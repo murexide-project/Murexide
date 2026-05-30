@@ -1,0 +1,46 @@
+syntax = "proto3";
+
+package yh_friend;
+
+option java_package = "com.juhao.murexide.proto.friend";
+option java_outer_classname = "FriendProto";
+option java_multiple_files = true;
+
+// 响应状态
+message Status {
+  int64 number = 1;
+  int32 code = 2;
+  string msg = 3;
+}
+
+// 对象请求列表
+message request_list {
+  Status status = 1;
+
+  message Request {
+    string receiverName = 1;
+    string receiverAvatar = 2;
+    string name = 3;
+    string avatar = 4;
+    string groupName = 5;
+    string groupAvatar = 6;
+    string inviterId = 7;
+    int32 sourceType = 9;
+    int32 targetType = 10;
+    string targetId = 11;
+    string receiverId = 12;
+    int32 result = 13;
+    int64 processedAt = 14;
+    int64 inviteAt = 16;
+    string inviteAtStr = 17;
+    int32 requestId = 18;
+    string botName = 19;
+    string botAvatar = 20;
+    string processorName = 22;
+    string note = 23;
+  }
+
+  repeated Request requests = 2;
+  int32 total = 3;
+  int32 pending = 4;
+}

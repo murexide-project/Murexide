@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package yh_instruction;
+
+option java_package = "com.juhao.murexide.proto.instruction";
+option java_outer_classname = "InstructionProto";
+option java_multiple_files = true;
+
+message get_bot_instruction {
+  string id = 3;
+}
+
+message Status {
+  uint64 number = 1;
+  uint64 code = 2;
+  string msg = 3;
+}
+
+message instruction_list {
+  Status status = 1;
+  repeated Data data = 2;
+
+  message Data {
+    uint64 command_id = 1;
+    string bot_id = 2;
+    string command_name = 3;
+    string command_description = 4;
+    uint64 instruction_type = 5;
+    string default_text = 7;
+    string bot_settings_json = 10;
+  }
+}

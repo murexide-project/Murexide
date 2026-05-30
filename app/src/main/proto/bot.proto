@@ -1,0 +1,87 @@
+syntax = "proto3";
+
+package yh_bot;
+
+option java_package = "com.juhao.murexide.proto.bot";
+option java_outer_classname = "BotProto";
+option java_multiple_files = true;
+
+// 响应状态（共用区）
+message Status {
+    int64 request_id = 1;
+    int32 code = 2;
+    string msg = 3;
+}
+
+// 获取机器人信息
+message bot_info_send {
+    string id = 2;
+}
+
+message bot_info {
+    Status status = 1;
+    Bot_data data = 2;
+    message Bot_data {
+        string bot_id = 1;
+        string name = 2;
+        int64 name_id = 3; // 名称ID
+        string avatar_url = 4;
+        int64 avatar_id = 5;
+        string introduction = 6;
+        string create_by = 7;
+        int64 create_time = 8;
+        int64 headcount = 9; // 使用人数
+        int64 private = 10;
+        int64 is_stop = 11; // 是否停用
+        int64 always_agree = 13; // 自动进群
+        int64 no_detele = 14; // 机器人能否被删除
+        int64 do_not_disturb = 15; // 免打扰
+        int64 top = 18; // 置顶
+        int64 group_limit = 20; // 限制进群
+    }
+}
+
+// 看板
+message board_send {
+    string chat_id = 3; // 群聊/机器人ID
+    int64 chat_type = 4; // 对象类型 2-群聊 3-机器人
+}
+
+message board {
+    Status status = 1;
+    repeated Board_data board = 2;
+
+    message Board_data {
+        string bot_id = 1; // 机器人ID
+        string chat_id = 2; // 对象ID
+        int32 chat_type = 3;
+        string content = 4;
+        int32 content_type = 5;
+        int64 last_update_time = 6; // 最后更新时间戳
+        string bot_name = 7;
+    }
+}
+
+// 创建机器人
+message create_bot_send {
+    string name = 2;                // 机器人名称
+    string introduction = 3;        // 机器人简介
+    string avatar_url = 4;          // 头像URL
+    int32 private = 5;              // 是否私有 (0-公开，1-私有)
+}
+
+message create_bot {
+    Status status = 1;
+    BotData data = 2;               // 机器人数据
+    
+    message BotData {
+        string bot_id = 1;          // 创建的机器人ID
+    }
+}
+
+// 停用/启用机器人
+message bot_stop_send {
+    string bot_id = 2;              // 机器人ID
+    int64 operation = 3;            // 操作类型：0-启用机器人，1-停用机器人
+}
+

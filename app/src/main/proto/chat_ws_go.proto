@@ -1,0 +1,180 @@
+syntax = "proto3";
+
+package yh_ws_go;
+
+option java_package = "com.juhao.murexide.proto.chat_ws_go";
+option java_outer_classname = "ChatWsGoProto";
+option java_multiple_files = true;
+
+// 共用区
+// 信息
+message INFO {
+    string seq = 1; // 请求标识码
+    string cmd = 2; // 操作类型
+}
+
+// 标签 - 使用不同的名称避免冲突
+message WsTag {
+    int64 id = 1; // 标签ID(貌似)
+    string text = 3;
+    string color = 4;
+}
+
+message WsMsg {
+    string msg_id = 1;
+    WsSender sender = 2;
+    string recv_id = 3; // 接收者ID
+    string chat_id = 4; // 会话的ID
+    int32 chat_type = 5; // 会话类型
+    WsContent content = 6; // 消息内容
+    int32 content_type = 7;
+    int64 timestamp = 8; // 时间戳(毫秒)
+    WsCmd cmd = 9; // 指令
+    int64 delete_time = 10; // 撤回消息时间,和8差别不大
+    string quote_msg_id = 11; // 引用消息ID
+    int64 msg_seq = 12; // 消息序列,在撤回的时也是被撤回消息的序列
+    int64 edit_time = 14; // 编辑时间
+            
+    message WsCmd {
+        int64 id = 1; // 命令ID
+        string name = 2; // 命令名称
+    }
+
+    message WsSender {
+        string chat_id = 1;
+        int32 chat_type = 2;
+        string name = 3;
+        string avatar_url = 4;
+        repeated string tag_old = 6;
+        repeated WsTag tag = 7;
+    }
+
+    message WsContent {
+        string text = 1; // 消息内容
+        string buttons = 2; // 按钮
+        string image_url = 3;
+        string file_name = 4;
+        string file_url = 5;
+        string form = 7; // 表单消息
+        string quote_msg_text = 8; // 引用消息文字
+        string sticker_url = 9; // 表情URL
+        string post_id = 10; // 文章ID
+        string post_title = 11; // 文章标题
+        string post_content = 12; // 文章内容
+        string post_content_type = 13; // 文章类型
+        string expression_id = 15; // 个人表情ID(不知道为啥为STR)
+        int64 file_size = 18; // 文件/图片大小(字节)
+        string video_url = 19; // 视频URL
+        string audio_url = 21; // 语音URL
+        int64 audio_time = 22; // 语音时长
+        int64 sticker_item_id = 25; // 表情ID
+        int64 sticker_pack_id = 26; // 表情包ID
+        string call_text = 29; // 语音通话文字
+        string call_status_text = 32; // 语音通话状态文字
+        int64 width = 33; // 图片的宽度
+        int64 height = 34; // 图片的高度
+    }
+}
+// 共用区结束
+
+// 心跳包返回信息
+message heartbeat_ack {
+    INFO info = 1; //数据
+}
+
+// ws推送消息
+message push_message {
+    INFO info = 1;
+    PushData data = 2;
+
+    message PushData {
+        string any = 1;
+        WsMsg msg = 2;
+    }
+}
+
+// ws接收编辑消息
+message edit_message {
+    INFO info = 1;
+    EditData data = 2;
+    
+    message EditData {
+        string any = 1;
+        WsMsg msg = 2;
+    }
+}
+
+// 超级文件分享
+message file_send_message {
+  INFO info = 1;
+  FileSendData data = 2;
+
+  message FileSendData {
+    string any = 1;
+    FileSender sender = 2;
+
+    message FileSender {
+      string send_user_id = 1; // 分享者用户ID
+      string user_id = 2; // 接收者用户ID
+      uint64 temp_code = 3; // 未知
+      string send_type = 4; // 分享类别区分文本
+      string data = 5; // 经过转义后的json格式发送数据
+      string send_deviceId = 6; // 发送者设备唯一标识符
+    }
+  }
+}
+
+// 草稿同步
+message draft_input {
+    INFO info = 1;
+    DraftData data = 2;
+    
+    message DraftData {
+        string any = 1;
+        Draft draft = 2;
+        
+        message Draft {
+            string chat_id = 1; // 对象ID
+            string input = 2; // 草稿内容
+        }
+    }
+}
+
+// 机器人公告设置
+message bot_board_message {
+    INFO info = 1;
+    BoardData data = 2;
+
+    message BoardData {
+        string any = 1; // Protobuf的any字段
+        BoardContent board = 2;
+
+        message BoardContent {
+            string bot_id = 1; // 机器人ID
+            string chat_id = 2; // 对象ID
+            int32 chat_type = 3;
+            string content = 4;
+            int32 content_type = 5;
+            int64 last_update_time = 6; // 最后更新时间戳
+            string bot_name = 7;
+        }
+    }
+}
+
+// 流式消息
+message stream_message {
+    INFO info = 1;
+    Data data = 2;
+
+    message Data {
+        string any = 1;
+        StreamMsg msg = 2;
+
+        message StreamMsg {
+            string msg_id = 1;
+            string recv_id = 2;
+            string chat_id = 3; // 似乎是会话ID
+            string content = 4; // 消息内容
+        }
+    }
+}
