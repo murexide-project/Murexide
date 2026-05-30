@@ -35,10 +35,10 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         tokenStorage = TokenStorage(this)
-
+        
         lifecycleScope.launch {
             if (tokenStorage.isLoggedIn()) {
-                token = tokenStorage.getToken()
+                token = tokenStorage.getToken() ?: ""
                 isLoggedIn = true
             }
         }
