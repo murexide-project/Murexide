@@ -61,6 +61,18 @@ jobs:
           MSG=$(git log -1 --format='%s')
           echo "msg=$MSG" >> $GITHUB_OUTPUT
 
+      - name: Prepare build message
+        run: |
+          cat > build-body.md <<EOF
+          **🔨 构建完成**
+        
+          **提交**: ${{ steps.commit.outputs.hash }}
+          **信息**: ${{ steps.commit_msg.outputs.msg }}
+          **触发者**: ${{ github.actor }}
+        
+          **下载**: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          EOF
+
       - name: Notify bot about build
         continue-on-error: true
         env:
@@ -139,15 +151,9 @@ jobs:
               -d "$payload"
           }
 
-          MESSAGE="**🔨 构建完成**
+          BUILD_MESSAGE="$(cat build-body.md)"
 
-**提交**: ${{ steps.commit.outputs.hash }}
-**信息**: ${{ steps.commit_msg.outputs.msg }}
-**触发者**: ${{ github.actor }}
-
-**下载**: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-
-          if ! send_markdown "$MESSAGE"; then
+          if ! send_markdown "$BUILD_MESSAGE"; then
             echo "Markdown bot notification failed"
             exit 0
           fi
