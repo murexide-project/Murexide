@@ -80,7 +80,7 @@ fun ConversationItem(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 4.dp)
+            .padding(horizontal = 8.dp)
             .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
