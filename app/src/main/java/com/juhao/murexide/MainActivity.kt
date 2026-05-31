@@ -25,7 +25,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import androidx.window.core.layout.WindowWidthSizeClass
 import com.composables.icons.lucide.*
 import com.juhao.murexide.datastore.TokenStorage
 import com.juhao.murexide.ui.chat.ChatActivity
