@@ -37,6 +37,8 @@ import com.juhao.murexide.ui.chat.components.MessageInput
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
