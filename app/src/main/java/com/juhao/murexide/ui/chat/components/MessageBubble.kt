@@ -137,26 +137,27 @@ fun MessageBubble(
                             }
 
                             if (message.hasImages && message.imageUrl != null) {
-                                val url = message.imageUrl
-                                val builder = ImageRequest.Builder(context)
-                                    .data(url)
+                                message.imageUrl?.let { url ->
+                                    val builder = ImageRequest.Builder(context)
+                                        .data(url)
                                     
-                                if (url.contains("chat-img.jwznb.com") || 
-                                    url.contains("jwznb.com") || 
-                                    url.contains("myapp.jwznb.com")) {
-                                    builder.setHeader("Referer", "https://myapp.jwznb.com")
-                                }
+                                    if (url.contains("chat-img.jwznb.com") || 
+                                        url.contains("jwznb.com") || 
+                                        url.contains("myapp.jwznb.com")) {
+                                        builder.setHeader("Referer", "https://myapp.jwznb.com")
+                                    }
                                 
-                                Spacer(modifier = Modifier.height(2.dp))
-                                AsyncImage(
-                                    model = builder.build(),
-                                    contentDescription = null,
-                                    contentScale = ContentScale.FillWidth,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .clickable { }
-                                )
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    AsyncImage(
+                                        model = builder.build(),
+                                        contentDescription = null,
+                                        contentScale = ContentScale.FillWidth,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .clickable { }
+                                    )
+                                }
                             }
 
                             if (message.quoteMsgText != null) {
