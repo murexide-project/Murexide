@@ -124,13 +124,19 @@ fun MessageInput(
 
                 Spacer(modifier = Modifier.width(5.dp))
 
-                OutlinedTextField(
+                TextField(
                     value = inputText,
                     onValueChange = onTextChange,
                     modifier = Modifier.weight(1f),
                     placeholder = { Text("输入消息...") },
                     shape = RoundedCornerShape(20.dp),
-                    maxLines = 5
+                    maxLines = 5,
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color.Transparent,
+                        unfocusedContainerColor = Color.Transparent,
+                        focusedIndicatorColor = MaterialTheme.colorScheme.primary,
+                        unfocusedIndicatorColor = Color.Transparent
+                    )
                 )
 
                 Spacer(modifier = Modifier.width(5.dp))

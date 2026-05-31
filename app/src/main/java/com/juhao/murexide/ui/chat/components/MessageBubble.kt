@@ -68,7 +68,7 @@ fun MessageBubble(
                 modifier = Modifier.widthIn(max = 250.dp)
             ) {
                 Text(
-                    text = "消息已撤回",
+                    text = "${message.senderName} 撤回了一条消息",
                     fontSize = 12.sp,
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
                 )
@@ -86,7 +86,7 @@ fun MessageBubble(
                     start = 8.dp,
                     end = 8.dp,
                     top = if (isOlderSameSender) 0.dp else 4.dp,
-                    bottom = if (isNewerSameSender) 1.dp else 4.dp
+                    bottom = if (isNewerSameSender) 0.dp else 4.dp
                 ),
             verticalAlignment = Alignment.Bottom,
             horizontalArrangement = if (isMine) Arrangement.End else Arrangement.Start
