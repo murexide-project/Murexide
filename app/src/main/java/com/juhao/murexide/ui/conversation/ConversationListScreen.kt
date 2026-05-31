@@ -30,40 +30,38 @@ fun ConversationListScreen(
         onRefresh = { viewModel.refresh() },
         modifier = modifier.fillMaxSize()
     ) {
-        when (val state = uiState) {
-            is ConversationUiState.Success -> {
-                if (state.conversations.isEmpty()) {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text("暂无会话")
-                    }
-                } else {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(vertical = 8.dp)
-                    ) {
-                        items(state.conversations, key = { it.chatId }) { conversation ->
-                            ConversationItem(
-                                conversation = conversation,
-                                onClick = { onConversationClick(conversation) }
-                            )
-                        }
-                    }
-                }
-            }
-            is ConversationUiState.Error -> {
+        val state = uiState
+        if (state is ConversationUiState.Success) {
+            if (state.conversations.isEmpty()) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("加载失败: ${state.message}")
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Button(onClick = { viewModel.refresh() }) {
-                            Text("重试")
-                        }
+                    Text("暂无会话")
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(vertical = 8.dp)
+                ) {
+                    items(state.conversations, key = { it.chatId }) { conversation ->
+                        ConversationItem(
+                            conversation = conversation,
+                            onClick = { onConversationClick(conversation) }
+                        )
+                    }
+                }
+            }
+        } else if (state is ConversationUiState.Error) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("加载失败: ${state.message}")
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Button(onClick = { viewModel.refresh() }) {
+                        Text("重试")
                     }
                 }
             }
