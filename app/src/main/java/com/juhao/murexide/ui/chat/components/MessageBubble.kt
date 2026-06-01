@@ -127,39 +127,7 @@ fun MessageBubble(
                                     modifier = Modifier.padding(bottom = 2.dp)
                                 )
                             }
-
-                            if (message.content.isNotBlank()) {
-                                Text(
-                                    text = message.content,
-                                    fontSize = 14.sp,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                            }
-
-                            if (message.hasImages && message.imageUrl != null) {
-                                message.imageUrl?.let { url ->
-                                    val builder = ImageRequest.Builder(context)
-                                        .data(url)
-                                    
-                                    if (url.contains("chat-img.jwznb.com") || 
-                                        url.contains("jwznb.com") || 
-                                        url.contains("myapp.jwznb.com")) {
-                                        builder.setHeader("Referer", "https://myapp.jwznb.com")
-                                    }
-                                
-                                    Spacer(modifier = Modifier.height(2.dp))
-                                    AsyncImage(
-                                        model = builder.build(),
-                                        contentDescription = null,
-                                        contentScale = ContentScale.FillWidth,
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .clip(RoundedCornerShape(8.dp))
-                                            .clickable { }
-                                    )
-                                }
-                            }
-
+                            
                             if (message.quoteMsgText != null) {
                                 val quoteText = message.quoteMsgText
                                 Surface(
@@ -196,9 +164,8 @@ fun MessageBubble(
                                                 contentDescription = null,
                                                 contentScale = ContentScale.Crop,
                                                 modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .size(60.dp)
-                                                    .clip(RoundedCornerShape(12.dp))
+                                                    .size(40.dp)
+                                                    .clip(RoundedCornerShape(8.dp))
                                             )
                                             Spacer(modifier = Modifier.width(8.dp))
                                         }
@@ -213,19 +180,51 @@ fun MessageBubble(
                                 }
                             }
 
+                            if (message.content.isNotBlank()) {
+                                Text(
+                                    text = message.content,
+                                    fontSize = 14.sp,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+
+                            if (message.hasImages && message.imageUrl != null) {
+                                message.imageUrl?.let { url ->
+                                    val builder = ImageRequest.Builder(context)
+                                        .data(url)
+                                    
+                                    if (url.contains("chat-img.jwznb.com") || 
+                                        url.contains("jwznb.com") || 
+                                        url.contains("myapp.jwznb.com")) {
+                                        builder.setHeader("Referer", "https://myapp.jwznb.com")
+                                    }
+                                
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    AsyncImage(
+                                        model = builder.build(),
+                                        contentDescription = null,
+                                        contentScale = ContentScale.FillWidth,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .clickable { }
+                                    )
+                                }
+                            }
+
                             Row(
                                 modifier = Modifier.align(if (isMine) Alignment.End else Alignment.Start)
                             ) {
                                 Text(
                                     text = timestampDisplay,
-                                    fontSize = 10.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    fontSize = 8.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                                 )
                                 if (message.isEdited) {
                                     Text(
                                         text = "已编辑",
-                                        fontSize = 10.sp,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        fontSize = 8.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                                         modifier = Modifier.padding(start = 4.dp)
                                     )
                                 }
