@@ -184,6 +184,7 @@ fun MessageBubble(
                                 Text(
                                     text = message.content,
                                     fontSize = 14.sp,
+                                    lineHeight = 18.sp,
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
                             }
@@ -218,7 +219,7 @@ fun MessageBubble(
                                 Text(
                                     text = timestampDisplay,
                                     fontSize = 8.sp,
-                                    lineHeight = 8.sp,
+                                    lineHeight = 10.sp,
                                     maxLines = 1,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                                 )
@@ -226,7 +227,7 @@ fun MessageBubble(
                                     Text(
                                         text = "已编辑",
                                         fontSize = 8.sp,
-                                        lineHeight = 8.sp,
+                                        lineHeight = 10.sp,
                                         maxLines = 1,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                                         modifier = Modifier.padding(start = 4.dp)
