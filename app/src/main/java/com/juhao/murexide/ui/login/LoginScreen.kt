@@ -21,6 +21,7 @@ import com.juhao.murexide.R
 @Composable
 fun LoginScreen(
     onLoginSuccess: (String) -> Unit,
+    onTokenLogin: () -> Unit,
     viewModel: LoginViewModel = viewModel(
         factory = LoginViewModelFactory(LocalContext.current.applicationContext as android.app.Application)
     )
@@ -177,9 +178,9 @@ fun LoginScreen(
                 Text("忘记密码？")
             }
             
-            TextButton(onClick = { /* TODO: 注册账号 */ }) {
-                Text("注册账号")
+            TextButton(onClick = onTokenLogin) {
+                Text("Token登录")
             }
         }
-    }
+    
 }
