@@ -70,13 +70,6 @@ fun ChatScreen(
     
     var topMessageHasEnoughSpace by remember { mutableStateOf(false) }
     var lastTopIndex by remember { mutableStateOf<Int?>(null) }
-    
-    LaunchedEffect(topVisibleMessageIndex) {
-        if (lastTopIndex != topVisibleMessageIndex) {
-            lastTopIndex = topVisibleMessageIndex
-            topMessageHasEnoughSpace = false
-        }
-    }
 
     val topVisibleMessageIndex by remember {
         derivedStateOf {
@@ -87,6 +80,13 @@ fun ChatScreen(
             } else {
                 null
             }
+        }
+    }
+    
+    LaunchedEffect(topVisibleMessageIndex) {
+        if (lastTopIndex != topVisibleMessageIndex) {
+            lastTopIndex = topVisibleMessageIndex
+            topMessageHasEnoughSpace = false
         }
     }
 
