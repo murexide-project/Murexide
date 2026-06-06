@@ -379,7 +379,7 @@ fun ChatScreen(
                             }
                             
                             val avatarAlignment = if (isTopVisibleItem && shouldShowItemAvatar) {
-                                if (isFirstFromSender) Alignment.Top else Alignment.Bottom
+                                if (isFirstFromSender) Alignment.Bottom else Alignment.Top
                             } else {
                                 Alignment.Bottom
                             }
