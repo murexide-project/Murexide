@@ -93,7 +93,7 @@ fun MessageBubble(
             verticalAlignment = avatarAlignment,
             horizontalArrangement = if (isMine) Arrangement.End else Arrangement.Start
         ) {
-            if (!isMine && isFirstFromSender && showAvatar) {
+            if (!isMine && showAvatar) {
                 Avatar(
                     url = message.senderAvatar,
                     size = 36.dp
@@ -304,7 +304,7 @@ fun MessageBubble(
                 }
             }
 
-            if (isMine && isFirstFromSender && showAvatar) {
+            if (isMine && showAvatar) {
                 Spacer(modifier = Modifier.width(8.dp))
                 Avatar(
                     url = message.senderAvatar,
