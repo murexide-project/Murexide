@@ -36,6 +36,7 @@ import com.juhao.murexide.ui.chat.components.MessageBubble
 import com.juhao.murexide.ui.chat.components.MessageInput
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 import androidx.compose.foundation.shape.RoundedCornerShape
 
 @OptIn(ExperimentalMaterial3Api::class, FlowPreview::class)
@@ -67,6 +68,8 @@ fun ChatScreen(
     var showFloatingAvatar by remember { mutableStateOf(false) }
     var floatingAvatarUrl by remember { mutableStateOf("") }
     var floatingAvatarIsMine by remember { mutableStateOf(false) }
+    
+    var stableShowFloatingAvatar by remember { mutableStateOf(false) }
 
     val topVisibleMessageIndex by remember {
         derivedStateOf {
@@ -170,6 +173,11 @@ fun ChatScreen(
                 floatingAvatarIsMine = false
             }
         }
+    }
+    
+    LaunchedEffect(showFloatingAvatar) {
+        delay(16)
+        stableShowFloatingAvatar = showFloatingAvatar
     }
 
     LaunchedEffect(uiState.messages) {
@@ -340,7 +348,7 @@ fun ChatScreen(
                             val isTopVisibleItem = index == topVisibleMessageIndex
 
                             val shouldShowItemAvatar = if (isTopVisibleItem) {
-                                !showFloatingAvatar && (isLastFromSender || isFirstFromSender)
+                                !stableShowFloatingAvatar && (isLastFromSender || isFirstFromSender)
                             } else {
                                 isFirstFromSender
                             }
