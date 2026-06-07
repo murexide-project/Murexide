@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.LayoutDirection
 import com.juhao.murexide.R
 import com.composables.icons.lucide.*
 import com.juhao.murexide.ui.components.Avatar
@@ -51,9 +52,9 @@ fun ConversationListScreen(
             modifier = Modifier
                  .fillMaxSize()
                  .padding(
-                    top = it.calculateTopPadding(),
-                    end = it.calculateRightPadding()
-                 )
+                     top = it.calculateTopPadding(),
+                     end = it.calculateRightPadding(LayoutDirection.Ltr)
+                 ),
         ) {
             val state = uiState
             if (state is ConversationUiState.Success) {
