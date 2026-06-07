@@ -69,13 +69,12 @@ fun ChatScreen(
     var floatingAvatarUrl by remember { mutableStateOf("") }
     var floatingAvatarIsMine by remember { mutableStateOf(false) }
     
-    var stableShowFloatingAvatar by remember { mutableStateOf(false) }
-
     val topVisibleMessageIndex by remember {
         derivedStateOf {
             val layoutInfo = listState.layoutInfo
             val visibleItems = layoutInfo.visibleItemsInfo
             if (visibleItems.isNotEmpty()) {
+                showFloatingAvatar = true
                 visibleItems.minByOrNull { it.index }?.index
             } else {
                 null
@@ -175,11 +174,6 @@ fun ChatScreen(
         }
     }
     
-    LaunchedEffect(showFloatingAvatar) {
-        delay(16)
-        stableShowFloatingAvatar = showFloatingAvatar
-    }
-
     LaunchedEffect(uiState.messages) {
         if (uiState.messages.isEmpty()) return@LaunchedEffect
 
@@ -348,13 +342,13 @@ fun ChatScreen(
                             val isTopVisibleItem = index == topVisibleMessageIndex
 
                             val shouldShowItemAvatar = if (isTopVisibleItem) {
-                                !stableShowFloatingAvatar && (isLastFromSender || isFirstFromSender)
+                                !showFloatingAvatar && (isLastFromSender || isFirstFromSender)
                             } else {
                                 isFirstFromSender
                             }
                             
                             val avatarAlignment = if (isTopVisibleItem && shouldShowItemAvatar) {
-                                Alignment.Top
+                                if (isLastFromSender) Alignment.Top else Alignment.Bottom
                             } else {
                                 Alignment.Bottom
                             }
