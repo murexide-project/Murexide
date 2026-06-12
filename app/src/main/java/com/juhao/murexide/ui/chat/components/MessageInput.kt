@@ -26,10 +26,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Send
-import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.Image
+import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -149,6 +146,18 @@ fun MessageInput(
                         shape = RoundedCornerShape(24.dp),
                         maxLines = 5
                     )
+                    
+                    Spacer(modifier = Modifier.width(4.dp))
+                    
+                    IconButton(
+                        onClick = {},
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Icon(
+                            Icons.Rounded.Mood,
+                            contentDescription = "表情"
+                        )
+                    }
 
                     AnimatedVisibility(
                         visible = inputText.isNotBlank(),
@@ -175,5 +184,7 @@ fun MessageInput(
                 }
             }
         }
+        
+        Spacer(modifier = Modifier.height(8.dp))
     }
 }
