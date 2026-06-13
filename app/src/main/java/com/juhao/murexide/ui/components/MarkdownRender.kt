@@ -21,6 +21,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.juhao.murexide.ui.webview.WebViewActivity
 import com.mikepenz.markdown.coil2.Coil2ImageTransformerImpl
 import com.mikepenz.markdown.compose.components.markdownComponents
@@ -77,19 +78,33 @@ object MarkdownRenderer {
 
         val components = markdownComponents(
             image = { componentData ->
-                val imageUrl = componentData.content
-                val altText = componentData.node.getAltTextFromNode(componentData.content)
+                val url = componentData.content
+                val altText = componentData.node.getAltTextFromNode(url)
+                
+                val imageRequest = remember(url) {
+                    ImageRequest.Builder(context)
+                        .data(url)
+                        .apply {
+                            if (url.contains("chat-img.jwznb.com") ||
+                                url.contains("jwznb.com") ||
+                                url.contains("myapp.jwznb.com")
+                            ) {
+                                setHeader("Referer", "https://myapp.jwznb.com")
+                            }
+                        }
+                        .build()
+                }
 
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 4.dp)
                         .clickable {
-                            onImageClick?.invoke(imageUrl, altText)
+                            onImageClick?.invoke(url, altText)
                         }
                 ) {
                     AsyncImage(
-                        model = imageUrl,
+                        model = imageRequest,
                         contentDescription = altText.ifEmpty { null },
                         modifier = Modifier.fillMaxWidth(),
                         contentScale = ContentScale.FillWidth
