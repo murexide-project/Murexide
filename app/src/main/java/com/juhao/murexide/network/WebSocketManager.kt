@@ -332,6 +332,4 @@ class WebSocketManager {
         isConnected = false
         stopHeartbeat()
     }
-
-    fun isConnected(): Boolean = isConnected
 }

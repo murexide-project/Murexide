@@ -52,10 +52,5 @@ class ChatActivity : ComponentActivity() {
             }
             context.startActivity(intent)
         }
-        
-        private fun getUserId(token: String): String {
-            // 从token中提取userId，取第一段
-            return token.split("-").firstOrNull() ?: ""
-        }
     }
 }

@@ -3,20 +3,6 @@ package com.juhao.murexide.data
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class ConversationListRequest(
-    val md5: String = ""
-)
-
-@Serializable
-data class ConversationListResponse(
-    val code: Int,
-    val data: List<ConversationItem>? = null,
-    val msg: String,
-    val total: Int = 0,
-    val md5: String = ""
-)
-
-@Serializable
 data class ConversationItem(
     val chatId: String,
     val chatType: Int,

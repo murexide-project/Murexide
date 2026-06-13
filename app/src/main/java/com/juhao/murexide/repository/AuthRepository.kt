@@ -57,31 +57,6 @@ class AuthRepository {
         }
     }
 
-    suspend fun getCaptcha(): Result<CaptchaResponse> {
-        return withContext(Dispatchers.IO) {
-            try {
-                val request = Request.Builder()
-                    .url("$baseUrl/v1/user/captcha")
-                    .post(okhttp3.RequestBody.create(null, ByteArray(0)))
-                    .build()
-                
-                client.newCall(request).execute().use { response ->
-                    if (response.isSuccessful) {
-                        val responseBody = response.body.string()
-                        val captchaResponse = json.decodeFromString(CaptchaResponse.serializer(),
-                            responseBody
-                        )
-                        Result.success(captchaResponse)
-                    } else {
-                        Result.failure(Exception("HTTP error: ${response.code}"))
-                    }
-                }
-            } catch (e: Exception) {
-                Result.failure(e)
-            }
-        }
-    }
-
     suspend fun getUserInfo(token: String): Result<UserInfo> {
         return withContext(Dispatchers.IO) {
             try {

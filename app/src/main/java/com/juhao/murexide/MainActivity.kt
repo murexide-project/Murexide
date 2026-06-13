@@ -52,6 +52,7 @@ private data class NavItem(
 private val navItems = listOf(
     NavItem("conversations", "消息", Icons.Rounded.ChatBubbleOutline),
     NavItem("contacts", "通讯录", Icons.Rounded.Contacts),
+    NavItem("community", "社区", Icons.Rounded.People),
     NavItem("mine", "我的", Icons.Rounded.Person),
 )
 
@@ -241,6 +242,29 @@ private fun MainNavHost(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text("通讯录", style = MaterialTheme.typography.headlineMedium)
+                }
+            }
+        }
+        composable("community") {
+            Scaffold (
+                topBar = {
+                    TopAppBar(
+                        title = {
+                            Text("社区")
+                        }
+                    )
+                }
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(
+                            top = it.calculateTopPadding(),
+                            end = it.calculateRightPadding(LayoutDirection.Ltr)
+                        ),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text("社区", style = MaterialTheme.typography.headlineMedium)
                 }
             }
         }

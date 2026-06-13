@@ -3,7 +3,6 @@ package com.juhao.murexide.ui.login
 import android.app.Application
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.juhao.murexide.datastore.TokenStorage
 import com.juhao.murexide.repository.AuthRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -44,9 +43,5 @@ class LoginViewModel(
 
     private fun getDeviceId(): String {
         return "android_device_${System.currentTimeMillis()}"
-    }
-
-    fun resetState() {
-        _uiState.value = LoginUiState.Idle
     }
 }

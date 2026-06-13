@@ -2,7 +2,6 @@ package com.juhao.murexide.ui.chat
 
 import android.util.Log
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.juhao.murexide.data.*
 import com.juhao.murexide.network.WebSocketManager
@@ -172,18 +171,6 @@ class ChatViewModel(
         _uiState.update { it.copy(isMarkdown = !it.isMarkdown) }
     }
 
-    fun addImage(imageUri: String) {
-        _uiState.update {
-            it.copy(selectedImages = it.selectedImages + imageUri)
-        }
-    }
-
-    fun removeImage(index: Int) {
-        _uiState.update {
-            it.copy(selectedImages = it.selectedImages.filterIndexed { i, _ -> i != index })
-        }
-    }
-
     fun setReplyTo(message: MessageItem) {
         _uiState.update { it.copy(replyTo = message) }
     }
@@ -194,13 +181,11 @@ class ChatViewModel(
 
     fun sendMessage() {
         val state = _uiState.value
-        if (state.inputText.isBlank() && state.selectedImages.isEmpty()) return
 
         viewModelScope.launch {
             val contentType = if (state.isMarkdown) MessageItem.CONTENT_TYPE_MARKDOWN else MessageItem.CONTENT_TYPE_TEXT
             val content = MessageContent(
-                text = state.inputText,
-                image = state.selectedImages.firstOrNull()
+                text = state.inputText
             )
 
             repository.sendMessage(
@@ -214,12 +199,10 @@ class ChatViewModel(
                 _uiState.update {
                     it.copy(
                         inputText = "",
-                        selectedImages = emptyList(),
                         replyTo = null
                     )
                 }
                 refresh()
-                _toastMessage.emit("发送成功")
             }.onFailure { error ->
                 _toastMessage.emit(error.message ?: "发送失败")
             }
@@ -352,19 +335,3 @@ data class EditDialogState(
     val newContent: String = "",
     val isMarkdown: Boolean = false
 )
-
-class ChatViewModelFactory(
-    private val token: String,
-    private val chatId: String,
-    private val chatType: Int,
-    private val userId: String,
-    private val deviceId: String
-) : ViewModelProvider.Factory {
-    @Suppress("UNCHECKED_CAST")
-    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        if (modelClass.isAssignableFrom(ChatViewModel::class.java)) {
-            return ChatViewModel(token, chatId, chatType, userId, deviceId) as T
-        }
-        throw IllegalArgumentException("Unknown ViewModel class")
-    }
-}

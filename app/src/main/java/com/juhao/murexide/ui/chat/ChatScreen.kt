@@ -306,7 +306,6 @@ fun ChatScreen(
                     onTextChange = { viewModel.updateInputText(it) },
                     onSendClick = { viewModel.sendMessage() },
                     onAddImageClick = { },
-                    onRemoveImage = { viewModel.removeImage(it) },
                     onToggleMarkdown = { viewModel.toggleMarkdown() }
                 )
             }

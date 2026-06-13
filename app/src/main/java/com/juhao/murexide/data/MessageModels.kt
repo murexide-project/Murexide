@@ -53,25 +53,6 @@ data class MessageTag(
 )
 
 @Serializable
-data class QuoteMessage(
-    val msgId: String,
-    val senderId: String,
-    val senderName: String,
-    val content: String,
-    val imageUrl: String? = null
-)
-
-@Serializable
-data class SendMessageRequest(
-    val msgId: String,
-    val chatId: String,
-    val chatType: Int,
-    val content: MessageContent,
-    val contentType: Int,
-    val quoteMsgId: String? = null
-)
-
-@Serializable
 data class MessageContent(
     val text: String = "",
     val image: String? = null,
@@ -91,45 +72,6 @@ data class MessageContent(
     val mentionedId: List<String> = emptyList()
 )
 
-@Serializable
-data class SendMessageResponse(
-    val code: Int,
-    val msg: String
-)
-
-@Serializable
-data class EditMessageRequest(
-    val msgId: String,
-    val chatId: String,
-    val chatType: Int,
-    val content: MessageContent,
-    val contentType: Int,
-    val quoteMsgId: String? = null
-)
-
-@Serializable
-data class RecallMessageRequest(
-    val msgId: String,
-    val chatId: String,
-    val chatType: Int
-)
-
-@Serializable
-data class ListMessageRequest(
-    val msgCount: Int = 20,
-    val msgId: String? = null,
-    val chatType: Int,
-    val chatId: String,
-    val msgSeq: Long? = null
-)
-
-@Serializable
-data class ListMessageResponse(
-    val code: Int,
-    val msg: List<MessageItem>? = null,
-    val total: Int = 0
-)
-
 data class ChatUiState(
     val messages: List<MessageItem> = emptyList(),
     val isLoading: Boolean = false,
@@ -137,7 +79,6 @@ data class ChatUiState(
     val isRefreshing: Boolean = false,
     val error: String? = null,
     val inputText: String = "",
-    val selectedImages: List<String> = emptyList(),
     val replyTo: MessageItem? = null,
     val isMarkdown: Boolean = false,
     val hasMore: Boolean = true,

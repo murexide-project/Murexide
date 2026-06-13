@@ -8,7 +8,6 @@ import com.juhao.murexide.proto.send_message_send
 import com.juhao.murexide.proto.send_message
 import com.juhao.murexide.proto.edit_message_send
 import com.juhao.murexide.proto.edit_message
-import com.juhao.murexide.proto.list_message_by_mid_seq_send
 import com.juhao.murexide.proto.recall_msg_send
 import com.juhao.murexide.proto.recall_msg
 import kotlinx.coroutines.Dispatchers

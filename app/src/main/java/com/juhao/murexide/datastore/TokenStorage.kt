@@ -86,8 +86,4 @@ class TokenStorage(private val context: Context) {
             preferences.remove(TOKEN_KEY)
         }
     }
-
-    suspend fun isLoggedIn(): Boolean {
-        return getToken() != null
-    }
 }
