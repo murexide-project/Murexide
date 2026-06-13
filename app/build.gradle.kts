@@ -87,7 +87,6 @@ dependencies {
     implementation(libs.navigation.compose)
 
     implementation(libs.okhttp)
-    implementation(libs.okhttp.logging)
 
     implementation(libs.kotlinx.serialization.json)
 

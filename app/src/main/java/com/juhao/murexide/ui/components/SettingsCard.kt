@@ -60,6 +60,7 @@ fun SettingsItem(
     title: String,
     subtitle: String? = null,
     showDivider: Boolean = false,
+    isDestructive: Boolean = false,
     onClick: () -> Unit = {}
 ) {
     Column {
@@ -73,7 +74,8 @@ fun SettingsItem(
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                tint = if (isDestructive) MaterialTheme.colorScheme.error 
+                   else MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(22.dp)
             )
 
@@ -83,10 +85,10 @@ fun SettingsItem(
                 Text(
                     text = title,
                     style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurface,
+                    color = if (isDestructive) MaterialTheme.colorScheme.error 
+                       else MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.Normal
                 )
-
                 if (subtitle != null) {
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
@@ -124,7 +126,7 @@ fun SettingsItem(
 fun SettingsItemCell(
     icon: ImageVector,
     title: String,
-    subtitle: String,
+    subtitle: String? = null,
     onClick: () -> Unit,
     isDestructive: Boolean = false
 ) {
@@ -152,11 +154,16 @@ fun SettingsItemCell(
                 color = if (isDestructive) MaterialTheme.colorScheme.error 
                        else MaterialTheme.colorScheme.onSurface
             )
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            if (subtitle != null) {
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
         }
     }
 }
@@ -168,7 +175,7 @@ fun SettingsItemCell(
 fun SettingsSwitchItem(
     icon: ImageVector,
     title: String,
-    subtitle: String,
+    subtitle: String? = null,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
     isError: Boolean = false,
@@ -201,13 +208,16 @@ fun SettingsSwitchItem(
                 color = if (isEnabled) MaterialTheme.colorScheme.onSurface
                        else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
             )
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(
-                    alpha = if (isEnabled) 1f else 0.38f
+            if (subtitle != null) {
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                        alpha = if (isEnabled) 1f else 0.38f
+                    )
                 )
-            )
+            }
         }
 
         Spacer(modifier = Modifier.width(8.dp))
@@ -227,7 +237,7 @@ fun SettingsSwitchItem(
 fun SettingsDropdownItem(
     icon: ImageVector,
     title: String,
-    subtitle: String,
+    subtitle: String? = null,
     options: List<Pair<String, String>>,
     selectedValue: String,
     onOptionSelected: (String) -> Unit
@@ -256,11 +266,14 @@ fun SettingsDropdownItem(
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurface
             )
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            if (subtitle != null) {
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
 
         Icon(
