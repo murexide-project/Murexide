@@ -10,7 +10,7 @@ data class MessageItem(
     val senderAvatar: String,
     val chatId: String,
     val chatType: Int,
-    val content: String,
+    val content: String = "",
     val contentType: Int,
     val timestamp: Long,
     val msgSeq: Long = 0,

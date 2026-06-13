@@ -27,6 +27,7 @@ import coil.request.ImageRequest
 import com.juhao.murexide.data.MessageItem
 import com.juhao.murexide.ui.chat.EditDialogState
 import com.juhao.murexide.ui.components.Avatar
+import com.juhao.murexide.ui.components.MarkdownRenderer
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -136,7 +137,7 @@ fun MessageBubble(
                             containerColor = if (isMediaMsg)
                                 MaterialTheme.colorScheme.surface
                             else if (isMine)
-                                MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
                             else
                                 MaterialTheme.colorScheme.surfaceContainer
                         )
@@ -223,7 +224,11 @@ fun MessageBubble(
                             when (message.contentType) {
                                 MessageItem.CONTENT_TYPE_TEXT,
                                 MessageItem.CONTENT_TYPE_MARKDOWN -> {
-                                    if (message.content.isNotBlank()) {
+                                    if (message.contentType == MessageItem.CONTENT_TYPE_MARKDOWN) {
+                                        MarkdownRenderer.Render(
+                                            content = message.content
+                                        )
+                                    } else {
                                         Text(
                                             text = message.content,
                                             fontSize = 14.sp,
@@ -271,7 +276,7 @@ fun MessageBubble(
                                                     .align(Alignment.BottomEnd)
                                                     .padding(end = 6.dp, bottom = 6.dp)
                                                     .background(
-                                                        color = Color.Black.copy(alpha = 0.6f),
+                                                        color = Color.Black.copy(alpha = 0.5f),
                                                         shape = RoundedCornerShape(50.dp)
                                                     )
                                                     .padding(horizontal = 6.dp, vertical = 2.dp)
