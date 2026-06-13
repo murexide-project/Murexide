@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.NotificationsOff
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -18,6 +19,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.LayoutDirection
 import com.juhao.murexide.R
+import com.juhao.murexide.data.ConversationItem
 import com.juhao.murexide.ui.components.Avatar
 import java.text.SimpleDateFormat
 import java.util.*
@@ -26,7 +28,7 @@ import java.util.*
 @Composable
 fun ConversationListScreen(
     token: String,
-    onConversationClick: (com.juhao.murexide.data.ConversationItem) -> Unit,
+    onConversationClick: (ConversationItem) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: ConversationViewModel = remember { ConversationViewModel(token) }
 ) {
@@ -103,7 +105,7 @@ fun ConversationListScreen(
 
 @Composable
 fun ConversationItem(
-    conversation: com.juhao.murexide.data.ConversationItem,
+    conversation: ConversationItem,
     onClick: () -> Unit
 ) {
     Row(
@@ -155,6 +157,16 @@ fun ConversationItem(
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f)
                 )
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                if (conversation.doNotDisturb == 1) {
+                    Icon(
+                        imageVector = Icons.Rounded.NotificationsOff,
+                        contentDescription = null,
+                        modifier = Modifier.size(14.dp)
+                    )
+                }
                 
                 if (conversation.hasUnread || conversation.isAtMentioned) {
                     Spacer(modifier = Modifier.width(8.dp))
