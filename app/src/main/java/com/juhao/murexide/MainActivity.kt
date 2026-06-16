@@ -37,6 +37,7 @@ import androidx.navigation.compose.rememberNavController
 import com.juhao.murexide.datastore.TokenStorage
 import com.juhao.murexide.ui.chat.ChatActivity
 import com.juhao.murexide.ui.login.LoginActivity
+import com.juhao.murexide.ui.contact.ContactListScreen
 import com.juhao.murexide.ui.conversation.ConversationListScreen
 import com.juhao.murexide.ui.mine.MineScreen
 import com.juhao.murexide.ui.theme.MurexideTheme
@@ -223,27 +224,18 @@ private fun MainNavHost(
             )
         }
         composable("contacts") {
-            Scaffold (
-                topBar = {
-                    TopAppBar(
-                        title = {
-                            Text("通讯录")
-                        }
+            ContactListScreen(
+                token = token,
+                onContactClick = { contact ->
+                    ChatActivity.start(
+                        context = context,
+                        chatId = contact.chatId,
+                        chatType = contact.chatType,
+                        chatName = contact.remark ?: contact.name,
+                        chatAvatar = contact.avatarUrl
                     )
                 }
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(
-                            top = it.calculateTopPadding(),
-                            end = it.calculateRightPadding(LayoutDirection.Ltr)
-                        ),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text("通讯录", style = MaterialTheme.typography.headlineMedium)
-                }
-            }
+            )
         }
         composable("community") {
             Scaffold (
