@@ -35,19 +35,6 @@ data class MessageItem(
     val isMine: Boolean
         get() = direction == "right"
 
-    fun getDisplayContent(): String {
-        return when (contentType) {
-            CONTENT_TYPE_IMAGE -> "[图片消息]"
-            CONTENT_TYPE_FILE -> "[文件消息]"
-            CONTENT_TYPE_STICKER -> "[表情消息]"
-            CONTENT_TYPE_VIDEO -> "[视频消息]"
-            CONTENT_TYPE_AUDIO -> "[语音消息]"
-            CONTENT_TYPE_MARKDOWN -> "[Markdown消息]"
-            CONTENT_TYPE_HTML -> "[HTML消息]"
-            else -> content.takeIf { it.isNotEmpty() } ?: "[消息]"
-        }
-    }
-
     companion object {
         const val CONTENT_TYPE_TEXT = 1
         const val CONTENT_TYPE_IMAGE = 2
@@ -100,6 +87,6 @@ data class ChatUiState(
     val chatName: String = "",
     val chatAvatar: String = "",
     val isAdmin: Boolean = false,
-    val memberCount: Long? = null,
-    val isSending: Boolean = false
+    val isRemoteDraft: Boolean = false,
+    val draftSource: String? = null
 )
