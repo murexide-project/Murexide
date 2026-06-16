@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 import com.juhao.murexide.network.NetworkClient
@@ -34,7 +35,13 @@ class ChatViewModel(
 
     companion object {
         private const val TAG = "ChatViewModel"
+        private const val DRAFT_DEBOUNCE_MS = 500L
+        private const val DRAFT_CLEAR_DELAY_MS = 300L
     }
+    
+    private var lastUserInputTime = 0L
+    private var lastAppliedDraft = ""
+    private var draftClearJob: kotlinx.coroutines.Job? = null
 
     private val _uiState = MutableStateFlow(ChatUiState())
     val uiState: StateFlow<ChatUiState> = _uiState.asStateFlow()
@@ -113,7 +120,7 @@ class ChatViewModel(
                     is WebSocketManager.WsEvent.DraftUpdate -> {
                         Log.d(TAG, "Draft update from WS: chatId=${event.chatId}, expected=$chatId")
                         if (event.chatId == chatId) {
-                            //updateInputTextFromWs(event.draft)
+                            updateInputTextFromWs(event.draft)
                         }
                     }
                     is WebSocketManager.WsEvent.MessageDeleted -> {
@@ -199,16 +206,46 @@ class ChatViewModel(
 
     fun updateInputText(text: String) {
         if (_uiState.value.inputText == text) return
+        
+        lastUserInputTime = System.currentTimeMillis()
+        
         _uiState.update { it.copy(inputText = text) }
-        // 只有用户主动输入才同步到服务器
+        
         wsManager.sendDraftSync(chatId, text, deviceId)
     }
 
-    /*private fun updateInputTextFromWs(text: String) {
-        if (_uiState.value.inputText == text) return
-        // 收到服务器同步的消息，只更新UI，不再发回服务器，避免死循环
-        _uiState.update { it.copy(inputText = text) }
-    }*/
+    private fun updateInputTextFromWs(draft: String) {
+        val currentTime = System.currentTimeMillis()
+        val timeSinceLastInput = currentTime - lastUserInputTime
+        
+        if (timeSinceLastInput < DRAFT_DEBOUNCE_MS) {
+            Log.d(TAG, "Ignoring remote draft: user is typing (${timeSinceLastInput}ms since last input)")
+            return
+        }
+        
+        if (draft == lastAppliedDraft) {
+            Log.d(TAG, "Ignoring remote draft: same as last applied draft")
+            return
+        }
+        
+        val currentInput = _uiState.value.inputText
+        if (currentInput == draft) {
+            Log.d(TAG, "Ignoring remote draft: already matches current input")
+            lastAppliedDraft = draft
+            return
+        }
+        
+        Log.d(TAG, "Applying remote draft: '$draft' (was '$currentInput')")
+        _uiState.update { it.copy(inputText = draft) }
+        lastAppliedDraft = draft
+        
+        draftClearJob?.cancel()
+        draftClearJob = viewModelScope.launch {
+            kotlinx.coroutines.delay(DRAFT_CLEAR_DELAY_MS)
+            Log.d(TAG, "Clearing draft state after ${DRAFT_CLEAR_DELAY_MS}ms delay")
+            _uiState.update { it.copy(isRemoteDraft = false) }
+        }
+    }
 
     fun toggleMarkdown() {
         _uiState.update { it.copy(isMarkdown = !it.isMarkdown) }
