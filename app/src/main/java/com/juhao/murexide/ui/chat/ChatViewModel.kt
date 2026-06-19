@@ -268,7 +268,9 @@ class ChatViewModel(
             val contentType = if (state.isMarkdown) MessageItem.CONTENT_TYPE_MARKDOWN else MessageItem.CONTENT_TYPE_TEXT
             val content = MessageContent(
                 text = state.inputText,
-                quoteMsgText = state.replyTo?.content,
+                quoteMsgText = state.replyTo?.let {
+                    "${it.senderName}: ${it.content}"
+                },
                 quoteImageUrl = state.replyTo?.imageUrl
             )
 
@@ -287,7 +289,6 @@ class ChatViewModel(
                         isSending = false
                     )
                 }
-                refresh()
             }.onFailure { error ->
                 _uiState.update { it.copy(isSending = false) }
                 _toastMessage.emit(error.message ?: "发送失败")
