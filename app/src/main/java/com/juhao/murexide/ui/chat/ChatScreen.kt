@@ -362,18 +362,15 @@ fun ChatScreen(
                             val isNewerSameSender = newerMessage != null && !newerMessage.isRecalled && newerMessage.senderId == message.senderId
 
                             val isTopVisibleItem = index == topVisibleMessageIndex
-                            
-                            // 连体消息判断：如果是同一组消息中的非第一条（即上方还有同发送者的消息）
 
                             val shouldShowItemAvatar = if (isTopVisibleItem) {
-                                // 如果是底部可见的第一条，且开启了悬浮头像，则只有它是该组最后一条时才显示自带头像
-                                if (showFloatingAvatar) isFirstFromSender else true
+                                !showFloatingAvatar && ((isLastFromSender && avatarFollowEnabled) || isFirstFromSender)
                             } else {
                                 isFirstFromSender
                             }
                             
-                            val avatarAlignment = if (isTopVisibleItem && avatarFollowEnabled) {
-                                if (isFirstFromSender) Alignment.Bottom else Alignment.Top
+                            val avatarAlignment = if (isTopVisibleItem && shouldShowItemAvatar && avatarFollowEnabled) {
+                                if (isLastFromSender) Alignment.Top else Alignment.Bottom
                             } else {
                                 Alignment.Bottom
                             }
