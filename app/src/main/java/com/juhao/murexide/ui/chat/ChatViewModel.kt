@@ -267,7 +267,9 @@ class ChatViewModel(
             _uiState.update { it.copy(isSending = true) }
             val contentType = if (state.isMarkdown) MessageItem.CONTENT_TYPE_MARKDOWN else MessageItem.CONTENT_TYPE_TEXT
             val content = MessageContent(
-                text = state.inputText
+                text = state.inputText,
+                quoteMsgText = state.replyTo?.content,
+                quoteImageUrl = state.replyTo?.imageUrl
             )
 
             repository.sendMessage(

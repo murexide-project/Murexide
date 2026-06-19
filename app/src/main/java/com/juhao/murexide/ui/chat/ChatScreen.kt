@@ -316,11 +316,11 @@ fun ChatScreen(
                 }
     
                 MessageInput(
-                inputText = uiState.inputText,
-                isMarkdown = uiState.isMarkdown,
-                isSending = uiState.isSending,
-                onTextChange = { viewModel.updateInputText(it) },
-                onSendClick = { viewModel.sendMessage() },
+                    inputText = uiState.inputText,
+                    isMarkdown = uiState.isMarkdown,
+                    isSending = uiState.isSending,
+                    onTextChange = { viewModel.updateInputText(it) },
+                    onSendClick = { viewModel.sendMessage() },
                     onAddImageClick = { },
                     onToggleMarkdown = { viewModel.toggleMarkdown() }
                 )
