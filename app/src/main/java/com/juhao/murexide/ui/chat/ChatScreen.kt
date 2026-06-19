@@ -98,19 +98,22 @@ fun ChatScreen(
                     if (message == null || message.isRecalled) {
                         Triple(false, "", false)
                     } else {
+                        val itemHeightDp = with(density) { topVisibleItem.size.toDp() }.value
                         val visibleHeightDp = with(density) { 
                             (topVisibleItem.size + topVisibleItem.offset.coerceAtMost(0)).toDp() 
                         }.value
-
-                        val isVisibleEnough = visibleHeightDp >= 40
+                        
+                        val hasEnoughSpace = visibleHeightDp >= 44 && itemHeightDp >= 44
                         
                         val newerMessage = if (firstVisibleIndex > 0) uiState.messages.getOrNull(firstVisibleIndex - 1) else null
                         val olderMessage = if (firstVisibleIndex < uiState.messages.size - 1) uiState.messages.getOrNull(firstVisibleIndex + 1) else null
                         val isLastFromSender = olderMessage == null || olderMessage.isRecalled || olderMessage.senderId != message.senderId
                         val hasOtherSameSender = (newerMessage != null && !newerMessage.isRecalled && newerMessage.senderId == message.senderId && !isLastFromSender) ||
                                                  (olderMessage != null && !olderMessage.isRecalled && olderMessage.senderId == message.senderId)
-
-                        if (hasOtherSameSender && message.senderAvatar.isNotEmpty() && isVisibleEnough) {
+                        
+                        if (hasEnoughSpace) {
+                            Triple(true, message.senderAvatar, message.isMine)
+                        } else if (hasOtherSameSender && message.senderAvatar.isNotEmpty()) {
                             Triple(true, message.senderAvatar, message.isMine)
                         } else {
                             Triple(false, "", false)
@@ -130,6 +133,7 @@ fun ChatScreen(
             val layoutInfo = listState.layoutInfo
             val visibleItems = layoutInfo.visibleItemsInfo
             if (visibleItems.isNotEmpty()) {
+                // 在 reverseLayout 中，index 最小的是底部的
                 visibleItems.minByOrNull { it.index }?.index
             } else {
                 null
@@ -358,15 +362,18 @@ fun ChatScreen(
                             val isNewerSameSender = newerMessage != null && !newerMessage.isRecalled && newerMessage.senderId == message.senderId
 
                             val isTopVisibleItem = index == topVisibleMessageIndex
+                            
+                            // 连体消息判断：如果是同一组消息中的非第一条（即上方还有同发送者的消息）
 
                             val shouldShowItemAvatar = if (isTopVisibleItem) {
-                                !showFloatingAvatar && ((isLastFromSender && avatarFollowEnabled) || isFirstFromSender)
+                                // 如果是底部可见的第一条，且开启了悬浮头像，则只有它是该组最后一条时才显示自带头像
+                                if (showFloatingAvatar) isFirstFromSender else true
                             } else {
                                 isFirstFromSender
                             }
                             
-                            val avatarAlignment = if (isTopVisibleItem && shouldShowItemAvatar && avatarFollowEnabled) {
-                                if (isLastFromSender) Alignment.Top else Alignment.Bottom
+                            val avatarAlignment = if (isTopVisibleItem && avatarFollowEnabled) {
+                                if (isFirstFromSender) Alignment.Bottom else Alignment.Top
                             } else {
                                 Alignment.Bottom
                             }
