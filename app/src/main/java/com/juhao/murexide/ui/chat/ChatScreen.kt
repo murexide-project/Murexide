@@ -36,6 +36,7 @@ import com.juhao.murexide.ui.chat.components.EditMessageDialog
 import com.juhao.murexide.ui.chat.components.MessageBubble
 import com.juhao.murexide.ui.chat.components.MessageInput
 import com.juhao.murexide.datastore.SettingsStorage
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.shape.RoundedCornerShape
