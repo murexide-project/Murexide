@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.juhao.murexide.data.*
 import com.juhao.murexide.network.WebSocketManager
 import com.juhao.murexide.repository.MessageRepository
+import androidx.core.net.toUri
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -272,7 +273,7 @@ class ChatViewModel(
                     "${it.senderName}: ${it.content}"
                 },
                 quoteImageUrl = state.replyTo?.imageUrl,
-                quoteImageName = state.replyTo?.imageUrl
+                quoteImageName = state.replyTo?.imageUrl.toUri().lastPathSegment
             )
 
             repository.sendMessage(

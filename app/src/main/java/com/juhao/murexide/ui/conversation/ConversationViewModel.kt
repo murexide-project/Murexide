@@ -98,14 +98,16 @@ class ConversationViewModel(
                 val index = conversations.indexOfFirst { it.chatId == message.chatId }
                 
                 if (index != -1) {
-                    val oldConv = conversations.removeAt(index)
-                    val updatedConv = oldConv.copy(
-                        chatContent = message.getDisplayContent(),
-                        timestampMs = message.timestamp,
-                        unreadMessage = oldConv.unreadMessage + 1
-                    )
-                    conversations.add(0, updatedConv)
-                    state.copy(conversations = conversations)
+                    if (!message.isMine) {
+                        val oldConv = conversations.removeAt(index)
+                        val updatedConv = oldConv.copy(
+                            chatContent = message.getDisplayContent(),
+                            timestampMs = message.timestamp,
+                            unreadMessage = oldConv.unreadMessage + 1
+                        )
+                        conversations.add(0, updatedConv)
+                        state.copy(conversations = conversations)
+                    }
                 } else {
                     refresh()
                     state

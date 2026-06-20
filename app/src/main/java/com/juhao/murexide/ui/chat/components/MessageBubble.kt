@@ -125,7 +125,9 @@ fun MessageBubble(
                 Spacer(modifier = Modifier.width(44.dp))
             }
             
-            val isMediaMsg = message.contentType == MessageItem.CONTENT_TYPE_IMAGE || message.contentType == MessageItem.CONTENT_TYPE_STICKER
+            val hideMsgCard = message.contentType == MessageItem.CONTENT_TYPE_IMAGE
+                || message.contentType == MessageItem.CONTENT_TYPE_STICKER
+                || message.contentType == MessageItem.CONTENT_TYPE_FILE
 
             Box(modifier = Modifier.weight(1f, fill = false)) {
                 Column(horizontalAlignment = if (isMine) Alignment.End else Alignment.Start) {
@@ -137,7 +139,7 @@ fun MessageBubble(
                             bottomEnd = if (isMine) if (isFirstFromSender) 16.dp else 4.dp else 16.dp
                         ),
                         colors = CardDefaults.cardColors(
-                            containerColor = if (isMediaMsg)
+                            containerColor = if (hideMsgCard)
                                 MaterialTheme.colorScheme.surface
                             else if (isMine)
                                 MaterialTheme.colorScheme.primaryContainer
@@ -145,7 +147,7 @@ fun MessageBubble(
                                 MaterialTheme.colorScheme.surfaceContainer
                         )
                     ) {
-                        Column(modifier = Modifier.padding(if (isMediaMsg) 0.dp else 8.dp)) {
+                        Column(modifier = Modifier.padding(if (hideMsgCard) 0.dp else 8.dp)) {
                             if (!isMine && isLastFromSender) {
                                 Box(
                                     modifier = Modifier.padding(bottom = 4.dp)
@@ -159,7 +161,7 @@ fun MessageBubble(
                                             style = MaterialTheme.typography.labelSmall,
                                             color = MaterialTheme.colorScheme.primary,
                                             fontWeight = FontWeight.Bold,
-                                            modifier = if (isMediaMsg) {
+                                            modifier = if (hideMsgCard) {
                                                 Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                                             } else {
                                                 Modifier
@@ -266,7 +268,7 @@ fun MessageBubble(
                                                 contentScale = ContentScale.FillWidth,
                                                 modifier = Modifier
                                                     .then(
-                                                        if (isLastFromSender)
+                                                        if (isLastFromSender || message.quoteMsgText != null)
                                                             Modifier.clip(
                                                                 RoundedCornerShape(
                                                                     topStart = 16.dp,
@@ -315,8 +317,22 @@ fun MessageBubble(
                                         Row(
                                             modifier = Modifier
                                                 .fillMaxWidth()
-                                                .clip(RoundedCornerShape(12.dp))
-                                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+                                                .then(
+                                                    if (isLastFromSender || message.quoteMsgText != null)
+                                                        Modifier.clip(
+                                                            RoundedCornerShape(
+                                                                topStart = 16.dp,
+                                                                topEnd = 16.dp
+                                                            )
+                                                        )
+                                                     else Modifier
+                                                )
+                                                .background(
+                                                    if (isMine)
+                                                        MaterialTheme.colorScheme.primaryContainer
+                                                    else
+                                                        MaterialTheme.colorScheme.surfaceContainer
+                                                )
                                                 .clickable { /* TODO: 打开/下载文件 */ }
                                                 .padding(12.dp),
                                             verticalAlignment = Alignment.CenterVertically
@@ -349,16 +365,32 @@ fun MessageBubble(
                                                     color = MaterialTheme.colorScheme.onSurface
                                                 )
                                                 
-                                                message.fileSize?.let { size ->
+                                                Row(modifier = Modifier.padding(top = 2.dp)) {
+                                                    message.fileSize?.let { size ->
+                                                        Text(
+                                                            text = formatFileSize(size),
+                                                            fontSize = 12.sp,
+                                                            lineHeight = 18.sp,
+                                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                                                            modifier = Modifier.padding(end = 4.dp)
+                                                        )
+                                                    }
                                                     Text(
-                                                        text = formatFileSize(size),
+                                                        text = timestampDisplay,
                                                         fontSize = 12.sp,
                                                         lineHeight = 18.sp,
-                                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                                                        modifier = Modifier.padding(top = 2.dp)
+                                                        maxLines = 1,
+                                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                                                     )
                                                 }
                                             }
+                                            
+                                            Icon(
+                                                imageVector = Icons.Rounded.Download,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(12.dp),
+                                                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
+                                            )
                                         }
                                     }
                                 }
@@ -372,7 +404,7 @@ fun MessageBubble(
                                 }
                             }
 
-                            if (!isMediaMsg) {
+                            if (!hideMsgCard) {
                                 Row(
                                     modifier = Modifier.align(if (isMine) Alignment.End else Alignment.Start)
                                 ) {
