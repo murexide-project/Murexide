@@ -248,242 +248,238 @@ fun ChatScreen(
         }
     }
     
-    Box(
-        modifier = Modifier.fillMaxSize()
-    ) {
-        uiState.backgroundUrl?.takeIf { it.isNotEmpty() }?.let { bgUrl ->
-            val bgRequest = remember(bgUrl) {
-                ImageRequest.Builder(context)
-                    .data(bgUrl)
-                    .apply {
-                        if (bgUrl.contains("jwznb.com")) {
-                            setHeader("Referer", "https://myapp.jwznb.com")
+    Scaffold(
+        modifier = Modifier.fillMaxSize(),
+        topBar = {
+            TopAppBar(
+                title = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Avatar(
+                            url = chatAvatar,
+                            size = 36.dp
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Column {
+                            Text(
+                                text = chatName,
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            if (chatType == 2 && uiState.memberCount != null) {
+                                Text(
+                                    text = "${uiState.memberCount} 人",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1
+                                )
+                            }
                         }
                     }
-                    .build()
-            }
-            AsyncImage(
-                model = bgRequest,
-                contentDescription = null,
-                modifier = Modifier.fillMaxSize().alpha(0.5f),
-                contentScale = ContentScale.Crop
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                ),
+                actions = {
+                    Box{
+                        IconButton(onClick = {  }) {
+                            Icon(Icons.Rounded.MoreVert, contentDescription = "更多")
+                        }
+                    }
+                },
+                navigationIcon = {
+                    IconButton(onClick = onBackClick) {
+                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "返回")
+                    }
+                }
             )
-        }
-    
-        Scaffold(
-            modifier = Modifier.fillMaxSize(),
-            topBar = {
-                TopAppBar(
-                    title = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Avatar(
-                                url = chatAvatar,
-                                size = 36.dp
+        },
+        bottomBar = {
+            Column(modifier = Modifier.imePadding()) {
+                AnimatedVisibility(
+                    visible = uiState.replyTo != null,
+                    enter = fadeIn() + expandVertically(),
+                    exit = fadeOut() + shrinkVertically()
+                ) {
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .width(3.dp)
+                                    .height(32.dp)
+                                    .background(
+                                        MaterialTheme.colorScheme.primary,
+                                        RoundedCornerShape(2.dp)
+                                    )
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Column {
+                            Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = chatName,
-                                    style = MaterialTheme.typography.bodyLarge,
+                                    text = uiState.replyTo?.senderName ?: "用户",
+                                    fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                Text(
+                                    text = uiState.replyTo?.getDisplayContent() ?: "消息",
+                                    fontSize = 12.sp,
                                     maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
+                                    overflow = TextOverflow.Ellipsis,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
-                                if (chatType == 2 && uiState.memberCount != null) {
-                                    Text(
-                                        text = "${uiState.memberCount} 人",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        maxLines = 1
-                                    )
-                                }
                             }
-                        }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.9f)
-                    ),
-                    actions = {
-                        Box{
-                            IconButton(onClick = {  }) {
-                                Icon(Icons.Rounded.MoreVert, contentDescription = "更多")
-                            }
-                        }
-                    },
-                    navigationIcon = {
-                        IconButton(onClick = onBackClick) {
-                            Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "返回")
-                        }
-                    }
-                )
-            },
-            bottomBar = {
-                Column(modifier = Modifier.imePadding()) {
-                    AnimatedVisibility(
-                        visible = uiState.replyTo != null,
-                        enter = fadeIn() + expandVertically(),
-                        exit = fadeOut() + shrinkVertically()
-                    ) {
-                        Surface(
-                            modifier = Modifier.fillMaxWidth(),
-                            color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.9f),
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 12.dp, vertical = 8.dp),
-                                verticalAlignment = Alignment.CenterVertically
+                            IconButton(
+                                onClick = { viewModel.clearReplyTo() },
+                                modifier = Modifier.size(24.dp)
                             ) {
-                                Box(
-                                    modifier = Modifier
-                                        .width(3.dp)
-                                        .height(32.dp)
-                                        .background(
-                                            MaterialTheme.colorScheme.primary,
-                                            RoundedCornerShape(2.dp)
-                                        )
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = uiState.replyTo?.senderName ?: "用户",
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.primary
-                                    )
-                                    Text(
-                                        text = uiState.replyTo?.getDisplayContent() ?: "消息",
-                                        fontSize = 12.sp,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                                IconButton(
-                                    onClick = { viewModel.clearReplyTo() },
-                                    modifier = Modifier.size(24.dp)
-                                ) {
-                                    Icon(Icons.Rounded.Close, contentDescription = "取消引用", modifier = Modifier.size(16.dp))
-                                }
+                                Icon(Icons.Rounded.Close, contentDescription = "取消引用", modifier = Modifier.size(16.dp))
                             }
                         }
                     }
-        
-                    MessageInput(
-                        inputText = uiState.inputText,
-                        isMarkdown = uiState.isMarkdown,
-                        isSending = uiState.isSending,
-                        onTextChange = { viewModel.updateInputText(it) },
-                        onSendClick = { viewModel.sendMessage() },
-                        onAddImageClick = { },
-                        onToggleMarkdown = { viewModel.toggleMarkdown() }
-                    )
                 }
-            }
-        ) { innerPadding ->
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-            ) {
-                if (uiState.isLoading && uiState.messages.isEmpty()) {
-                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-                } else if (uiState.error != null && uiState.messages.isEmpty()) {
-                    Text(
-                        text = "错误: ${uiState.error}",
-                        color = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.align(Alignment.Center)
-                    )
-                } else {
-                    PullToRefreshBox(
-                        isRefreshing = uiState.isRefreshing,
-                        onRefresh = { viewModel.refresh() },
-                        modifier = Modifier.fillMaxSize()
-                    ) {
-                        LazyColumn(
-                            state = listState,
-                            modifier = Modifier.fillMaxSize(),
-                            reverseLayout = true,
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            items(
-                                items = uiState.messages,
-                                key = { it.msgId }
-                            ) { message ->
-                                val index = uiState.messages.indexOf(message)
-                                
-                                val newerMessage = if (index > 0) uiState.messages[index - 1] else null
-                                val olderMessage = if (index < uiState.messages.size - 1) uiState.messages[index + 1] else null
-                            
-                                val isFirstFromSender = newerMessage == null || newerMessage.isRecalled || newerMessage.contentType == MessageItem.CONTENT_TYPE_TIP || newerMessage.senderId != message.senderId
-                                val isLastFromSender = olderMessage == null || olderMessage.isRecalled || olderMessage.contentType == MessageItem.CONTENT_TYPE_TIP || olderMessage.senderId != message.senderId
-                                val isOlderSameSender = olderMessage != null && !olderMessage.isRecalled && olderMessage.contentType != MessageItem.CONTENT_TYPE_TIP && olderMessage.senderId == message.senderId
-                                val isNewerSameSender = newerMessage != null && !newerMessage.isRecalled && newerMessage.contentType != MessageItem.CONTENT_TYPE_TIP && newerMessage.senderId == message.senderId
-                            
-                                val isTopVisibleItem = message.msgId == topVisibleMessageId
-                            
-                                val shouldShowItemAvatar = if (isTopVisibleItem) {
-                                    !showFloatingAvatar && ((isLastFromSender && avatarFollowEnabled) || isFirstFromSender)
-                                } else {
-                                    isFirstFromSender
-                                }
-                            
-                                val avatarAlignment = if (isTopVisibleItem && shouldShowItemAvatar && avatarFollowEnabled) {
-                                    if (isLastFromSender) Alignment.Top else Alignment.Bottom
-                                } else {
-                                    Alignment.Bottom
-                                }
-                            
-                                MessageBubble(
-                                    message = message,
-                                    onRecall = { viewModel.showRecallDialog(message.msgId) },
-                                    onEdit = { viewModel.showEditDialog(message) },
-                                    onReply = { viewModel.setReplyTo(message) },
-                                    isAdmin = uiState.isAdmin,
-                                    isLastFromSender = isLastFromSender,
-                                    isFirstFromSender = isFirstFromSender,
-                                    isOlderSameSender = isOlderSameSender,
-                                    isNewerSameSender = isNewerSameSender,
-                                    showAvatar = shouldShowItemAvatar,
-                                    avatarAlignment = avatarAlignment
-                                )
-                            }
     
-                            if (uiState.isLoadingMore) {
-                                item {
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(16.dp),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        CircularProgressIndicator()
-                                    }
-                                }
+                MessageInput(
+                    inputText = uiState.inputText,
+                    isMarkdown = uiState.isMarkdown,
+                    isSending = uiState.isSending,
+                    onTextChange = { viewModel.updateInputText(it) },
+                    onSendClick = { viewModel.sendMessage() },
+                    onAddImageClick = { },
+                    onToggleMarkdown = { viewModel.toggleMarkdown() }
+                )
+            }
+        }
+    ) { innerPadding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+        ) {
+            uiState.backgroundUrl?.takeIf { it.isNotEmpty() }?.let { bgUrl ->
+                val bgRequest = remember(bgUrl) {
+                    ImageRequest.Builder(context)
+                        .data(bgUrl)
+                        .apply {
+                            if (bgUrl.contains("jwznb.com")) {
+                                setHeader("Referer", "https://myapp.jwznb.com")
                             }
                         }
-                    }
-        
-                    AnimatedScrollToBottomButton(
-                        visible = showScrollToBottom,
-                        unreadCount = unreadCount,
-                        onClick = scrollToBottom,
-                        modifier = Modifier
-                            .align(Alignment.BottomCenter)
-                            .padding(12.dp)
-                    )
-    
-                    if (showFloatingAvatar) {
-                        Column (
-                            modifier = Modifier
-                                .align(if (floatingAvatarIsMine) Alignment.BottomEnd else Alignment.BottomStart)
-                                .padding(horizontal = 8.dp, vertical = 4.dp)
-                        ) {
-                            Avatar(
-                                url = floatingAvatarUrl,
-                                size = 36.dp
+                        .build()
+                }
+                AsyncImage(
+                    model = bgRequest,
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize().alpha(0.5f),
+                    contentScale = ContentScale.Crop
+                )
+            }
+
+            if (uiState.isLoading && uiState.messages.isEmpty()) {
+                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+            } else if (uiState.error != null && uiState.messages.isEmpty()) {
+                Text(
+                    text = "错误: ${uiState.error}",
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.align(Alignment.Center)
+                )
+            } else {
+                PullToRefreshBox(
+                    isRefreshing = uiState.isRefreshing,
+                    onRefresh = { viewModel.refresh() },
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    LazyColumn(
+                        state = listState,
+                        modifier = Modifier.fillMaxSize(),
+                        reverseLayout = true,
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        items(
+                            items = uiState.messages,
+                            key = { it.msgId }
+                        ) { message ->
+                            val index = uiState.messages.indexOf(message)
+                            
+                            val newerMessage = if (index > 0) uiState.messages[index - 1] else null
+                            val olderMessage = if (index < uiState.messages.size - 1) uiState.messages[index + 1] else null
+                        
+                            val isFirstFromSender = newerMessage == null || newerMessage.isRecalled || newerMessage.contentType == MessageItem.CONTENT_TYPE_TIP || newerMessage.senderId != message.senderId
+                            val isLastFromSender = olderMessage == null || olderMessage.isRecalled || olderMessage.contentType == MessageItem.CONTENT_TYPE_TIP || olderMessage.senderId != message.senderId
+                            val isOlderSameSender = olderMessage != null && !olderMessage.isRecalled && olderMessage.contentType != MessageItem.CONTENT_TYPE_TIP && olderMessage.senderId == message.senderId
+                            val isNewerSameSender = newerMessage != null && !newerMessage.isRecalled && newerMessage.contentType != MessageItem.CONTENT_TYPE_TIP && newerMessage.senderId == message.senderId
+                        
+                            val isTopVisibleItem = message.msgId == topVisibleMessageId
+                        
+                            val shouldShowItemAvatar = if (isTopVisibleItem) {
+                                !showFloatingAvatar && ((isLastFromSender && avatarFollowEnabled) || isFirstFromSender)
+                            } else {
+                                isFirstFromSender
+                            }
+                        
+                            val avatarAlignment = if (isTopVisibleItem && shouldShowItemAvatar && avatarFollowEnabled) {
+                                if (isLastFromSender) Alignment.Top else Alignment.Bottom
+                            } else {
+                                Alignment.Bottom
+                            }
+                        
+                            MessageBubble(
+                                message = message,
+                                onRecall = { viewModel.showRecallDialog(message.msgId) },
+                                onEdit = { viewModel.showEditDialog(message) },
+                                onReply = { viewModel.setReplyTo(message) },
+                                isAdmin = uiState.isAdmin,
+                                isLastFromSender = isLastFromSender,
+                                isFirstFromSender = isFirstFromSender,
+                                isOlderSameSender = isOlderSameSender,
+                                isNewerSameSender = isNewerSameSender,
+                                showAvatar = shouldShowItemAvatar,
+                                avatarAlignment = avatarAlignment
                             )
                         }
+
+                        if (uiState.isLoadingMore) {
+                            item {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    CircularProgressIndicator()
+                                }
+                            }
+                        }
+                    }
+                }
+    
+                AnimatedScrollToBottomButton(
+                    visible = showScrollToBottom,
+                    unreadCount = unreadCount,
+                    onClick = scrollToBottom,
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(12.dp)
+                )
+
+                if (showFloatingAvatar) {
+                    Column (
+                        modifier = Modifier
+                            .align(if (floatingAvatarIsMine) Alignment.BottomEnd else Alignment.BottomStart)
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Avatar(
+                            url = floatingAvatarUrl,
+                            size = 36.dp
+                        )
                     }
                 }
             }
