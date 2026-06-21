@@ -21,6 +21,7 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -480,11 +481,12 @@ fun ChatScreen(
                 if (showFloatingAvatar) {
                     Column (
                         modifier = Modifier
+                            .alpha(if (showMenuMsgId != null && topVisibleMessageId != showMenuMsgId) 0.4f else 1f)
                             .align(if (floatingAvatarIsMine) Alignment.BottomEnd else Alignment.BottomStart)
                             .padding(horizontal = 8.dp, vertical = 4.dp)
                     ) {
                         Avatar(
-                            url = floatingAvatarUrl,
+                            url = floatingAvatarUrl,i
                             size = 36.dp
                         )
                     }
