@@ -221,7 +221,6 @@ fun ChatScreen(
                 
                 if (isAtBottom && !listState.isScrollInProgress) {
                     isScrollingToBottom = true
-                    delay(300)
                     if (!listState.isScrollInProgress) {
                         listState.animateScrollToItem(0)
                         unreadCount = 0
