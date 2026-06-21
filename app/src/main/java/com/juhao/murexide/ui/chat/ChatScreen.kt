@@ -36,6 +36,7 @@ import com.juhao.murexide.ui.chat.components.EditMessageDialog
 import com.juhao.murexide.ui.chat.components.MessageBubble
 import com.juhao.murexide.ui.chat.components.MessageInput
 import com.juhao.murexide.datastore.SettingsStorage
+import com.juhao.murexide.data.MessageItem
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -411,10 +412,10 @@ fun ChatScreen(
                             val newerMessage = if (index > 0) uiState.messages[index - 1] else null
                             val olderMessage = if (index < uiState.messages.size - 1) uiState.messages[index + 1] else null
                         
-                            val isFirstFromSender = newerMessage == null || newerMessage.isRecalled || newerMessage.senderId != message.senderId
-                            val isLastFromSender = olderMessage == null || olderMessage.isRecalled || olderMessage.senderId != message.senderId
-                            val isOlderSameSender = olderMessage != null && !olderMessage.isRecalled && olderMessage.senderId == message.senderId
-                            val isNewerSameSender = newerMessage != null && !newerMessage.isRecalled && newerMessage.senderId == message.senderId
+                            val isFirstFromSender = newerMessage == null || newerMessage.isRecalled || newerMessage.contentType == MessageItem.CONTENT_TYPE_TIP || newerMessage.senderId != message.senderId
+                            val isLastFromSender = olderMessage == null || olderMessage.isRecalled || olderMessage.contentType == MessageItem.CONTENT_TYPE_TIP || olderMessage.senderId != message.senderId
+                            val isOlderSameSender = olderMessage != null && !olderMessage.isRecalled && olderMessage.contentType != MessageItem.CONTENT_TYPE_TIP && olderMessage.senderId == message.senderId
+                            val isNewerSameSender = newerMessage != null && !newerMessage.isRecalled && newerMessage.contentType != MessageItem.CONTENT_TYPE_TIP && newerMessage.senderId == message.senderId
                         
                             val isTopVisibleItem = message.msgId == topVisibleMessageId
                         
