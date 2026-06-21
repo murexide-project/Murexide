@@ -45,7 +45,7 @@ fun MessageInput(
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.9f),
         tonalElevation = 0.dp
     ) {
         Column(

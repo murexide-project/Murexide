@@ -178,9 +178,9 @@ fun MessageBubble(
                             containerColor = if (hideMsgCard)
                                 Color.Transparent
                             else if (isMine)
-                                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.95f)
+                                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.9f)
                             else
-                                MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.95f)
+                                MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.9f)
                         )
                     ) {
                         Column(modifier = Modifier.padding(if (hideMsgCard) 0.dp else 8.dp)) {
@@ -215,8 +215,7 @@ fun MessageBubble(
                             message.cmdName?.let {
                                 Text(
                                     text = "/$it",
-                                    fontSize = 12.sp,
-                                    lineHeight = 20.sp,
+                                    style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                                 )
                             }
@@ -372,9 +371,9 @@ fun MessageBubble(
                                                 )
                                                 .background(
                                                     if (isMine)
-                                                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.95f)
+                                                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.9f)
                                                     else
-                                                        MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.95f)
+                                                        MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.9f)
                                                 )
                                                 .clickable { /* TODO: 打开/下载文件 */ }
                                                 .padding(12.dp),
@@ -442,7 +441,7 @@ fun MessageBubble(
                                     Text(
                                         text = "暂不支持解析此消息：${message.contentType}",
                                         style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
                                     )
                                 }
                             }
