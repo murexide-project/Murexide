@@ -95,7 +95,7 @@ class ConversationViewModel(
         _uiState.update { state ->
             if (state is ConversationUiState.Success) {
                 val conversations = state.conversations.toMutableList()
-                val index = conversations.indexOfFirst { it.chatId == message.chatId }
+                val index = conversations.indexOfFirst { it.chatId == message.chatId || (message.chatType == 1 && it.chatId == message.senderId) }
                 
                 if (index != -1) {
                     val oldConv = conversations.removeAt(index)
