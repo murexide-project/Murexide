@@ -54,6 +54,7 @@ class MessageRepository {
                                     senderId = msg.sender?.chat_id ?: "",
                                     senderName = msg.sender?.name ?: "",
                                     senderAvatar = msg.sender?.avatar_url ?: "",
+                                    senderType = msg.sender?.chat_type ?: 1,
                                     chatId = chatId,
                                     chatType = chatType,
                                     content = msg.content?.text ?: "",

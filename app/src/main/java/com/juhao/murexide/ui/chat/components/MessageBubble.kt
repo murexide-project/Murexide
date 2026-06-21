@@ -91,15 +91,15 @@ fun MessageBubble(
         ) {
             Surface(
                 shape = RoundedCornerShape(500.dp),
-                color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.95f),
+                color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.9f),
                 contentColor = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.widthIn(max = 250.dp)
             ) {
                 Text(
                     text = "${message.senderName} 撤回了一条消息",
                     fontSize = 12.sp,
-                    lineHeight = 20.sp,
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                    lineHeight = 18.sp,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)
                 )
             }
         }
@@ -157,25 +157,31 @@ fun MessageBubble(
                         )
                     ) {
                         Column(modifier = Modifier.padding(if (hideMsgCard) 0.dp else 8.dp)) {
-                            if (!isMine && isLastFromSender) {
-                                Box(
-                                    modifier = Modifier.padding(bottom = 4.dp)
+                            if (!isMine && isLastFromSender && !hideMsgCard) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Surface(
-                                        shape = RoundedCornerShape(12.dp),
-                                        color = if (hideMsgCard) MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.95f) else Color.Transparent
-                                    ) {
-                                        Text(
-                                            text = message.senderName,
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.primary,
-                                            fontWeight = FontWeight.Bold,
-                                            modifier = if (hideMsgCard) {
-                                                Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                                            } else {
-                                                Modifier.padding(horizontal = 2.dp)
-                                            }
-                                        )
+                                    Text(
+                                        text = message.senderName,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.padding(bottom = 4.dp)
+                                    )
+                                    if (message.senderType == 3) {
+                                        Surface(
+                                            shape = RoundedCornerShape(50.dp),
+                                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                                        ) {
+                                            Text(
+                                                text = "机器人",
+                                                fontSize = 10.sp,
+                                                color = MaterialTheme.colorScheme.primary
+                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -299,7 +305,7 @@ fun MessageBubble(
                                                     .align(Alignment.BottomEnd)
                                                     .padding(end = 6.dp, bottom = 6.dp)
                                                     .background(
-                                                        color = Color.Black.copy(alpha = 0.5f),
+                                                        color = Color.Black.copy(alpha = 0.3f),
                                                         shape = RoundedCornerShape(50.dp)
                                                     )
                                                     .padding(horizontal = 6.dp, vertical = 2.dp)
