@@ -261,8 +261,7 @@ fun ChatScreen(
                         Column {
                             Text(
                                 text = chatName,
-                                fontSize = 18.sp,
-                                lineHeight = 26.sp,
+                                style = MaterialTheme.typography.bodyLarge,
                                 fontWeight = FontWeight.Bold,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
@@ -270,8 +269,7 @@ fun ChatScreen(
                             if (chatType == 2 && uiState.memberCount != null) {
                                 Text(
                                     text = "${uiState.memberCount} 人",
-                                    fontSize = 12.sp,
-                                    lineHeight = 18.sp,
+                                    style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     maxLines = 1
                                 )
