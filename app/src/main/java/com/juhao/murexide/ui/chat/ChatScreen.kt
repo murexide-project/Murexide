@@ -75,6 +75,8 @@ fun ChatScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val uiState by viewModel.uiState.collectAsState()
+    
+    var showMenuMsgId by remember { mutableStateOf<String?>(null) }
     val recallDialog by viewModel.recallDialog.collectAsState()
     val editDialog by viewModel.editDialog.collectAsState()
 
@@ -442,7 +444,12 @@ fun ChatScreen(
                                 isOlderSameSender = isOlderSameSender,
                                 isNewerSameSender = isNewerSameSender,
                                 showAvatar = shouldShowItemAvatar,
-                                avatarAlignment = avatarAlignment
+                                avatarAlignment = avatarAlignment,
+                                showMenu = showMenuMsgId == message.msgId,
+                                showMenuMsgId = showMenuMsgId,
+                                showMenuChanged = {
+                                    showMenuMsgId = it
+                                }
                             )
                         }
 
