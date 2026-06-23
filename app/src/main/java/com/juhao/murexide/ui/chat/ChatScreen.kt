@@ -193,8 +193,9 @@ fun ChatScreen(
         var lastMsgId: String? = null
         var pendingCount = 0
         
-        snapshotFlow { uiState.messages.firstOrNull()?.msgId }
-            .collect { msgId: String? ->
+        snapshotFlow { uiState.messages.firstOrNull() }
+            .collect { message: MessageItem? ->
+                val msgId = message?.msgId
                 if (msgId == null) return@collect
                 if (msgId == lastMsgId) return@collect
                 lastMsgId = msgId
@@ -232,7 +233,9 @@ fun ChatScreen(
                     isScrollingToBottom = false
                     pendingCount = 0
                 } else {
-                    unreadCount += pendingCount
+                    if (message?.isMine ?: false) {
+                        unreadCount += pendingCount
+                    }
                     pendingCount = 0
                 }
             }
