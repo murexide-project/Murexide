@@ -33,6 +33,7 @@ class ChatViewModel(
     private val chatId: String,
     private val chatType: Int,
     private val deviceId: String,
+    private val context: Context,
     private val repository: MessageRepository = MessageRepository(),
     private val backgroundRepository: ChatBackgroundRepository = ChatBackgroundRepository(),
     private val stickerRepository: StickerRepository = StickerRepository(),

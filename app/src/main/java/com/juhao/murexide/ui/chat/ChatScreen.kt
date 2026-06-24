@@ -1,5 +1,7 @@
 package com.juhao.murexide.ui.chat
 
+import android.content.ContentResolver
+import android.database.Cursor
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -686,13 +688,13 @@ fun AnimatedScrollToBottomButton(
 private fun getRealPathFromUri(context: Context, uri: Uri): String? {
     return try {
         val projection = arrayOf(MediaStore.Images.Media.DATA)
-        context.contentResolver.query(uri, projection, null, null, null)?.use { cursor ->
-            val columnIndex = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATA)
-            cursor.moveToFirst()
-            cursor.getString(columnIndex)
+        val cursor: Cursor? = context.contentResolver.query(uri, projection, null, null, null)
+        cursor?.use { 
+            val columnIndex = it.getColumnIndexOrThrow(MediaStore.Images.Media.DATA)
+            it.moveToFirst()
+            it.getString(columnIndex)
         }
     } catch (e: Exception) {
-        // 如果无法获取真实路径，尝试直接使用 Uri
         uri.toString()
     }
 }
