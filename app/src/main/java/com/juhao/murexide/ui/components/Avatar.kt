@@ -23,14 +23,12 @@ fun Avatar(
 ) {
     val context = LocalContext.current
     val settingsStorage = remember { SettingsStorage(context) }
-    var squareAvatar by remember { mutableStateOf(cachedSquareAvatar) }
 
     LaunchedEffect(Unit) {
         cachedSquareAvatar = settingsStorage.getSquareAvatar()
-        squareAvatar = cachedSquareAvatar
     }
 
-    val shape = if (squareAvatar == true) {
+    val shape = if (cachedSquareAvatar == true) {
         RoundedCornerShape(size / 5)
     } else {
         CircleShape

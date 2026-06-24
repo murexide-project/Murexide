@@ -5,6 +5,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.juhao.murexide.datastore.TokenStorage
 import com.juhao.murexide.ui.theme.MurexideTheme
 import kotlinx.coroutines.runBlocking
@@ -25,12 +26,23 @@ class ChatActivity : ComponentActivity() {
         setContent {
             MurexideTheme {
                 ChatScreen(
-                    token = token,
-                    chatId = chatId,
                     chatType = chatType,
                     chatName = chatName,
                     chatAvatar = chatAvatar,
-                    onBackClick = { finish() }
+                    onBackClick = { finish() },
+                    viewModel = viewModel(
+                        factory = object : androidx.lifecycle.ViewModelProvider.Factory {
+                            @Suppress("UNCHECKED_CAST")
+                            override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+                                return ChatViewModel(
+                                    token = token,
+                                    chatId = chatId,
+                                    chatType = chatType,
+                                    deviceId = com.juhao.murexide.ui.chat.getDeviceId()
+                                ) as T
+                            }
+                        }
+                    )
                 )
             }
         }

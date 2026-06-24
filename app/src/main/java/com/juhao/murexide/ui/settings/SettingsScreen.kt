@@ -1,3 +1,5 @@
+@file:Suppress("AssignedValueIsNeverRead")
+
 package com.juhao.murexide.ui.settings
 
 import android.widget.Toast
@@ -44,12 +46,14 @@ fun SettingsScreen(
     var squareAvatar by remember { mutableStateOf(false) }
     var avatarFollow by remember { mutableStateOf(false) }
     var showSticky by remember { mutableStateOf(true) }
+    var bigScreen by remember { mutableStateOf(true) }
     var updateChannel by remember { mutableStateOf("stable") }
 
     LaunchedEffect(Unit) {
         squareAvatar = settingsStorage.getSquareAvatar()
         avatarFollow = settingsStorage.getAvatarFollow()
         showSticky = settingsStorage.getShowSticky()
+        bigScreen = settingsStorage.getBigScreen()
         updateChannel = settingsStorage.getUpdateChannel()
     }
     
@@ -140,6 +144,18 @@ fun SettingsScreen(
             }
             
             SettingsGroup(title = "行为") {
+                SettingsSwitchItem(
+                    icon = Icons.Rounded.LaptopChromebook,
+                    title = "大屏模式",
+                    subtitle = "在横屏下使用大屏模式",
+                    checked = bigScreen,
+                    onCheckedChange = { checked ->
+                        bigScreen = checked
+                        scope.launch {
+                            settingsStorage.setBigScreen(checked)
+                        }
+                    }
+                )
                 SettingsSwitchItem(
                     icon = Icons.Rounded.Animation,
                     title = "聊天页头像跟随",

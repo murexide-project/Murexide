@@ -195,7 +195,7 @@ fun MessageBubble(
                                 else if (isMine)
                                     MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.9f)
                                 else
-                                    MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.9f)
+                                    MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp).copy(alpha = 0.9f)
                             )
                         ) {
                             Column(modifier = Modifier.padding(if (hideMsgCard) 0.dp else 8.dp)) {
@@ -388,7 +388,7 @@ fun MessageBubble(
                                                         if (isMine)
                                                             MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.9f)
                                                         else
-                                                            MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.9f)
+                                                            MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp).copy(alpha = 0.9f)
                                                     )
                                                     .clickable { /* TODO: 打开/下载文件 */ }
                                                     .padding(12.dp),

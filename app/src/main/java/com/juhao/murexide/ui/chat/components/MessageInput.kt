@@ -36,23 +36,30 @@ fun MessageInput(
     inputText: String,
     isMarkdown: Boolean,
     isSending: Boolean = false,
+    bigScreenMode: Boolean = false,
     onTextChange: (String) -> Unit,
     onSendClick: () -> Unit,
     onAddImageClick: () -> Unit,
-    onToggleMarkdown: () -> Unit
+    onToggleMarkdown: () -> Unit,
+    onEmojiClick: () -> Unit
 ) {
     var showMenu by remember { mutableStateOf(false) }
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        color = MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp),
         tonalElevation = 0.dp
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(8.dp)
-                .navigationBarsPadding()
+                .then(
+                    if (!bigScreenMode)
+                        Modifier.navigationBarsPadding()
+                    else
+                        Modifier
+                )
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -122,11 +129,11 @@ fun MessageInput(
                     shape = RoundedCornerShape(20.dp),
                     maxLines = 5
                 )
-                
+
                 Spacer(modifier = Modifier.width(5.dp))
-                
+
                 IconButton(
-                    onClick = {},
+                    onClick = onEmojiClick,
                     modifier = Modifier.size(36.dp)
                 ) {
                     Icon(

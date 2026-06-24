@@ -29,53 +29,40 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.juhao.murexide.ui.components.Avatar
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.juhao.murexide.ui.chat.components.EditMessageDialog
 import com.juhao.murexide.ui.chat.components.MessageBubble
 import com.juhao.murexide.ui.chat.components.MessageInput
+import com.juhao.murexide.ui.chat.components.EmojiPanel
 import com.juhao.murexide.datastore.SettingsStorage
 import com.juhao.murexide.data.MessageItem
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.flow.distinctUntilChanged
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.MoreVert
-import androidx.compose.ui.draw.alpha
 
 @OptIn(ExperimentalMaterial3Api::class, FlowPreview::class)
 @Composable
 fun ChatScreen(
-    token: String,
-    chatId: String,
+    modifier: Modifier = Modifier,
     chatType: Int,
     chatName: String,
     chatAvatar: String,
-    onBackClick: () -> Unit,
-    viewModel: ChatViewModel = viewModel(
-        factory = object : androidx.lifecycle.ViewModelProvider.Factory {
-            @Suppress("UNCHECKED_CAST")
-            override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
-                return ChatViewModel(
-                    token = token,
-                    chatId = chatId,
-                    chatType = chatType,
-                    deviceId = getDeviceId()
-                ) as T
-            }
-        }
-    )
+    onBackClick: () -> Unit = {},
+    bigScreenMode: Boolean = false,
+    viewModel: ChatViewModel
 ) {
     val density = LocalDensity.current
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val uiState by viewModel.uiState.collectAsState()
+    val expressions by viewModel.stickerPanel.collectAsState()
     
     var showMenuMsgId by remember { mutableStateOf<String?>(null) }
     val recallDialog by viewModel.recallDialog.collectAsState()
@@ -154,7 +141,6 @@ fun ChatScreen(
             Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
         }
     }
-
     LaunchedEffect(listState) {
         snapshotFlow {
             val layoutInfo = listState.layoutInfo
@@ -233,7 +219,7 @@ fun ChatScreen(
                     isScrollingToBottom = false
                     pendingCount = 0
                 } else {
-                    if (!message!!.isMine) {
+                    if (!message.isMine) {
                         unreadCount += pendingCount
                     }
                     pendingCount = 0
@@ -256,9 +242,19 @@ fun ChatScreen(
     }
     
     Scaffold(
-        modifier = Modifier.fillMaxSize(),
+        modifier = modifier.fillMaxSize(),
+        contentWindowInsets = if (bigScreenMode) {
+            WindowInsets(0, 0, 0, 0)
+        } else {
+            ScaffoldDefaults.contentWindowInsets
+        },
         topBar = {
             TopAppBar(
+                windowInsets = if (bigScreenMode) {
+                    WindowInsets(top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding())
+                } else {
+                    TopAppBarDefaults.windowInsets
+                },
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Avatar(
@@ -287,7 +283,7 @@ fun ChatScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                    containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp)
                 ),
                 actions = {
                     Box{
@@ -297,14 +293,18 @@ fun ChatScreen(
                     }
                 },
                 navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "返回")
+                    if (!bigScreenMode) {
+                        IconButton(onClick = onBackClick) {
+                            Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "返回")
+                        }
                     }
                 }
             )
         },
         bottomBar = {
-            Column(modifier = Modifier.imePadding()) {
+            Column(
+                modifier = Modifier.imePadding()
+            ) {
                 AnimatedVisibility(
                     visible = uiState.replyTo != null,
                     enter = fadeIn() + expandVertically(),
@@ -359,11 +359,29 @@ fun ChatScreen(
                     inputText = uiState.inputText,
                     isMarkdown = uiState.isMarkdown,
                     isSending = uiState.isSending,
+                    bigScreenMode = bigScreenMode,
                     onTextChange = { viewModel.updateInputText(it) },
                     onSendClick = { viewModel.sendMessage() },
                     onAddImageClick = { },
-                    onToggleMarkdown = { viewModel.toggleMarkdown() }
+                    onToggleMarkdown = { viewModel.toggleMarkdown() },
+                    onEmojiClick = {
+                        viewModel.toggleStickerPanel()
+                    }
                 )
+
+                if (expressions.isVisible) {
+                    EmojiPanel(
+                        expressions = expressions.expressions,
+                        isLoading = expressions.isLoading,
+                        onExpressionClick = {
+
+                        },
+                        onStickerItemClick = {
+
+                        },
+                        stickerPacks = expressions.stickerPacks
+                    )
+                }
             }
         }
     ) { innerPadding ->
@@ -536,7 +554,7 @@ fun ChatScreen(
     }
 }
 
-private fun getDeviceId(): String {
+fun getDeviceId(): String {
     return "android_${System.currentTimeMillis()}"
 }
 

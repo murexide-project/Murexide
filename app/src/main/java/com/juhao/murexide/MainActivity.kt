@@ -12,13 +12,16 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
@@ -43,6 +46,12 @@ import com.juhao.murexide.ui.mine.MineScreen
 import com.juhao.murexide.ui.theme.MurexideTheme
 import kotlinx.coroutines.launch
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.juhao.murexide.data.ConversationItem
+import com.juhao.murexide.datastore.SettingsStorage
+import com.juhao.murexide.ui.chat.ChatScreen
+import com.juhao.murexide.ui.chat.ChatViewModel
+import com.juhao.murexide.ui.chat.getDeviceId
 
 private data class NavItem(
     val route: String,
@@ -94,9 +103,15 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun MainScreen(token: String, onLogout: () -> Unit) {
     val context = LocalContext.current
+
+    val settingsStorage = remember { SettingsStorage(context) }
+    val bigScreenEnabled by settingsStorage.bigScreenFlow.collectAsState(initial = true)
+
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
+
+    var currentConversation by remember { mutableStateOf<ConversationItem?>(null) }
 
     BoxWithConstraints {
         val useNavigationRail = maxWidth >= 600.dp
@@ -109,7 +124,7 @@ fun MainScreen(token: String, onLogout: () -> Unit) {
                     .weight(1f)
                     .fillMaxSize()
             ) {
-                if (useNavigationRail) {
+                if (useNavigationRail && bigScreenEnabled) {
                     MainNavigationRail(
                         currentRoute = currentRoute,
                         onNavigate = { route ->
@@ -120,22 +135,69 @@ fun MainScreen(token: String, onLogout: () -> Unit) {
                 MainNavHost(
                     token = token,
                     onConversationClick = { currentChat ->
-                        ChatActivity.start(
-                            context = context,
-                            chatId = currentChat.chatId,
-                            chatType = currentChat.chatType,
-                            chatName = currentChat.displayName,
-                            chatAvatar = currentChat.avatarUrl,
-                        )
+                        if (useNavigationRail && bigScreenEnabled) {
+                            currentConversation = currentChat
+                        } else {
+                            ChatActivity.start(
+                                context = context,
+                                chatId = currentChat.chatId,
+                                chatType = currentChat.chatType,
+                                chatName = currentChat.displayName,
+                                chatAvatar = currentChat.avatarUrl,
+                            )
+                        }
                     },
+                    bigScreenMode = useNavigationRail,
                     onLogout = onLogout,
                     modifier = Modifier
-                        .weight(1f)
+                        .weight(if (useNavigationRail) 4f else 1f)
                         .fillMaxSize(),
                     navController = navController
                 )
+                if (useNavigationRail && bigScreenEnabled && currentRoute == "conversations") {
+                    if (currentConversation != null) {
+                        key(currentConversation!!.chatId) {
+                            ChatScreen(
+                                modifier = Modifier.weight(6f).fillMaxHeight(),
+                                chatAvatar = currentConversation!!.avatarUrl,
+                                chatName = currentConversation!!.name,
+                                chatType = currentConversation!!.chatType,
+                                onBackClick = {
+                                    currentConversation = null
+                                },
+                                bigScreenMode = true,
+                                viewModel = viewModel(
+                                    key = "chat_" + currentConversation!!.chatId,
+                                    factory = object : androidx.lifecycle.ViewModelProvider.Factory {
+                                        @Suppress("UNCHECKED_CAST")
+                                        override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+                                            return ChatViewModel(
+                                                token = token,
+                                                chatId = currentConversation!!.chatId,
+                                                chatType = currentConversation!!.chatType,
+                                                deviceId = getDeviceId()
+                                            ) as T
+                                        }
+                                    }
+                                )
+                            )
+                        }
+                    } else {
+                        Column(
+                            modifier = Modifier.weight(7f).fillMaxHeight(),
+                            verticalArrangement = Arrangement.Center,
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.ChatBubble,
+                                contentDescription = null,
+                                modifier = Modifier.size(64.dp)
+                            )
+                        }
+                    }
+                }
             }
-            if (!useNavigationRail) {
+            if (!useNavigationRail || !bigScreenEnabled) {
                 MainNavigationBar(
                     currentRoute = currentRoute,
                     onNavigate = { route ->
@@ -206,7 +268,8 @@ private fun MainNavigationRail(
 private fun MainNavHost(
     modifier: Modifier,
     token: String,
-    onConversationClick: (com.juhao.murexide.data.ConversationItem) -> Unit,
+    onConversationClick: (ConversationItem) -> Unit,
+    bigScreenMode: Boolean = false,
     onLogout: () -> Unit,
     navController: androidx.navigation.NavHostController,
 ) {
@@ -220,7 +283,8 @@ private fun MainNavHost(
         composable("conversations") {
             ConversationListScreen(
                 token = token,
-                onConversationClick = onConversationClick
+                onConversationClick = onConversationClick,
+                bigScreenMode = bigScreenMode
             )
         }
         composable("contacts") {

@@ -20,6 +20,7 @@ import com.juhao.murexide.network.NetworkClient
 import com.juhao.murexide.proto.group.info
 import com.juhao.murexide.proto.group.info_send
 import com.juhao.murexide.repository.ChatBackgroundRepository
+import com.juhao.murexide.repository.StickerRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import okhttp3.MediaType.Companion.toMediaType
@@ -33,6 +34,7 @@ class ChatViewModel(
     private val deviceId: String,
     private val repository: MessageRepository = MessageRepository(),
     private val backgroundRepository: ChatBackgroundRepository = ChatBackgroundRepository(),
+    private val stickerRepository: StickerRepository = StickerRepository(),
     private val wsManager: WebSocketManager = WebSocketManager.getInstance()
 ) : ViewModel() {
 
@@ -59,6 +61,9 @@ class ChatViewModel(
 
     private val _editDialog = MutableStateFlow(EditDialogState())
     val editDialog: StateFlow<EditDialogState> = _editDialog.asStateFlow()
+
+    private val _stickerPanel = MutableStateFlow(StickerPanelState())
+    val stickerPanel: StateFlow<StickerPanelState> = _stickerPanel.asStateFlow()
 
     private var currentMsgId: String? = null
     private var isLoadingMore = false
@@ -403,6 +408,103 @@ class ChatViewModel(
         }
     }
 
+    // ---------- 表情面板 ----------
+
+    /** 切换表情面板显示/隐藏（显示前懒加载一次数据） */
+    fun toggleStickerPanel() {
+        val current = _stickerPanel.value
+        if (current.isVisible) {
+            _stickerPanel.value = current.copy(isVisible = false)
+        } else {
+            _stickerPanel.value = current.copy(isVisible = true)
+            if (!current.isLoaded && !current.isLoading) {
+                loadStickerData()
+            }
+        }
+    }
+
+    fun hideStickerPanel() {
+        _stickerPanel.update { it.copy(isVisible = false) }
+    }
+
+    /** 同时加载个人收藏表情和表情包列表 */
+    private fun loadStickerData() {
+        _stickerPanel.update { it.copy(isLoading = true) }
+        viewModelScope.launch(Dispatchers.IO) {
+            val exprResult = stickerRepository.getExpressionList(token)
+            val packResult = stickerRepository.getStickerList(token)
+
+            val expressions = exprResult.getOrElse {
+                Log.e(TAG, "Failed to load expressions", it); emptyList()
+            }
+            val packs = packResult.getOrElse {
+                Log.e(TAG, "Failed to load sticker packs", it); emptyList()
+            }
+
+            _stickerPanel.update {
+                it.copy(
+                    isLoading = false,
+                    isLoaded = true,
+                    expressions = expressions,
+                    stickerPacks = packs
+                )
+            }
+        }
+    }
+
+    /** 发送个人收藏表情 */
+    fun sendExpression(expression: ExpressionItem) {
+        val url = resolveStickerUrl(expression.url) ?: return
+        sendStickerMessage(
+            imageUrl = url,
+            expressionId = expression.id.toString()
+        )
+    }
+
+    /** 发送表情包里的单个表情 */
+    fun sendStickerItem(item: StickerItem) {
+        val url = resolveStickerUrl(item.url) ?: return
+        sendStickerMessage(
+            imageUrl = url,
+            stickerItemId = item.id,
+            stickerPackId = item.stickerPackId
+        )
+    }
+
+    private fun sendStickerMessage(
+        imageUrl: String,
+        expressionId: String? = null,
+        stickerItemId: Long? = null,
+        stickerPackId: Long? = null
+    ) {
+        val contentType = if (stickerItemId != null) {
+            MessageItem.CONTENT_TYPE_STICKER
+        } else {
+            MessageItem.CONTENT_TYPE_IMAGE
+        }
+        val content = MessageContent(
+            image = imageUrl,
+            expressionId = expressionId,
+            stickerItemId = stickerItemId,
+            stickerPackId = stickerPackId
+        )
+
+        viewModelScope.launch {
+            repository.sendMessage(
+                token = token,
+                chatId = chatId,
+                chatType = chatType,
+                content = content,
+                contentType = contentType
+            ).onSuccess {
+                hideStickerPanel()
+            }.onFailure { error ->
+                _toastMessage.emit("表情发送失败: ${error.message}")
+                error.printStackTrace()
+            }
+        }
+    }
+
     fun addReceivedMessage(message: MessageItem) {
         if (message.msgId in msgIdCache) {
             updateEditedMessage(message)
@@ -467,4 +569,12 @@ data class EditDialogState(
     val message: MessageItem? = null,
     val newContent: String = "",
     val isMarkdown: Boolean = false
+)
+
+data class StickerPanelState(
+    val isVisible: Boolean = false,
+    val isLoading: Boolean = false,
+    val isLoaded: Boolean = false,
+    val expressions: List<ExpressionItem> = emptyList(),
+    val stickerPacks: List<StickerPack> = emptyList()
 )

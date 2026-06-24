@@ -14,6 +14,7 @@ class SettingsStorage(private val context: Context) {
         private val THEME_MODE_KEY = stringPreferencesKey("theme_mode")
         private val SQUARE_AVATAR_KEY = booleanPreferencesKey("square_avatar")
         private val AVATAR_FOLLOW_KEY = booleanPreferencesKey("avatar_follow")
+        private val BIG_SCREEN_KEY = booleanPreferencesKey("big_screen")
         private val SHOW_STICKY_KEY = booleanPreferencesKey("show_sticky")
         private val UPDATE_CHANNEL_KEY = stringPreferencesKey("update_channel")
     }
@@ -32,6 +33,7 @@ class SettingsStorage(private val context: Context) {
     suspend fun getThemeMode(): String {
         return themeModeFlow.first()
     }
+
 
     // 圆角正方形头像
     val squareAvatarFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
@@ -61,6 +63,21 @@ class SettingsStorage(private val context: Context) {
 
     suspend fun getAvatarFollow(): Boolean {
         return avatarFollowFlow.first()
+    }
+
+    // 大屏模式
+    val bigScreenFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[BIG_SCREEN_KEY] ?: true
+    }
+
+    suspend fun setBigScreen(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[BIG_SCREEN_KEY] = enabled
+        }
+    }
+
+    suspend fun getBigScreen(): Boolean {
+        return bigScreenFlow.first()
     }
     
     // 显示置顶会话

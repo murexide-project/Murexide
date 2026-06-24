@@ -34,30 +34,35 @@ import androidx.compose.foundation.shape.CircleShape
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ConversationListScreen(
+    modifier: Modifier = Modifier,
     token: String,
     onConversationClick: (ConversationItem) -> Unit,
-    modifier: Modifier = Modifier,
+    bigScreenMode: Boolean = false,
     viewModel: ConversationViewModel = remember { ConversationViewModel(token) }
 ) {
     val context = LocalContext.current
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
     val uiState by viewModel.uiState.collectAsState()
     val isWsConnected by viewModel.isWsConnected.collectAsState()
-    
+
     val settingsStorage = remember { SettingsStorage(context) }
     var showSticky by remember { mutableStateOf(false) }
-    
+
     LaunchedEffect(Unit) {
         showSticky = settingsStorage.getShowSticky()
     }
 
-    Scaffold (
+    Scaffold(
         modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             TopAppBar(
+                windowInsets = WindowInsets(top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()),
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(stringResource(R.string.app_name))
+                        Text(
+                            stringResource(R.string.app_name),
+                            maxLines = 1
+                        )
                         if (!isWsConnected) {
                             Spacer(modifier = Modifier.width(12.dp))
                             Surface(
@@ -85,11 +90,14 @@ fun ConversationListScreen(
             isRefreshing = uiState is ConversationUiState.Loading,
             onRefresh = { viewModel.refresh() },
             modifier = Modifier
-                 .fillMaxSize()
-                 .padding(
-                     top = it.calculateTopPadding(),
-                     end = it.calculateRightPadding(LayoutDirection.Ltr)
-                 ),
+                .fillMaxSize()
+                .padding(
+                    top = it.calculateTopPadding(),
+                )
+                .then(
+                    if (!bigScreenMode) Modifier.padding(end = it.calculateEndPadding(LayoutDirection.Ltr))
+                    else Modifier.padding(bottom = it.calculateBottomPadding())
+                ),
         ) {
             val state = uiState
             if (state is ConversationUiState.Success) {
@@ -229,9 +237,9 @@ fun ConversationItem(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Avatar(conversation.avatarUrl, 52.dp)
-        
+
         Spacer(modifier = Modifier.width(12.dp))
-        
+
         Column(modifier = Modifier.weight(1f)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -245,18 +253,18 @@ fun ConversationItem(
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f)
                 )
-                
+
                 Spacer(modifier = Modifier.width(8.dp))
-                
+
                 Text(
                     text = formatTime(conversation.timestampMs),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            
+
             Spacer(modifier = Modifier.height(2.dp))
-            
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -280,10 +288,10 @@ fun ConversationItem(
                         modifier = Modifier.size(14.dp)
                     )
                 }
-                
+
                 if (conversation.hasUnread || conversation.isAtMentioned) {
                     Spacer(modifier = Modifier.width(8.dp))
-                    
+
                     Badges(
                         doNotDisturb = conversation.doNotDisturb == 1,
                         hasUnread = conversation.hasUnread,
@@ -299,7 +307,7 @@ fun ConversationItem(
 @Composable
 private fun Badges(
     doNotDisturb: Boolean,
-    hasUnread: Boolean, 
+    hasUnread: Boolean,
     isAtMentioned: Boolean,
     unreadCount: Int,
 ) {
@@ -312,7 +320,7 @@ private fun Badges(
                 Text("@", style = MaterialTheme.typography.labelSmall)
             }
         }
-        
+
         if (hasUnread) {
             Badge(
                 containerColor = if (doNotDisturb) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.primary,
@@ -326,10 +334,10 @@ private fun Badges(
 
 private fun formatTime(timestampMs: Long): String {
     if (timestampMs <= 0) return ""
-    
+
     val date = Date(timestampMs)
     val now = Date()
-    
+
     val todayCalendar = Calendar.getInstance().apply {
         time = now
         set(Calendar.HOUR_OF_DAY, 0)
@@ -337,18 +345,20 @@ private fun formatTime(timestampMs: Long): String {
         set(Calendar.SECOND, 0)
         set(Calendar.MILLISECOND, 0)
     }
-    
+
     val dateCalendar = Calendar.getInstance().apply {
         time = date
     }
-    
+
     return when {
         date.after(todayCalendar.time) -> {
             SimpleDateFormat("HH:mm", Locale.getDefault()).format(date)
         }
+
         dateCalendar.get(Calendar.YEAR) == todayCalendar.get(Calendar.YEAR) -> {
             SimpleDateFormat("M/d HH:mm", Locale.getDefault()).format(date)
         }
+
         else -> {
             SimpleDateFormat("yyyy/M/d HH:mm", Locale.getDefault()).format(date)
         }
