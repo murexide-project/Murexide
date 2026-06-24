@@ -1,5 +1,6 @@
 package com.juhao.murexide.ui.conversation
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -37,6 +38,7 @@ fun ConversationListScreen(
     modifier: Modifier = Modifier,
     token: String,
     onConversationClick: (ConversationItem) -> Unit,
+    currentConversation: ConversationItem? = null,
     bigScreenMode: Boolean = false,
     viewModel: ConversationViewModel = remember { ConversationViewModel(token) }
 ) {
@@ -141,6 +143,7 @@ fun ConversationListScreen(
                         ) { conversation ->
                             ConversationItem(
                                 conversation = conversation,
+                                isSelected = currentConversation?.chatId == conversation.chatId,
                                 onClick = {
                                     viewModel.clearUnread(conversation.chatId)
                                     onConversationClick(conversation)
@@ -227,11 +230,17 @@ fun StickyItemView(
 @Composable
 fun ConversationItem(
     conversation: ConversationItem,
+    isSelected: Boolean = false,
     onClick: () -> Unit
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .background(if (isSelected)
+                MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+            else
+                MaterialTheme.colorScheme.surface
+            )
             .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
