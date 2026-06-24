@@ -28,6 +28,7 @@ import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -136,70 +137,31 @@ fun MainScreen(token: String, onLogout: () -> Unit) {
                 MainNavHost(
                     token = token,
                     onConversationClick = { currentChat ->
-                        if (useNavigationRail && bigScreenEnabled) {
-                            currentConversation = currentChat
+                        if (currentChat == null) {
+                            currentConversation = null
                         } else {
-                            ChatActivity.start(
-                                context = context,
-                                chatId = currentChat.chatId,
-                                chatType = currentChat.chatType,
-                                chatName = currentChat.displayName,
-                                chatAvatar = currentChat.avatarUrl,
-                            )
+                            if (useNavigationRail && bigScreenEnabled) {
+                                currentConversation = currentChat
+                            } else {
+                                ChatActivity.start(
+                                    context = context,
+                                    chatId = currentChat.chatId,
+                                    chatType = currentChat.chatType,
+                                    chatName = currentChat.displayName,
+                                    chatAvatar = currentChat.avatarUrl,
+                                )
+                            }
                         }
                     },
+                    currentConversation = currentConversation,
                     bigScreenMode = useNavigationRail,
+                    bigScreenEnabled = bigScreenEnabled,
                     onLogout = onLogout,
                     modifier = Modifier
-                        .weight(if (useNavigationRail) 4f else 1f)
+                        .weight(1f)
                         .fillMaxSize(),
                     navController = navController
                 )
-                if (useNavigationRail && bigScreenEnabled && currentRoute == "conversations") {
-                    if (currentConversation != null) {
-                        BackHandler {
-                            currentConversation = null
-                        }
-                        key(currentConversation!!.chatId) {
-                            ChatScreen(
-                                modifier = Modifier.weight(7f).fillMaxHeight(),
-                                chatAvatar = currentConversation!!.avatarUrl,
-                                chatName = currentConversation!!.name,
-                                chatType = currentConversation!!.chatType,
-                                onBackClick = {
-                                    currentConversation = null
-                                },
-                                bigScreenMode = true,
-                                viewModel = viewModel(
-                                    key = "chat_" + currentConversation!!.chatId,
-                                    factory = object : androidx.lifecycle.ViewModelProvider.Factory {
-                                        @Suppress("UNCHECKED_CAST")
-                                        override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
-                                            return ChatViewModel(
-                                                token = token,
-                                                chatId = currentConversation!!.chatId,
-                                                chatType = currentConversation!!.chatType,
-                                                deviceId = getDeviceId()
-                                            ) as T
-                                        }
-                                    }
-                                )
-                            )
-                        }
-                    } else {
-                        Column(
-                            modifier = Modifier.weight(7f).fillMaxHeight(),
-                            verticalArrangement = Arrangement.Center,
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Icon(
-                                imageVector = Icons.Rounded.ChatBubble,
-                                contentDescription = null,
-                                modifier = Modifier.size(64.dp)
-                            )
-                        }
-                    }
-                }
             }
             if (!useNavigationRail || !bigScreenEnabled) {
                 MainNavigationBar(
@@ -272,8 +234,10 @@ private fun MainNavigationRail(
 private fun MainNavHost(
     modifier: Modifier,
     token: String,
-    onConversationClick: (ConversationItem) -> Unit,
+    onConversationClick: (ConversationItem?) -> Unit,
+    currentConversation: ConversationItem? = null,
     bigScreenMode: Boolean = false,
+    bigScreenEnabled: Boolean = true,
     onLogout: () -> Unit,
     navController: androidx.navigation.NavHostController,
 ) {
@@ -285,11 +249,65 @@ private fun MainNavHost(
         modifier = modifier
     ) {
         composable("conversations") {
-            ConversationListScreen(
-                token = token,
-                onConversationClick = onConversationClick,
-                bigScreenMode = bigScreenMode
-            )
+            Row(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxSize()
+            ) {
+                ConversationListScreen(
+                    modifier = Modifier
+                        .weight(if (bigScreenMode) 4f else 1f)
+                        .fillMaxSize(),
+                    token = token,
+                    onConversationClick = onConversationClick,
+                    bigScreenMode = bigScreenMode
+                )
+                if (bigScreenMode && bigScreenEnabled) {
+                    if (currentConversation != null) {
+                        BackHandler {
+                            onConversationClick(null)
+                        }
+                        key(currentConversation!!.chatId) {
+                            ChatScreen(
+                                modifier = Modifier.weight(7f).fillMaxHeight(),
+                                chatAvatar = currentConversation!!.avatarUrl,
+                                chatName = currentConversation!!.name,
+                                chatType = currentConversation!!.chatType,
+                                onBackClick = {
+                                    onConversationClick(null)
+                                },
+                                bigScreenMode = true,
+                                viewModel = viewModel(
+                                    key = "chat_" + currentConversation!!.chatId,
+                                    factory = object : androidx.lifecycle.ViewModelProvider.Factory {
+                                        @Suppress("UNCHECKED_CAST")
+                                        override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+                                            return ChatViewModel(
+                                                token = token,
+                                                chatId = currentConversation!!.chatId,
+                                                chatType = currentConversation!!.chatType,
+                                                deviceId = getDeviceId()
+                                            ) as T
+                                        }
+                                    }
+                                )
+                            )
+                        }
+                    } else {
+                        Column(
+                            modifier = Modifier.weight(7f).fillMaxHeight(),
+                            verticalArrangement = Arrangement.Center,
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.ChatBubble,
+                                contentDescription = null,
+                                modifier = Modifier.size(64.dp).alpha(0.6f)
+                            )
+                        }
+                    }
+                }
+            }
         }
         composable("contacts") {
             ContactListScreen(
