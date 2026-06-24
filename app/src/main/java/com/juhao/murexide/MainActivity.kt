@@ -158,7 +158,7 @@ fun MainScreen(token: String, onLogout: () -> Unit) {
                     if (currentConversation != null) {
                         key(currentConversation!!.chatId) {
                             ChatScreen(
-                                modifier = Modifier.weight(6f).fillMaxHeight(),
+                                modifier = Modifier.weight(7f).fillMaxHeight(),
                                 chatAvatar = currentConversation!!.avatarUrl,
                                 chatName = currentConversation!!.name,
                                 chatType = currentConversation!!.chatType,
@@ -184,7 +184,7 @@ fun MainScreen(token: String, onLogout: () -> Unit) {
                         }
                     } else {
                         Column(
-                            modifier = Modifier.weight(6f).fillMaxHeight(),
+                            modifier = Modifier.weight(7f).fillMaxHeight(),
                             verticalArrangement = Arrangement.Center,
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
