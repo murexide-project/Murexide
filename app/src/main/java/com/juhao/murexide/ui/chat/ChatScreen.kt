@@ -312,7 +312,7 @@ fun ChatScreen(
                 ) {
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
-                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        color = MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp),
                     ) {
                         Row(
                             modifier = Modifier

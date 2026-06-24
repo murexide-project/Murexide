@@ -32,7 +32,6 @@ import coil.request.ImageRequest
 import com.juhao.murexide.data.ExpressionItem
 import com.juhao.murexide.data.StickerItem
 import com.juhao.murexide.data.StickerPack
-import com.juhao.murexide.data.resolveStickerUrl
 import kotlinx.coroutines.launch
 
 private const val PANEL_HEIGHT_RATIO = 0.55f
@@ -127,7 +126,7 @@ private fun ExpressionGridPage(
     ) { index ->
         val item = expressions[index]
         EmojiGridItem(
-            url = resolveStickerUrl(item.url),
+            url = item.url,
             onClick = { onItemClick(item) }
         )
     }
@@ -154,7 +153,7 @@ private fun StickerPackGridPage(
     ) { index ->
         val item = items[index]
         EmojiGridItem(
-            url = resolveStickerUrl(item.url),
+            url = item.url,
             onClick = { onItemClick(item) }
         )
     }
