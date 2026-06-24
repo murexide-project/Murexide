@@ -152,7 +152,7 @@ fun SettingsScreen(
             
             SettingsGroup(title = "更新") {
                 SettingsItem(
-                    icon = Icons.Rounded.Info,
+                    icon = Icons.Rounded.Update,
                     title = "检查更新",
                     subtitle = "访问仓库获取最新版本",
                     onClick = {
