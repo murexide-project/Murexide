@@ -36,6 +36,7 @@ import coil.request.ImageRequest
 import com.juhao.murexide.data.MessageItem
 import com.juhao.murexide.ui.chat.EditDialogState
 import com.juhao.murexide.ui.components.Avatar
+import com.juhao.murexide.ui.components.UnifiedHtmlWebView
 import com.juhao.murexide.ui.components.MarkdownRenderer
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -66,6 +67,10 @@ fun MessageBubble(
 
     val isMine = message.isMine
     val context = LocalContext.current
+    
+    var showImageViewer by remember { mutableStateOf(false) }
+    var imageList by remember { mutableStateOf<List<String>>(emptyList()) }
+    var currentImageIndex by remember { mutableStateOf(0) }
 
     val timestampDisplay = remember(message.timestamp) {
         try {
@@ -96,6 +101,15 @@ fun MessageBubble(
         animationSpec = tween(durationMillis = 300),
         label = "message_alpha"
     )
+    
+    if (showImageViewer) {
+        MultiImageViewer(
+            images = imageList,
+            initialPage = currentImageIndex,
+            isVisible = showImageViewer,
+            onDismiss = { showImageViewer = false }
+        )
+    }
     
     Box(
         modifier = Modifier.alpha(animatedAlpha)
@@ -302,6 +316,19 @@ fun MessageBubble(
                                                 color = MaterialTheme.colorScheme.onSurface
                                             )
                                         }
+                                    }
+                                    
+                                    MessageItem.CONTENT_TYPE_HTML -> {
+                                        UnifiedHtmlWebView(
+                                            htmlContent = message.content,
+                                            modifier = Modifier.fillMaxWidth(),
+                                            onImageClick = { imageUrl ->
+                                                val allImages = extractImageUrls(message.content)
+                                                imageList = allImages
+                                                currentImageIndex = allImages.indexOf(imageUrl).coerceAtLeast(0)
+                                                showImageViewer = true
+                                            }
+                                        )
                                     }
     
                                     MessageItem.CONTENT_TYPE_IMAGE,
@@ -638,4 +665,9 @@ private fun formatFileSize(size: Long): String {
         size < 1024 * 1024 * 1024 -> "${"%.1f".format(size.toFloat() / (1024 * 1024))}MB"
         else -> "${"%.2f".format(size.toFloat() / (1024 * 1024 * 1024))}GB"
     }
+}
+
+private fun extractImageUrls(html: String): List<String> {
+    val regex = Regex("""<img[^>]+src\s*=\s*["']([^"']+)["'][^>]*>""", RegexOption.IGNORE_CASE)
+    return regex.findAll(html).map { it.groupValues[1] }.toList()
 }
