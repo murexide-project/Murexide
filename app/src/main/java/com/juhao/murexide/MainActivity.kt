@@ -266,26 +266,26 @@ private fun MainNavHost(
                         BackHandler {
                             onConversationClick(null)
                         }
-                        key(currentConversation!!.chatId) {
+                        key(currentConversation.chatId) {
                             ChatScreen(
                                 modifier = Modifier.weight(7f).fillMaxHeight(),
-                                chatAvatar = currentConversation!!.avatarUrl,
-                                chatName = currentConversation!!.name,
-                                chatType = currentConversation!!.chatType,
+                                chatAvatar = currentConversation.avatarUrl,
+                                chatName = currentConversation.name,
+                                chatType = currentConversation.chatType,
                                 onBackClick = {
                                     onConversationClick(null)
                                 },
                                 bigScreenMode = true,
                                 viewModel = viewModel(
-                                    key = "chat_" + currentConversation!!.chatId,
+                                    key = "chat_" + currentConversation.chatId,
                                     factory = object : androidx.lifecycle.ViewModelProvider.Factory {
                                         @Suppress("UNCHECKED_CAST")
                                         override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
                                             return ChatViewModel(
                                                 token = token,
-                                                chatId = currentConversation!!.chatId,
+                                                chatId = currentConversation.chatId,
                                                 context = context,
-                                                chatType = currentConversation!!.chatType,
+                                                chatType = currentConversation.chatType,
                                                 deviceId = getDeviceId()
                                             ) as T
                                         }
