@@ -59,6 +59,7 @@ import com.juhao.murexide.datastore.SettingsStorage
 import com.juhao.murexide.data.MessageItem
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
@@ -447,7 +448,10 @@ fun ChatScreen(
                         } else {
                             focusManager.clearFocus()
                             keyboardController?.hide()
-                            viewModel.toggleStickerPanel()
+                            scope.launch {
+                                delay(100)
+                                viewModel.toggleStickerPanel()
+                            }
                         }
                     }
                 )
