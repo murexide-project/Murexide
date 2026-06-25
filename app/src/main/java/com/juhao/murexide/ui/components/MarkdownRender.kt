@@ -1,5 +1,8 @@
 package com.juhao.murexide.ui.components
 
+import android.content.Context
+import android.os.Build
+import androidx.compose.ui.draw.clip
 import android.content.Intent
 import android.webkit.WebSettings
 import androidx.compose.foundation.clickable
