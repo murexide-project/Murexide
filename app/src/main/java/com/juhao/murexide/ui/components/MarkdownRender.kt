@@ -1,7 +1,6 @@
 package com.juhao.murexide.ui.components
 
 import android.content.Intent
-import android.os.Build
 import android.webkit.WebSettings
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -35,11 +34,7 @@ import org.intellij.markdown.ast.getTextInNode
 
 private fun getUserAgent(context: Context): String {
     return try {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
-            WebSettings.getDefaultUserAgent(context)
-        } else {
-            System.getProperty("http.agent") ?: "Mozilla/5.0 (Linux; Android ${Build.VERSION.RELEASE}; Mobile) AppleWebKit/537.36"
-        }
+        WebSettings.getDefaultUserAgent(context)
     } catch (e: Exception) {
         "Mozilla/5.0 (Linux; Android ${Build.VERSION.RELEASE}; Mobile) AppleWebKit/537.36"
     }
@@ -115,11 +110,11 @@ object MarkdownRenderer {
 
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(12.dp))
                             .padding(vertical = 4.dp)
                             .clickable {
                                 onImageClick?.invoke(url, altText)
                             }
+                            .clip(RoundedCornerShape(12.dp))
                     ) {
                         AsyncImage(
                             model = imageRequest,
