@@ -42,7 +42,7 @@ fun UnifiedHtmlWebView(
         generateStyledHtml(htmlContent, backgroundColor, textColor, linkColor, codeBackgroundColor, isDarkTheme)
     }
     
-    val webViewRef = remember { mutableStateOf<WebView?>(null) }
+    var webViewRef by remember { mutableStateOf<WebView?>(null) }
     
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
