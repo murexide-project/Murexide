@@ -1,16 +1,11 @@
 package com.juhao.murexide.ui.components
 
-import android.content.Context
-import android.os.Build
-import androidx.compose.ui.draw.clip
 import android.content.Intent
-import android.webkit.WebSettings
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
@@ -27,6 +22,8 @@ import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import com.juhao.murexide.ui.webview.WebViewActivity
 import com.mikepenz.markdown.coil2.Coil2ImageTransformerImpl
 import com.mikepenz.markdown.compose.components.markdownComponents
@@ -34,14 +31,6 @@ import com.mikepenz.markdown.m3.Markdown
 import com.mikepenz.markdown.m3.markdownTypography
 import org.intellij.markdown.ast.findChildOfType
 import org.intellij.markdown.ast.getTextInNode
-
-private fun getUserAgent(context: Context): String {
-    return try {
-        WebSettings.getDefaultUserAgent(context)
-    } catch (e: Exception) {
-        "Mozilla/5.0 (Linux; Android ${Build.VERSION.RELEASE}; Mobile) AppleWebKit/537.36"
-    }
-}
 
 object MarkdownRenderer {
     @Composable
@@ -95,24 +84,9 @@ object MarkdownRenderer {
                     val url = componentData.content
                     val altText = componentData.node.getAltTextFromNode(url)
 
-                    val imageRequest = remember(url) {
-                        ImageRequest.Builder(context)
-                            .data(url)
-                            .apply {
-                                if (url.contains("chat-img.jwznb.com") ||
-                                    url.contains("jwznb.com") ||
-                                    url.contains("myapp.jwznb.com")
-                                ) {
-                                    setHeader("Referer", "https://myapp.jwznb.com")
-                                }
-                                val userAgent = getUserAgent(context)
-                                setHeader("User-Agent", userAgent)
-                            }
-                            .build()
-                    }
-
                     Box(
                         modifier = Modifier
+                            .fillMaxWidth()
                             .padding(vertical = 4.dp)
                             .clickable {
                                 onImageClick?.invoke(url, altText)
@@ -120,8 +94,19 @@ object MarkdownRenderer {
                             .clip(RoundedCornerShape(12.dp))
                     ) {
                         AsyncImage(
-                            model = imageRequest,
+                            model = ImageRequest.Builder(context)
+                                .data(url)
+                                .apply {
+                                    if (url.contains("chat-img.jwznb.com") ||
+                                        url.contains("jwznb.com") ||
+                                        url.contains("myapp.jwznb.com")
+                                    ) {
+                                        setHeader("Referer", "https://myapp.jwznb.com")
+                                    }
+                                }
+                                .build(),
                             contentDescription = altText.ifEmpty { null },
+                            modifier = Modifier.fillMaxWidth(),
                             contentScale = ContentScale.FillWidth
                         )
                     }
