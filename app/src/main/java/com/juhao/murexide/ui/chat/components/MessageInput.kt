@@ -176,8 +176,7 @@ fun MessageInput(
                 OutlinedTextField(
                     value = inputText,
                     onValueChange = onTextChange,
-                    modifier = Modifier.weight(1f),
-                    modifier = Modifier.focusRequester(focusRequester),
+                    modifier = Modifier.weight(1f).focusRequester(focusRequester),
                     placeholder = { Text("输入消息...") },
                     shape = RoundedCornerShape(16.dp),
                     maxLines = 5

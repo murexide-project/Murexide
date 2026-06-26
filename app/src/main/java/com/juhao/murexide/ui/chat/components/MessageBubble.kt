@@ -130,6 +130,22 @@ fun MessageBubble(
                 },
                 shape = RoundedCornerShape(12.dp)
             )
+            .combinedClickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = {
+                    if (isSelectionMode) {
+                        onClickInSelectionMode(message.msgId)
+                    } else if (!message.isRecalled && message.contentType != MessageItem.CONTENT_TYPE_TIP) {
+                        showMenuChanged(message.msgId)
+                    }
+                },
+                onLongClick = {
+                    if (!isSelectionMode) {
+                        onLongPress(message.msgId)
+                    }
+                }
+            )
     ) {
         if (message.isRecalled) {
             Box(
@@ -177,22 +193,6 @@ fun MessageBubble(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .combinedClickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = {
-                            if (isSelectionMode) {
-                                onClickInSelectionMode(message.msgId)
-                            } else {
-                                showMenuChanged(message.msgId)
-                            }
-                        },
-                        onLongClick = {
-                            if (!isSelectionMode) {
-                                onLongPress(message.msgId)
-                            }
-                        }
-                    )
                     .padding(
                         start = 8.dp,
                         end = 8.dp,
