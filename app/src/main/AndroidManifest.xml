@@ -50,6 +50,10 @@
             android:name=".ui.about.AboutActivity"
             android:exported="false"
             android:theme="@style/Theme.Murexide" />
+        <activity
+            android:name=".ui.conversationdetail.ConversationDetailActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Murexide" />
     </application>
 
 </manifest>

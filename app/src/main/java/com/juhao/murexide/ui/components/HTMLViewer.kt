@@ -17,13 +17,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import java.net.HttpURLConnection
 import java.net.URL
 import androidx.core.net.toUri
+import androidx.lifecycle.compose.LocalLifecycleOwner
 
 @Composable
 fun UnifiedHtmlWebView(

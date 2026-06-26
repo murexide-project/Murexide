@@ -68,6 +68,7 @@ fun MessageBubble(
     showMenuMsgId: String? = null,
     showMenuChanged: (String?) -> Unit,
     onImageClick: (String) -> Unit = {},
+    onAvatarClick: () -> Unit,
     avatarAlignment: Alignment.Vertical = Alignment.Bottom
 ) {
     val clipboardManager = LocalClipboard.current
@@ -78,7 +79,7 @@ fun MessageBubble(
     
     var showImageViewer by remember { mutableStateOf(false) }
     var imageList by remember { mutableStateOf<List<String>>(emptyList()) }
-    var currentImageIndex by remember { mutableStateOf(0) }
+    var currentImageIndex by remember { mutableIntStateOf(0) }
 
     val timestampDisplay = remember(message.timestamp) {
         try {
@@ -209,6 +210,9 @@ fun MessageBubble(
                 if (!isMine && showAvatar) {
                     Avatar(
                         url = message.senderAvatar,
+                        modifier = Modifier.clickable {
+                            onAvatarClick()
+                        },
                         size = 36.dp
                     )
                     Spacer(modifier = Modifier.width(8.dp))
@@ -613,6 +617,9 @@ fun MessageBubble(
                     Spacer(modifier = Modifier.width(8.dp))
                     Avatar(
                         url = message.senderAvatar,
+                        modifier = Modifier.clickable {
+                            onAvatarClick()
+                        },
                         size = 36.dp
                     )
                 } else if (isMine) {

@@ -1,3 +1,5 @@
+@file:Suppress("AssignedValueIsNeverRead")
+
 package com.juhao.murexide.ui.chat
 
 import androidx.compose.foundation.layout.WindowInsets
@@ -39,6 +41,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.clickable
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
@@ -61,7 +64,10 @@ import kotlinx.coroutines.launch
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.*
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.rounded.*
+import androidx.compose.ui.draw.clip
+import com.juhao.murexide.ui.conversationdetail.ConversationDetailActivity
 
 @OptIn(ExperimentalMaterial3Api::class, FlowPreview::class, ExperimentalComposeUiApi::class)
 @Composable
@@ -79,8 +85,10 @@ fun ChatScreen(
     val scope = rememberCoroutineScope()
     val uiState by viewModel.uiState.collectAsState()
     val expressions by viewModel.stickerPanel.collectAsState()
-    
+
     var showMenuMsgId by remember { mutableStateOf<String?>(null) }
+    var showMoreMenu by remember { mutableStateOf(false) }
+
     val recallDialog by viewModel.recallDialog.collectAsState()
     val editDialog by viewModel.editDialog.collectAsState()
 
@@ -88,30 +96,30 @@ fun ChatScreen(
     var showScrollToBottom by remember { mutableStateOf(false) }
     var unreadCount by remember { mutableIntStateOf(0) }
     var firstMessageId by remember { mutableStateOf<String?>(null) }
-    
+
     val settingsStorage = remember { SettingsStorage(context) }
     val avatarFollowEnabled by settingsStorage.avatarFollowFlow.collectAsState(initial = false)
-    
+
     var viewerImages by remember { mutableStateOf<List<String>>(emptyList()) }
     var viewerInitialPage by remember { mutableIntStateOf(0) }
     var viewerVisible by remember { mutableStateOf(false) }
-    
+
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusManager = LocalFocusManager.current
-    
+
     val windowInsetsIme = WindowInsets.ime
     val isKeyboardOpen by remember {
         derivedStateOf {
             windowInsetsIme.getBottom(density) > 0
         }
     }
-    
+
     LaunchedEffect(isKeyboardOpen) {
         if (isKeyboardOpen) {
             viewModel.hideStickerPanel()
         }
     }
-    
+
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
@@ -119,7 +127,7 @@ fun ChatScreen(
             viewModel.uploadAndSendImage(it, context)
         }
     }
-    
+
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
@@ -130,28 +138,29 @@ fun ChatScreen(
             Toast.makeText(context, "需要存储权限才能选择图片", Toast.LENGTH_SHORT).show()
         }
     }
-    
+
     fun openImagePicker() {
-        val permissions = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-            arrayOf(Manifest.permission.READ_MEDIA_IMAGES)
-        } else {
-            arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)
-        }
-        
+        val permissions =
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                arrayOf(Manifest.permission.READ_MEDIA_IMAGES)
+            } else {
+                arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)
+            }
+
         val needRequest = permissions.any {
             ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED
         }
-        
+
         if (needRequest) {
             permissionLauncher.launch(permissions)
         } else {
             imagePickerLauncher.launch("image/*")
         }
     }
-    
+
     val selectionMode = uiState.selectionMode
     val selectedMessageIds = uiState.selectedMessageIds
-    
+
     BackHandler(enabled = selectionMode) {
         viewModel.exitSelectionMode()
     }
@@ -168,24 +177,29 @@ fun ChatScreen(
                 } else {
                     val firstVisibleIndex = topVisibleItem.index
                     val message = uiState.messages.getOrNull(firstVisibleIndex)
-                    
+
                     if (message == null || message.isRecalled) {
                         Triple(false, "", false)
                     } else {
                         val itemHeightDp = with(density) { topVisibleItem.size.toDp() }.value
-                        val visibleHeightDp = with(density) { 
-                            (topVisibleItem.size + topVisibleItem.offset.coerceAtMost(0)).toDp() 
+                        val visibleHeightDp = with(density) {
+                            (topVisibleItem.size + topVisibleItem.offset.coerceAtMost(0)).toDp()
                         }.value
-                        
+
                         val hasEnoughSpace = visibleHeightDp >= 44 && itemHeightDp >= 44
-                        
-                        val currentIndex = uiState.messages.indexOfFirst { it.msgId == message.msgId }
-                        val newerMessage = if (currentIndex > 0) uiState.messages[currentIndex - 1] else null
-                        val olderMessage = if (currentIndex < uiState.messages.size - 1) uiState.messages[currentIndex + 1] else null
-                        val isLastFromSender = olderMessage == null || olderMessage.isRecalled || olderMessage.senderId != message.senderId
-                        val hasOtherSameSender = (newerMessage != null && !newerMessage.isRecalled && newerMessage.senderId == message.senderId && !isLastFromSender) ||
-                                                 (olderMessage != null && !olderMessage.isRecalled && olderMessage.senderId == message.senderId)
-                        
+
+                        val currentIndex =
+                            uiState.messages.indexOfFirst { it.msgId == message.msgId }
+                        val newerMessage =
+                            if (currentIndex > 0) uiState.messages[currentIndex - 1] else null
+                        val olderMessage =
+                            if (currentIndex < uiState.messages.size - 1) uiState.messages[currentIndex + 1] else null
+                        val isLastFromSender =
+                            olderMessage == null || olderMessage.isRecalled || olderMessage.senderId != message.senderId
+                        val hasOtherSameSender =
+                            (newerMessage != null && !newerMessage.isRecalled && newerMessage.senderId == message.senderId && !isLastFromSender) ||
+                                    (olderMessage != null && !olderMessage.isRecalled && olderMessage.senderId == message.senderId)
+
                         if (hasEnoughSpace) {
                             Triple(true, message.senderAvatar, message.isMine)
                         } else if (hasOtherSameSender && message.senderAvatar.isNotEmpty()) {
@@ -198,23 +212,25 @@ fun ChatScreen(
             }
         }
     }
-    
+
     val showFloatingAvatar = floatingAvatarState.first
     val floatingAvatarUrl = floatingAvatarState.second
     val floatingAvatarIsMine = floatingAvatarState.third
-    
-    val topVisibleMessageId by remember {
+
+    val topVisibleMessage by remember {
         derivedStateOf {
             val visibleItems = listState.layoutInfo.visibleItemsInfo
             if (visibleItems.isNotEmpty()) {
                 val topIndex = visibleItems.minByOrNull { it.index }?.index
-                topIndex?.let { uiState.messages.getOrNull(it)?.msgId }
+                topIndex?.let { uiState.messages.getOrNull(it) }
             } else {
                 null
             }
         }
     }
-    
+
+    val topVisibleMessageId = topVisibleMessage?.msgId
+
     LaunchedEffect(Unit) {
         viewModel.toastMessage.collect { message ->
             Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
@@ -224,7 +240,7 @@ fun ChatScreen(
         snapshotFlow {
             val layoutInfo = listState.layoutInfo
             val visibleItems = layoutInfo.visibleItemsInfo
-    
+
             val shouldLoadMore = if (visibleItems.isNotEmpty()) {
                 val lastVisibleIndex = visibleItems.last().index
                 val totalItems = layoutInfo.totalItemsCount
@@ -232,62 +248,62 @@ fun ChatScreen(
             } else {
                 false
             }
-    
+
             val atBottom = if (visibleItems.isNotEmpty()) {
                 val firstVisibleIndex = visibleItems.first().index
                 firstVisibleIndex == 0
             } else {
                 true
             }
-            
+
             Pair(shouldLoadMore, atBottom)
         }
-        .collect { (shouldLoadMore, atBottom) ->
-            if (shouldLoadMore) {
-                viewModel.loadMore()
+            .collect { (shouldLoadMore, atBottom) ->
+                if (shouldLoadMore) {
+                    viewModel.loadMore()
+                }
+
+                showScrollToBottom = !atBottom
+                if (atBottom) {
+                    unreadCount = 0
+                }
             }
-    
-            showScrollToBottom = !atBottom
-            if (atBottom) {
-                unreadCount = 0
-            }
-        }
     }
-    
+
     LaunchedEffect(Unit) {
         var lastMsgId: String? = null
         var pendingCount = 0
-        
+
         snapshotFlow { uiState.messages.firstOrNull() }
             .collect { message: MessageItem? ->
                 val msgId = message?.msgId
                 if (message == null) return@collect
                 if (msgId == lastMsgId) return@collect
                 lastMsgId = msgId
-                
+
                 pendingCount++
-                
+
                 if (firstMessageId == null) {
                     firstMessageId = msgId
                     pendingCount = 0
                     return@collect
                 }
-                
+
                 if (msgId == firstMessageId) {
                     pendingCount = 0
                     return@collect
                 }
-                
+
                 if (listState.isScrollInProgress) {
                     firstMessageId = msgId
                     return@collect
                 }
-                
+
                 val isAtBottom = listState.layoutInfo.visibleItemsInfo
                     .firstOrNull()?.index == 0
-                
+
                 firstMessageId = msgId
-                
+
                 if (isAtBottom && !listState.isScrollInProgress) {
                     showMenuMsgId = null
                     if (!listState.isScrollInProgress) {
@@ -303,7 +319,7 @@ fun ChatScreen(
                 }
             }
     }
-    
+
     val scrollToBottom: () -> Unit = {
         scope.launch {
             listState.animateScrollToItem(0)
@@ -313,7 +329,7 @@ fun ChatScreen(
             }
         }
     }
-    
+
     Scaffold(
         modifier = modifier.fillMaxSize(),
         contentWindowInsets = if (bigScreenMode) {
@@ -325,15 +341,18 @@ fun ChatScreen(
             AnimatedContent(
                 targetState = selectionMode,
                 transitionSpec = {
-                    fadeIn(animationSpec = tween(200)) togetherWith 
-                    fadeOut(animationSpec = tween(200))
+                    fadeIn(animationSpec = tween(200)) togetherWith
+                            fadeOut(animationSpec = tween(200))
                 },
                 label = "top_bar_transition"
             ) { isSelectionMode ->
                 if (isSelectionMode) {
                     TopAppBar(
                         windowInsets = if (bigScreenMode) {
-                            WindowInsets(top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding())
+                            WindowInsets(
+                                top = WindowInsets.statusBars.asPaddingValues()
+                                    .calculateTopPadding()
+                            )
                         } else {
                             TopAppBarDefaults.windowInsets
                         },
@@ -385,12 +404,29 @@ fun ChatScreen(
                 } else {
                     TopAppBar(
                         windowInsets = if (bigScreenMode) {
-                            WindowInsets(top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding())
+                            WindowInsets(
+                                top = WindowInsets.statusBars.asPaddingValues()
+                                    .calculateTopPadding()
+                            )
                         } else {
                             TopAppBarDefaults.windowInsets
                         },
                         title = {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .clickable {
+                                        ConversationDetailActivity.start(
+                                            context = context,
+                                            chatId = viewModel.chatId,
+                                            chatType = chatType,
+                                            chatName = chatName,
+                                            chatAvatar = chatAvatar
+                                        )
+                                    }
+                            ) {
                                 Avatar(
                                     url = chatAvatar,
                                     size = 36.dp
@@ -420,8 +456,31 @@ fun ChatScreen(
                             containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp)
                         ),
                         actions = {
-                            Box{
-                                IconButton(onClick = {  }) {
+                            Box {
+                                DropdownMenu(
+                                    expanded = showMoreMenu,
+                                    onDismissRequest = { showMoreMenu = false }
+                                ) {
+                                    DropdownMenuItem(
+                                        text = { Text("会话详情") },
+                                        onClick = {
+                                            ConversationDetailActivity.start(
+                                                context = context,
+                                                chatId = viewModel.chatId,
+                                                chatType = chatType,
+                                                chatName = chatName,
+                                                chatAvatar = chatAvatar
+                                            )
+                                        },
+                                        leadingIcon = {
+                                            Icon(Icons.Outlined.Info, contentDescription = null)
+                                        }
+                                    )
+                                }
+
+                                IconButton(onClick = {
+                                    showMoreMenu = true
+                                }) {
                                     Icon(Icons.Rounded.MoreVert, contentDescription = "更多")
                                 }
                             }
@@ -429,7 +488,10 @@ fun ChatScreen(
                         navigationIcon = {
                             if (!bigScreenMode) {
                                 IconButton(onClick = onBackClick) {
-                                    Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "返回")
+                                    Icon(
+                                        Icons.AutoMirrored.Rounded.ArrowBack,
+                                        contentDescription = "返回"
+                                    )
                                 }
                             }
                         }
@@ -441,8 +503,8 @@ fun ChatScreen(
             AnimatedContent(
                 targetState = selectionMode,
                 transitionSpec = {
-                    fadeIn(animationSpec = tween(200)) togetherWith 
-                    fadeOut(animationSpec = tween(200))
+                    fadeIn(animationSpec = tween(200)) togetherWith
+                            fadeOut(animationSpec = tween(200))
                 },
                 label = "bottom_bar_transition"
             ) { isSelectionMode ->
@@ -489,7 +551,7 @@ fun ChatScreen(
                                 onCancel = { viewModel.cancelUpload() }
                             )
                         }
-                        
+
                         AnimatedVisibility(
                             visible = uiState.replyTo != null,
                             enter = fadeIn() + expandVertically(),
@@ -534,12 +596,16 @@ fun ChatScreen(
                                         onClick = { viewModel.clearReplyTo() },
                                         modifier = Modifier.size(24.dp)
                                     ) {
-                                        Icon(Icons.Rounded.Close, contentDescription = "取消引用", modifier = Modifier.size(16.dp))
+                                        Icon(
+                                            Icons.Rounded.Close,
+                                            contentDescription = "取消引用",
+                                            modifier = Modifier.size(16.dp)
+                                        )
                                     }
                                 }
                             }
                         }
-            
+
                         MessageInput(
                             inputText = uiState.inputText,
                             sendType = uiState.sendType,
@@ -565,11 +631,11 @@ fun ChatScreen(
                                 }
                             }
                         )
-                        
+
                         BackHandler(enabled = expressions.isVisible) {
                             viewModel.hideStickerPanel()
                         }
-                        
+
                         AnimatedVisibility(
                             visible = expressions.isVisible,
                             enter = fadeIn() + expandVertically(),
@@ -614,7 +680,9 @@ fun ChatScreen(
                 AsyncImage(
                     model = bgRequest,
                     contentDescription = null,
-                    modifier = Modifier.fillMaxSize().alpha(0.5f),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .alpha(0.5f),
                     contentScale = ContentScale.Crop
                 )
             }
@@ -644,29 +712,35 @@ fun ChatScreen(
                             key = { it.msgId }
                         ) { message ->
                             val index = uiState.messages.indexOf(message)
-                            
+
                             val newerMessage = if (index > 0) uiState.messages[index - 1] else null
-                            val olderMessage = if (index < uiState.messages.size - 1) uiState.messages[index + 1] else null
-                        
-                            val isFirstFromSender = newerMessage == null || newerMessage.isRecalled || newerMessage.contentType == MessageItem.CONTENT_TYPE_TIP || newerMessage.senderId != message.senderId
-                            val isLastFromSender = olderMessage == null || olderMessage.isRecalled || olderMessage.contentType == MessageItem.CONTENT_TYPE_TIP || olderMessage.senderId != message.senderId
-                            val isOlderSameSender = olderMessage != null && !olderMessage.isRecalled && olderMessage.contentType != MessageItem.CONTENT_TYPE_TIP && olderMessage.senderId == message.senderId
-                            val isNewerSameSender = newerMessage != null && !newerMessage.isRecalled && newerMessage.contentType != MessageItem.CONTENT_TYPE_TIP && newerMessage.senderId == message.senderId
-                        
+                            val olderMessage =
+                                if (index < uiState.messages.size - 1) uiState.messages[index + 1] else null
+
+                            val isFirstFromSender =
+                                newerMessage == null || newerMessage.isRecalled || newerMessage.contentType == MessageItem.CONTENT_TYPE_TIP || newerMessage.senderId != message.senderId
+                            val isLastFromSender =
+                                olderMessage == null || olderMessage.isRecalled || olderMessage.contentType == MessageItem.CONTENT_TYPE_TIP || olderMessage.senderId != message.senderId
+                            val isOlderSameSender =
+                                olderMessage != null && !olderMessage.isRecalled && olderMessage.contentType != MessageItem.CONTENT_TYPE_TIP && olderMessage.senderId == message.senderId
+                            val isNewerSameSender =
+                                newerMessage != null && !newerMessage.isRecalled && newerMessage.contentType != MessageItem.CONTENT_TYPE_TIP && newerMessage.senderId == message.senderId
+
                             val isTopVisibleItem = message.msgId == topVisibleMessageId
-                        
+
                             val shouldShowItemAvatar = if (isTopVisibleItem) {
                                 !showFloatingAvatar && ((isLastFromSender && avatarFollowEnabled) || isFirstFromSender)
                             } else {
                                 isFirstFromSender
                             }
-                        
-                            val avatarAlignment = if (isTopVisibleItem && shouldShowItemAvatar && avatarFollowEnabled) {
-                                if (isLastFromSender) Alignment.Top else Alignment.Bottom
-                            } else {
-                                Alignment.Bottom
-                            }
-                        
+
+                            val avatarAlignment =
+                                if (isTopVisibleItem && shouldShowItemAvatar && avatarFollowEnabled) {
+                                    if (isLastFromSender) Alignment.Top else Alignment.Bottom
+                                } else {
+                                    Alignment.Bottom
+                                }
+
                             MessageBubble(
                                 message = message,
                                 onRecall = { viewModel.showRecallDialog(message.msgId) },
@@ -682,7 +756,11 @@ fun ChatScreen(
                                 isSelectionMode = selectionMode,
                                 isSelected = message.msgId in selectedMessageIds,
                                 onLongPress = { msgId -> viewModel.enterSelectionMode(msgId) },
-                                onClickInSelectionMode = { msgId -> viewModel.toggleMessageSelection(msgId) },
+                                onClickInSelectionMode = { msgId ->
+                                    viewModel.toggleMessageSelection(
+                                        msgId
+                                    )
+                                },
                                 showMenu = showMenuMsgId == message.msgId && !selectionMode,
                                 showMenuMsgId = showMenuMsgId,
                                 showMenuChanged = { msgId ->
@@ -696,13 +774,22 @@ fun ChatScreen(
                                         .mapNotNull { it.imageUrl }
                                         .filter { it.isNotEmpty() }
                                         .reversed()
-                                    
+
                                     if (allImages.isNotEmpty()) {
                                         val index = allImages.indexOf(imageUrl)
                                         viewerImages = allImages
                                         viewerInitialPage = if (index >= 0) index else 0
                                         viewerVisible = true
                                     }
+                                },
+                                onAvatarClick = {
+                                    ConversationDetailActivity.start(
+                                        context = context,
+                                        chatId = message.senderId,
+                                        chatType = message.senderType,
+                                        chatName = message.senderName,
+                                        chatAvatar = message.senderAvatar
+                                    )
                                 }
                             )
                         }
@@ -721,7 +808,7 @@ fun ChatScreen(
                         }
                     }
                 }
-    
+
                 AnimatedScrollToBottomButton(
                     visible = showScrollToBottom,
                     unreadCount = unreadCount,
@@ -730,8 +817,9 @@ fun ChatScreen(
                         .align(Alignment.BottomCenter)
                         .padding(12.dp)
                 )
-                
-                val targetAlpha = if (showMenuMsgId != null && topVisibleMessageId != showMenuMsgId) 0.4f else 1f
+
+                val targetAlpha =
+                    if (showMenuMsgId != null && topVisibleMessageId != showMenuMsgId) 0.4f else 1f
                 val animatedAlpha by animateFloatAsState(
                     targetValue = targetAlpha,
                     animationSpec = tween(durationMillis = 300),
@@ -739,13 +827,22 @@ fun ChatScreen(
                 )
 
                 if (showFloatingAvatar) {
-                    Column (
+                    Column(
                         modifier = Modifier
                             .alpha(animatedAlpha)
                             .align(if (floatingAvatarIsMine) Alignment.BottomEnd else Alignment.BottomStart)
                             .padding(horizontal = 8.dp, vertical = 4.dp)
                     ) {
                         Avatar(
+                            modifier = Modifier.clickable {
+                                ConversationDetailActivity.start(
+                                    context = context,
+                                    chatId = topVisibleMessage?.senderId ?: "0",
+                                    chatType = topVisibleMessage?.senderType ?: 0,
+                                    chatName = topVisibleMessage?.senderName ?: "",
+                                    chatAvatar = topVisibleMessage?.senderAvatar ?: ""
+                                )
+                            },
                             url = floatingAvatarUrl,
                             size = 36.dp
                         )
@@ -754,7 +851,7 @@ fun ChatScreen(
             }
         }
     }
-    
+
     if (viewerVisible) {
         MultiImageViewer(
             images = viewerImages,
@@ -789,7 +886,7 @@ fun ChatScreen(
             onContentChange = { viewModel.updateEditContent(it) },
             onSave = { viewModel.editMessage() },
             onToggleSendType = { type ->
-                viewModel.toggleEditSendType(type) 
+                viewModel.toggleEditSendType(type)
             }
         )
     }
@@ -848,7 +945,7 @@ fun AnimatedScrollToBottomButton(
                 }
             }
         ) {
-            SmallFloatingActionButton (
+            SmallFloatingActionButton(
                 onClick = onClick,
                 shape = CircleShape,
                 containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,

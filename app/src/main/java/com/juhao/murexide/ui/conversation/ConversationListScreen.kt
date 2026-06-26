@@ -245,7 +245,10 @@ fun ConversationItem(
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Avatar(conversation.avatarUrl, 52.dp)
+        Avatar(
+            url = conversation.avatarUrl,
+            size = 52.dp
+        )
 
         Spacer(modifier = Modifier.width(12.dp))
 
