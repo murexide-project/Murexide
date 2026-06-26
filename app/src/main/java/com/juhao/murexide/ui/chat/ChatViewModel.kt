@@ -35,7 +35,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
 
 class ChatViewModel(
     private val token: String,
-    private val chatId: String,
+    val chatId: String,
     private val chatType: Int,
     private val deviceId: String,
     private val repository: MessageRepository = MessageRepository(),

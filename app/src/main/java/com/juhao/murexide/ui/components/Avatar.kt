@@ -18,6 +18,7 @@ private var cachedSquareAvatar: Boolean? = null
 
 @Composable
 fun Avatar(
+    modifier: Modifier = Modifier,
     url: String,
     size: Dp = 48.dp
 ) {
@@ -51,7 +52,7 @@ fun Avatar(
     AsyncImage(
         model = imageRequest,
         contentDescription = null,
-        modifier = Modifier
+        modifier = modifier
             .size(size)
             .clip(shape),
         contentScale = ContentScale.Crop
