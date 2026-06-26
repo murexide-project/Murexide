@@ -692,6 +692,95 @@ class ChatViewModel(
             )
         }
     }
+
+    fun enterSelectionMode(msgId: String) {
+        _uiState.update {
+            it.copy(
+                selectionMode = true,
+                selectedMessageIds = setOf(msgId)
+            )
+        }
+    }
+
+    fun toggleMessageSelection(msgId: String) {
+        _uiState.update { state ->
+            if (!state.selectionMode) return@update state  // 非多选模式不处理
+            
+            val newSelected = if (msgId in state.selectedMessageIds) {
+                state.selectedMessageIds - msgId
+            } else {
+                state.selectedMessageIds + msgId
+            }
+            
+            if (newSelected.isEmpty()) {
+                state.copy(
+                    selectionMode = false,
+                    selectedMessageIds = emptySet()
+                )
+            } else {
+                state.copy(selectedMessageIds = newSelected)
+            }
+        }
+    }
+
+    fun exitSelectionMode() {
+        _uiState.update {
+            it.copy(
+                selectionMode = false,
+                selectedMessageIds = emptySet()
+            )
+        }
+    }
+
+    fun forwardSelectedMessages(targetChatId: String) {
+        val selectedIds = _uiState.value.selectedMessageIds
+        if (selectedIds.isEmpty()) return
+        
+        viewModelScope.launch {
+            repository.forwardMessages(
+                token = token,
+                messageIds = selectedIds.toList(),
+                targetChatId = targetChatId
+            ).onSuccess {
+                exitSelectionMode()
+                _toastMessage.emit("转发成功")
+            }.onFailure { error ->
+                _toastMessage.emit("转发失败: ${error.message}")
+            }
+        }
+    }
+
+    fun recallSelectedMessages() {
+        val selectedIds = _uiState.value.selectedMessageIds
+        if (selectedIds.isEmpty()) return
+        
+        viewModelScope.launch {
+            var successCount = 0
+            var failCount = 0
+            
+            selectedIds.forEach { msgId ->
+                repository.recallMessage(
+                    token = token,
+                    msgId = msgId,
+                    chatId = chatId,
+                    chatType = chatType
+                ).onSuccess {
+                    successCount++
+                    deleteMessage(msgId)
+                }.onFailure {
+                    failCount++
+                }
+            }
+            
+            exitSelectionMode()
+            
+            when {
+                failCount == 0 -> _toastMessage.emit("撤回成功")
+                successCount == 0 -> _toastMessage.emit("撤回失败")
+                else -> _toastMessage.emit("成功撤回 ${successCount} 条，失败 ${failCount} 条")
+            }
+        }
+    }
 }
 
 data class RecallDialogState(

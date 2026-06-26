@@ -302,7 +302,7 @@ private fun MainNavHost(
                             Icon(
                                 imageVector = Icons.Rounded.ChatBubble,
                                 contentDescription = null,
-                                modifier = Modifier.size(64.dp).alpha(0.6f)
+                                modifier = Modifier.size(80.dp).alpha(0.6f)
                             )
                         }
                     }

@@ -51,6 +51,10 @@ import java.util.Locale
 @Composable
 fun MessageBubble(
     message: MessageItem,
+    isSelectionMode: Boolean = false,
+    isSelected: Boolean = false,
+    onLongPress: (String) -> Unit = {},
+    onClickInSelectionMode: (String) -> Unit = {},
     onRecall: () -> Unit,
     onEdit: () -> Unit,
     onReply: () -> Unit,
@@ -115,9 +119,29 @@ fun MessageBubble(
         )
     }
     
-    Box(
-        modifier = Modifier.alpha(animatedAlpha)
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .alpha(animatedAlpha)
+            .background(
+                if (isSelected) {
+                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f)
+                } else {
+                    Color.Transparent
+                },
+                shape = RoundedCornerShape(12.dp)
+            )
     ) {
+        if (isSelectionMode) {
+            Checkbox(
+                checked = isSelected,
+                onCheckedChange = { onClickInSelectionMode(message.msgId) },
+                modifier = Modifier
+                    .padding(4.dp)
+                    .size(24.dp)
+            )
+        }
+    
         if (message.isRecalled) {
             Box(
                 modifier = Modifier
@@ -168,18 +192,24 @@ fun MessageBubble(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
                         onClick = {
-                            showMenuChanged(message.msgId)
+                            if (isSelectionMode) {
+                                onClickInSelectionMode(message.msgId)
+                            } else {
+                                showMenuChanged(message.msgId)
+                            }
                         },
-                        onLongClick = { showMenuChanged(message.msgId) }
+                        onLongClick = {
+                            if (!isSelectionMode) {
+                                onLongPress(message.msgId)
+                            }
+                        }
                     )
                     .padding(
                         start = 8.dp,
                         end = 8.dp,
                         top = if (isOlderSameSender) 0.dp else 4.dp,
                         bottom = if (isNewerSameSender) 0.dp else 4.dp
-                    ),
-                verticalAlignment = avatarAlignment,
-                horizontalArrangement = if (isMine) Arrangement.End else Arrangement.Start
+                    )
             ) {
                 if (isFirstFromSender || isLastFromSender) {
                     Spacer(modifier = Modifier.height(36.dp))

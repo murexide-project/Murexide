@@ -109,5 +109,7 @@ data class ChatUiState(
     val backgroundUrl: String? = null,
     val isUploading: Boolean = false,
     val uploadProgress: Float = 0f,
-    val uploadImagePath: String? = null
+    val uploadImagePath: String? = null,
+    val selectionMode: Boolean = false,
+    val selectedMessageIds: Set<String> = emptySet()
 )
