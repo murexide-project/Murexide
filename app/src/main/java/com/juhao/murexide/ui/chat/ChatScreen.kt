@@ -396,6 +396,7 @@ fun ChatScreen(
                             if (selectedMessages.size == 1) {
                                 IconButton(onClick = { 
                                     selectedMessages.firstOrNull()?.let { viewModel.setReplyTo(it) }
+                                    viewModel.exitSelectionMode()
                                 }) {
                                     Icon(Icons.Rounded.FormatQuote, contentDescription = "引用")
                                 }
