@@ -3,38 +3,30 @@ package com.juhao.murexide.network
 import android.util.Log
 import com.juhao.murexide.data.MessageItem
 import com.juhao.murexide.data.MessageTag
-import com.juhao.murexide.proto.chat_ws_go.push_message
-import com.juhao.murexide.proto.chat_ws_go.edit_message
-import com.juhao.murexide.proto.chat_ws_go.stream_message
-import com.juhao.murexide.proto.chat_ws_go.draft_input
-import com.juhao.murexide.proto.chat_ws_go.heartbeat_ack
-import com.juhao.murexide.proto.chat_ws_go.file_send_message
-import com.juhao.murexide.proto.chat_ws_go.bot_board_message
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.delay
+import com.juhao.murexide.proto.chat_ws_go.*
+import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.selects.select
 import okhttp3.Request
 import okhttp3.Response
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
 import okio.ByteString
+import org.json.JSONObject
 import java.util.UUID
 
 class WebSocketManager private constructor() {
     companion object {
         private const val TAG = "WebSocketManager"
         private const val WS_URL = "wss://chat-ws-go.jwzhd.com/ws"
-        private const val HEARTBEAT_INTERVAL = 15000L // 降低心跳间隔到 15 秒
+        private const val HEARTBEAT_INTERVAL = 15_000L
+        private const val CONNECT_TIMEOUT = 2_500L
 
         @Volatile
         private var instance: WebSocketManager? = null
@@ -56,22 +48,15 @@ class WebSocketManager private constructor() {
     @Volatile private var lastHeartbeatAckTime = 0L
     private var heartbeatJob: Job? = null
 
-    /**
-     * 连接维持协程。它是唯一负责创建 / 重建 socket 的角色，
-     * 这样就不会出现「重连协程在自身内部被 cancel」导致的死循环问题。
-     * 等待者通过 [connectionSignal] 唤醒它立即进行下一次尝试。
-     */
     private var maintainerJob: Job? = null
-    private val connectionSignal = kotlinx.coroutines.channels.Channel<Unit>(
-        capacity = kotlinx.coroutines.channels.Channel.CONFLATED
-    )
+    private val connectionSignal = Channel<Unit>(Channel.CONFLATED)
 
     private val _connectionState = MutableStateFlow(false)
     val connectionState: StateFlow<Boolean> = _connectionState.asStateFlow()
 
     private val _messageFlow = MutableSharedFlow<WsEvent>()
     val messageFlow: SharedFlow<WsEvent> = _messageFlow.asSharedFlow()
-    
+
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val client = NetworkClient.okHttpClient
 
@@ -87,31 +72,26 @@ class WebSocketManager private constructor() {
 
     fun connect(userId: String, token: String, deviceId: String, platform: String = "android") {
         val credsChanged = currentUserId != userId ||
-            currentToken != token ||
-            currentDeviceId != deviceId ||
-            currentPlatform != platform
+                currentToken != token ||
+                currentDeviceId != deviceId ||
+                currentPlatform != platform
 
         currentUserId = userId
         currentToken = token
         currentDeviceId = deviceId
         currentPlatform = platform
 
-        if (isConnected && !credsChanged) {
-            Log.d(TAG, "WebSocket already connected with same creds")
-            return
-        }
-
         if (credsChanged || !isConnected) {
             connectionVersion++
             closeCurrentSocket()
+            handleDisconnect()
             startMaintainer()
             connectionSignal.trySend(Unit)
         }
     }
 
     private fun startMaintainer() {
-        if (maintainerJob?.isActive == true) return
-
+        maintainerJob?.cancel()
         maintainerJob = scope.launch {
             var backoff = 1000L
             while (isActive && currentUserId != null && currentToken != null) {
@@ -121,30 +101,23 @@ class WebSocketManager private constructor() {
                     continue
                 }
 
-                try {
-                    createConnection()
-                } catch (e: Exception) {
-                    Log.e(TAG, "createConnection threw", e)
-                }
+                createConnection()
 
-                val connected = waitForConnectionOrTimeout(2500L)
+                val connected = waitForConnectionOrTimeout(CONNECT_TIMEOUT)
                 if (connected) {
                     backoff = 1000L
                 } else {
-                    delay(backoff)
-                    backoff = minOf(backoff * 2, 30000L)
+                    select<Unit> {
+                        onTimeout(backoff) {}
+                        connectionSignal.onReceive { }
+                    }
+                    backoff = minOf(backoff * 2, 30_000L)
                 }
             }
         }
     }
 
     private fun createConnection() {
-        if (isConnected) return
-        val userId = currentUserId ?: return
-        val token = currentToken ?: return
-        val deviceId = currentDeviceId ?: return
-        val platform = currentPlatform ?: "android"
-
         connectionVersion++
         val thisVersion = connectionVersion
 
@@ -163,7 +136,12 @@ class WebSocketManager private constructor() {
                 isConnected = true
                 _connectionState.value = true
                 lastHeartbeatAckTime = System.currentTimeMillis()
-                sendLogin(userId, token, deviceId, platform)
+                sendLogin(
+                    currentUserId ?: return,
+                    currentToken ?: return,
+                    currentDeviceId ?: return,
+                    currentPlatform ?: "android"
+                )
                 startHeartbeat()
                 scope.launch { _messageFlow.emit(WsEvent.Connected) }
             }
@@ -235,41 +213,31 @@ class WebSocketManager private constructor() {
     }
 
     fun manualReconnect() {
-        if (isConnected) {
-            connectionVersion++
-            closeCurrentSocket()
-            handleDisconnect()
-        }
+        closeCurrentSocket()
+        handleDisconnect()
         startMaintainer()
         connectionSignal.trySend(Unit)
     }
 
     fun notifyNetworkLost() {
-        Log.d(TAG, "Network lost")
-        if (isConnected) {
-            connectionVersion++
-            closeCurrentSocket()
-            handleDisconnect()
-        }
+        closeCurrentSocket()
+        handleDisconnect()
+        connectionSignal.trySend(Unit)
     }
-    
+
     private fun sendLogin(userId: String, token: String, deviceId: String, platform: String) {
-        Log.d(TAG, "Login params: userId=$userId, token=$token, deviceId=$deviceId, platform=$platform")
-        val loginJson = """
-            {
-                "seq": "${UUID.randomUUID()}",
-                "cmd": "login",
-                "data": {
-                    "userId": "$userId",
-                    "token": "$token",
-                    "platform": "$platform",
-                    "deviceId": "$deviceId"
-                }
-            }
-        """.trimIndent()
-        
-        webSocket?.send(loginJson)
-        Log.d(TAG, "Login sent: $loginJson")
+        val json = JSONObject().apply {
+            put("seq", UUID.randomUUID().toString())
+            put("cmd", "login")
+            put("data", JSONObject().apply {
+                put("userId", userId)
+                put("token", token)
+                put("platform", platform)
+                put("deviceId", deviceId)
+            })
+        }
+        webSocket?.send(json.toString())
+        Log.d(TAG, "Login sent")
     }
 
     private fun startHeartbeat() {
@@ -280,28 +248,22 @@ class WebSocketManager private constructor() {
                 if (!isConnected) break
                 val now = System.currentTimeMillis()
                 if (now - lastHeartbeatAckTime > HEARTBEAT_INTERVAL * 2) {
-                    Log.w(TAG, "Heartbeat timeout, triggering reconnect")
-                    connectionVersion++
-                    closeCurrentSocket()
+                    Log.w(TAG, "Heartbeat timeout")
                     onConnectionLost()
                     break
                 }
-                
                 sendHeartbeat()
             }
         }
     }
 
     private fun sendHeartbeat() {
-        val heartbeatJson = """
-            {
-                "seq": "${UUID.randomUUID()}",
-                "cmd": "heartbeat",
-                "data": {}
-            }
-        """.trimIndent()
-        
-        webSocket?.send(heartbeatJson)
+        val json = JSONObject().apply {
+            put("seq", UUID.randomUUID().toString())
+            put("cmd", "heartbeat")
+            put("data", JSONObject())
+        }
+        webSocket?.send(json.toString())
         Log.d(TAG, "Heartbeat sent")
     }
 
@@ -315,35 +277,26 @@ class WebSocketManager private constructor() {
             Log.w(TAG, "WebSocket not connected")
             return
         }
-
-        val draftJson = """
-            {
-                "seq": "${UUID.randomUUID()}",
-                "cmd": "inputInfo",
-                "data": {
-                    "chatId": "$chatId",
-                    "input": "$draft",
-                    "deviceId": "$deviceId"
-                }
-            }
-        """.trimIndent()
-        
-        webSocket?.send(draftJson)
+        val json = JSONObject().apply {
+            put("seq", UUID.randomUUID().toString())
+            put("cmd", "inputInfo")
+            put("data", JSONObject().apply {
+                put("chatId", chatId)
+                put("input", draft)
+                put("deviceId", deviceId)
+            })
+        }
+        webSocket?.send(json.toString())
         Log.d(TAG, "Draft sync sent")
     }
 
     private fun handleTextMessage(text: String) {
         try {
-            val json = org.json.JSONObject(text)
+            val json = JSONObject(text)
             when (val cmd = json.optString("cmd", "")) {
                 "heartbeat_ack" -> {
                     Log.d(TAG, "Heartbeat ACK received")
                     lastHeartbeatAckTime = System.currentTimeMillis()
-                }
-                "push_message", "edit_message", "stream_message", "draft_input" -> {
-                    // JSON格式的消息,需要转换为ProtoBuf或直接解析
-                    Log.w(TAG, "Received JSON format message, need to convert to ProtoBuf: $cmd")
-                    // TODO: 如果服务器发送JSON,需要在这里处理
                 }
                 else -> {
                     Log.d(TAG, "Unknown command: $cmd")

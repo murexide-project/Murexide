@@ -85,12 +85,6 @@ class QiniuUploader(
         .writeTimeout(WRITE_TIMEOUT_SECONDS, TimeUnit.SECONDS)
         .build()
 
-    private fun debugLog(message: String) {
-        if (debug) {
-            println("[QiniuImageUploader] $message")
-        }
-    }
-
     private fun isUrl(input: String): Boolean {
         return input.startsWith("http://") || input.startsWith("https://")
     }
@@ -126,32 +120,27 @@ class QiniuUploader(
         if (userToken.isEmpty()) {
             throw IllegalStateException("user_token is empty")
         }
-
+    
         val request = Request.Builder()
             .url(tokenUrl)
             .header("token", userToken)
             .get()
             .build()
-
+    
         return withContext(Dispatchers.IO) {
             val response = client.newCall(request).execute()
             response.use { response ->
                 if (!response.isSuccessful) {
                     throw IOException("Failed to get upload token: ${response.code}")
                 }
-
-                val body = response.body.string()
-
+    
                 try {
-                    val codeRegex = """"code"\s*:\s*(\d+)""".toRegex()
-                    val code = codeRegex.find(body)?.groupValues?.get(1)?.toIntOrNull() ?: 0
-                    if (code != 1) {
-                        throw IOException("Failed to get upload token: code=$code")
-                    }
-
-                    val tokenRegex = """"token"\s*:\s*"([^"]+)"""".toRegex()
-                    tokenRegex.find(body)?.groupValues?.get(1)
-                        ?: throw IOException("Token not found in response")
+                    Json.parseToJsonElement(response.body.string())
+                        .jsonObject["data"]
+                        ?.jsonObject
+                        ?.getValue("token")
+                        .jsonPrimitive
+                        .content
                 } catch (e: Exception) {
                     throw IOException("Failed to parse response: ${e.message}")
                 }
@@ -170,7 +159,6 @@ class QiniuUploader(
                     if (!response.isSuccessful) return@withContext defaultUploadHost
     
                     val body = response.body.string()
-                    debugLog("Query response: $body")
     
                     try {
                         val json = Json.parseToJsonElement(body).jsonObject
@@ -183,18 +171,14 @@ class QiniuUploader(
                             
                             if (domains.isNotEmpty()) {
                                 val domain = domains[0].jsonPrimitive.content
-                                debugLog("✅ Found upload domain: $domain")
                                 return@withContext domain
                             }
                         }
-                    } catch (e: Exception) {
-                        debugLog("Failed to parse JSON: ${e.message}")
-                    }
+                    } catch (_: Exception) {}
     
                     defaultUploadHost
                 }
             } catch (e: Exception) {
-                debugLog("Failed to query upload host: ${e.message}")
                 defaultUploadHost
             }
         }
@@ -218,7 +202,6 @@ class QiniuUploader(
 
                 success && outputFile.exists() && outputFile.length() > 0
             } catch (e: Exception) {
-                debugLog("WebP conversion failed: ${e.message}")
                 false
             } finally {
                 bitmap?.recycle()
@@ -242,11 +225,6 @@ class QiniuUploader(
             2 -> {
                 // 视频处理
                 val ext = file.extension.ifEmpty { "mp4" }
-                allowedExtensions?.let {
-                    if (!it.contains(ext.lowercase())) {
-                        debugLog("Unsupported video format: $ext")
-                    }
-                }
                 file to ext
             }
             else -> {
@@ -258,26 +236,12 @@ class QiniuUploader(
     }
 
     private fun parseUploadResponse(responseBody: String): String {
-        try {
-            val keyRegex = """"key"\s*:\s*"([^"]+)"""".toRegex()
-            val key = keyRegex.find(responseBody)?.groupValues?.get(1)
-            if (key != null) {
-                return key
-            }
+        return try {
+            val json = Json.parseToJsonElement(responseBody).jsonObject
             
-            val hashRegex = """"hash"\s*:\s*"([^"]+)"""".toRegex()
-            val hash = hashRegex.find(responseBody)?.groupValues?.get(1)
-            if (hash != null) {
-                return hash
-            }
-            
-            if (responseBody.matches(Regex("^[a-zA-Z0-9._-]+$"))) {
-                return responseBody
-            }
-            
-            if (responseBody.startsWith("http://") || responseBody.startsWith("https://")) {
-                return responseBody
-            }
+            json["key"]?.jsonPrimitive?.content?.let { return it }
+
+            json["hash"]?.jsonPrimitive?.content?.let { return it }
             
             throw IOException("Cannot parse upload response: $responseBody")
         } catch (e: Exception) {
@@ -306,7 +270,6 @@ class QiniuUploader(
                 
                 val isRemoteUrl = isUrl(inputPath)
                 val srcFile = if (isRemoteUrl) {
-                    debugLog("Downloading file: $inputPath")
                     val downloadFile = File(cacheDir, "imgutil_${timestamp}_${uniqueId}.bin")
                     
                     val request = Request.Builder().url(inputPath).build()
@@ -362,7 +325,6 @@ class QiniuUploader(
                 if (uploadType != 3) {
                     allowedExtensions?.let {
                         if (!it.contains(safeExt.lowercase())) {
-                            debugLog("Unsupported extension: $safeExt")
                             if (uploadType == 1) {
                                 return@withContext Result.failure(
                                     IllegalArgumentException("Unsupported image format: $safeExt")
@@ -374,8 +336,6 @@ class QiniuUploader(
     
                 val md5 = md5Hex(uploadFile)
                 val key = "$md5.$safeExt"
-    
-                debugLog("Uploading file: key=$key, size=${uploadFile.length()}")
     
                 val uploadToken = try {
                     getUploadToken()
@@ -416,7 +376,6 @@ class QiniuUploader(
                     val responseBody = response.body.string()
 
                     if (!response.isSuccessful && responseBody.contains("no such domain")) {
-                        debugLog("Domain error, switching to default domain")
                         val fallbackUrl = "https://$defaultUploadHost"
                         val fallbackRequest = Request.Builder()
                             .url(fallbackUrl)
@@ -445,10 +404,8 @@ class QiniuUploader(
                 }
     
             } catch (e: CancellationException) {
-                debugLog("Upload cancelled")
                 Result.failure(e)
             } catch (e: Exception) {
-                debugLog("Upload failed: ${e.message}")
                 Result.failure(e)
             } finally {
                 filesToClean.forEach { file ->
