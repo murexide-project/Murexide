@@ -70,11 +70,11 @@ class QiniuUploader(
             else -> FILE_BUCKET
         }
     
-    private val allowedExtensions: Set<String>
+    private val allowedExtensions: Set<String>?
         get() = when (uploadType) {
             1 -> ALLOWED_IMAGE_EXTENSIONS
             2 -> ALLOWED_VIDEO_EXTENSIONS
-            else -> ALLOWED_FILE_EXTENSIONS
+            else -> null
         }
     
     private val appContext = context.applicationContext
@@ -242,8 +242,10 @@ class QiniuUploader(
             2 -> {
                 // 视频处理
                 val ext = file.extension.ifEmpty { "mp4" }
-                if (!allowedExtensions.contains(ext.lowercase())) {
-                    debugLog("Unsupported video format: $ext, using mp4")
+                allowedExtensions?.let {
+                    if (!it.contains(ext.lowercase())) {
+                        debugLog("Unsupported video format: $ext")
+                    }
                 }
                 file to ext
             }
@@ -357,12 +359,16 @@ class QiniuUploader(
                 onProgress(0.5f)
     
                 val safeExt = ext.replace(Regex("[^a-zA-Z0-9]"), "").ifEmpty { "bin" }
-                if (!allowedExtensions.contains(safeExt.lowercase())) {
-                    debugLog("Unsupported extension: $safeExt")
-                    if (uploadType == 1) {
-                        return@withContext Result.failure(
-                            IllegalArgumentException("Unsupported image format: $safeExt")
-                        )
+                if (uploadType != 3) {
+                    allowedExtensions?.let {
+                        if (!it.contains(safeExt.lowercase())) {
+                            debugLog("Unsupported extension: $safeExt")
+                            if (uploadType == 1) {
+                                return@withContext Result.failure(
+                                    IllegalArgumentException("Unsupported image format: $safeExt")
+                                )
+                            }
+                        }
                     }
                 }
     
