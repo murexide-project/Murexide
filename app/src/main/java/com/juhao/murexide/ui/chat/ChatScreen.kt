@@ -610,16 +610,16 @@ fun ChatScreen(
                                     Column(modifier = Modifier.weight(1f)) {
                                         Text(
                                             text = uiState.replyTo?.senderName ?: "用户",
-                                            fontSize = 12.sp,
+                                            style = MaterialTheme.typography.labelSmall,
                                             fontWeight = FontWeight.Bold,
                                             color = MaterialTheme.colorScheme.primary
                                         )
+                                        Spacer(modifier = Modifier.height(2.dp))
                                         Text(
                                             text = uiState.replyTo?.getDisplayContent() ?: "消息",
-                                            fontSize = 12.sp,
+                                            style = MaterialTheme.typography.labelSmall,
                                             maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            overflow = TextOverflow.Ellipsis
                                         )
                                     }
                                     IconButton(

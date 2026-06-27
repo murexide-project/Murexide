@@ -322,7 +322,7 @@ fun MessageBubble(
                                             }
                                             Text(
                                                 text = quoteText,
-                                                fontSize = 12.sp,
+                                                style = MaterialTheme.typography.bodyMedium,
                                                 maxLines = 2,
                                                 overflow = TextOverflow.Ellipsis,
                                                 color = MaterialTheme.colorScheme.onSurface
@@ -390,7 +390,7 @@ fun MessageBubble(
                                                         )
                                                         .combinedClickable(
                                                             onClick = { onImageClick(url) },
-                                                            onLongClick = { showMenuChanged(message.msgId) }
+                                                            onLongClick = { onLongPress(message) }
                                                         )
                                                 )
     
@@ -447,7 +447,10 @@ fun MessageBubble(
                                                         else
                                                             MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp).copy(alpha = 0.9f)
                                                     )
-                                                    .clickable { /* TODO: 打开/下载文件 */ }
+                                                    .combinedClickable(
+                                                        onClick = { },
+                                                        onLongClick = { onLongPress(message) }
+                                                    )
                                                     .padding(12.dp),
                                                 verticalAlignment = Alignment.CenterVertically
                                             ) {
@@ -577,7 +580,7 @@ fun MessageBubble(
                                 onReply()
                             },
                             leadingIcon = {
-                                Icon(Icons.Rounded.FormatQuote, contentDescription = null, modifier = Modifier.size(24.dp))
+                                Icon(Icons.Rounded.FormatQuote, contentDescription = null, modifier = Modifier.size(18.dp))
                             }
                         )
     
@@ -589,7 +592,7 @@ fun MessageBubble(
                                     onRecall()
                                 },
                                 leadingIcon = {
-                                    Icon(Icons.AutoMirrored.Rounded.Undo, contentDescription = null, modifier = Modifier.size(24.dp))
+                                    Icon(Icons.AutoMirrored.Rounded.Undo, contentDescription = null, modifier = Modifier.size(18.dp))
                                 }
                             )
                         }
@@ -605,7 +608,7 @@ fun MessageBubble(
                                     Icon(
                                         Icons.Rounded.Edit,
                                         contentDescription = null,
-                                        modifier = Modifier.size(24.dp)
+                                        modifier = Modifier.size(18.dp)
                                     )
                                 }
                             )

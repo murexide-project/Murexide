@@ -316,6 +316,12 @@ class ChatViewModel(
                 quoteImageUrl = state.replyTo?.imageUrl,
                 quoteImageName = state.replyTo?.imageUrl?.toUri()?.lastPathSegment
             )
+            
+            _uiState.update {
+                it.copy(
+                    requestInputFocus = true
+                )
+            }
 
             repository.sendMessage(
                 token = token,

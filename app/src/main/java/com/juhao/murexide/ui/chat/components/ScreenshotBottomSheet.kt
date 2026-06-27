@@ -162,7 +162,6 @@ private fun ScreenshotContent(
                 .padding(12.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // 顶部信息
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -179,7 +178,7 @@ private fun ScreenshotContent(
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Bold
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(2.dp))
                     Text(
                         text = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date()),
                         style = MaterialTheme.typography.bodySmall,
@@ -188,7 +187,6 @@ private fun ScreenshotContent(
                 }
             }
     
-            // 消息列表 - 按实际位置计算连体效果
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -233,7 +231,6 @@ private fun ScreenshotContent(
                 }
             }
     
-            // 底部水印
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
