@@ -135,7 +135,6 @@ class QiniuUploader(
                 }
     
                 val body = response.body.string()
-                debugLog("Token response: $body")
     
                 try {
                     val json = Json.parseToJsonElement(body).jsonObject
