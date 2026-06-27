@@ -30,7 +30,7 @@ class QiniuUploader(
         private const val IMAGE_BUCKET = "chat-68"
         
         // 视频配置
-        private const val VIDEO_DEFAULT_UPLOAD_HOST = "up-cn-east-2.qiniup.com"
+        private const val VIDEO_DEFAULT_UPLOAD_HOST = "upload-cn-east-2.qiniup.com"
         private const val VIDEO_BUCKET = "chat68-video"
         
         private val ALLOWED_IMAGE_EXTENSIONS = setOf("jpg", "jpeg", "png", "gif", "webp", "bmp")
