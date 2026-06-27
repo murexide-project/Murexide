@@ -6,9 +6,6 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.ime
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalFocusManager
-import android.Manifest
-import android.content.pm.PackageManager
-import androidx.core.content.ContextCompat
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -125,118 +122,31 @@ fun ChatScreen(
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
-        uri?.let {
-            viewModel.uploadAndSendImage(it, context)
-        }
-    }
-
-    val permissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestMultiplePermissions()
-    ) { permissions ->
-        val allGranted = permissions.values.all { it }
-        if (allGranted) {
-            imagePickerLauncher.launch("image/*")
-        } else {
-            Toast.makeText(context, "需要权限才能选择图片", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    fun openImagePicker() {
-        val permissions =
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-                arrayOf(Manifest.permission.READ_MEDIA_IMAGES)
-            } else {
-                arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)
-            }
-
-        val needRequest = permissions.any {
-            ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED
-        }
-
-        if (needRequest) {
-            permissionLauncher.launch(permissions)
-        } else {
-            imagePickerLauncher.launch("image/*")
-        }
+        uri?.let { viewModel.uploadAndSendImage(it, context) }
     }
     
     val videoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
-        uri?.let {
-            viewModel.uploadAndSendVideo(it, context)
-        }
-    }
-
-    val videoPermissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestMultiplePermissions()
-    ) { permissions ->
-        val allGranted = permissions.values.all { it }
-        if (allGranted) {
-            videoPickerLauncher.launch("video/*")
-        } else {
-            Toast.makeText(context, "需要权限才能选择视频", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    fun openVideoPicker() {
-        val permissions =
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-                arrayOf(Manifest.permission.READ_MEDIA_VIDEO)
-            } else {
-                arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)
-            }
-
-        val needRequest = permissions.any {
-            ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED
-        }
-
-        if (needRequest) {
-            videoPermissionLauncher.launch(permissions)
-        } else {
-            videoPickerLauncher.launch("video/*")
-        }
+        uri?.let { viewModel.uploadAndSendVideo(it, context) }
     }
     
     val filePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
-        uri?.let {
-            viewModel.uploadAndSendFile(it, context)
-        }
+        uri?.let { viewModel.uploadAndSendFile(it, context) }
     }
     
-    val filePermissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestMultiplePermissions()
-    ) { permissions ->
-        val allGranted = permissions.values.all { it }
-        if (allGranted) {
-            filePickerLauncher.launch("*/*")
-        } else {
-            Toast.makeText(context, "需要存储权限才能选择文件", Toast.LENGTH_SHORT).show()
-        }
+    fun openImagePicker() {
+        imagePickerLauncher.launch("image/*")
+    }
+    
+    fun openVideoPicker() {
+        videoPickerLauncher.launch("video/*")
     }
     
     fun openFilePicker() {
-        val permissions =
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-                arrayOf(
-                    Manifest.permission.READ_MEDIA_IMAGES,
-                    Manifest.permission.READ_MEDIA_VIDEO
-                )
-            } else {
-                arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)
-            }
-    
-        val needRequest = permissions.any {
-            ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED
-        }
-    
-        if (needRequest) {
-            filePermissionLauncher.launch(permissions)
-        } else {
-            filePickerLauncher.launch("*/*")
-        }
+        filePickerLauncher.launch("*/*")
     }
 
     val selectionMode = uiState.selectionMode
