@@ -21,6 +21,7 @@ data class ConversationDetail(
     val nameId: Long? = null,
     val registerTime: String? = null,
     val onlineDay: Int? = null,
+    val continuousOnlineDay: Int? = null,
     val ipGeo: String? = null,
     val isVip: Boolean = false,
     val gender: Int = 3,

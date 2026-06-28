@@ -1,7 +1,12 @@
 package com.juhao.murexide.repository
 
+import com.juhao.murexide.data.BaseResponse
+import com.juhao.murexide.data.CaptchaData
+import com.juhao.murexide.data.CaptchaResponse
 import com.juhao.murexide.data.LoginRequest
 import com.juhao.murexide.data.LoginResponse
+import com.juhao.murexide.data.PhoneLoginRequest
+import com.juhao.murexide.data.VerificationCodeRequest
 import com.juhao.murexide.network.NetworkClient
 import com.juhao.murexide.proto.user.info
 import kotlinx.coroutines.Dispatchers
@@ -41,6 +46,130 @@ class AuthRepository {
                             responseBody
                         )
                         
+                        if (loginResponse.code == 1 && loginResponse.data != null) {
+                            Result.success(loginResponse.data.token)
+                        } else {
+                            Result.failure(Exception(loginResponse.msg))
+                        }
+                    } else {
+                        Result.failure(Exception("HTTP error: ${response.code}"))
+                    }
+                }
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+        }
+    }
+
+    /** 获取人机验证图片 */
+    suspend fun getCaptcha(): Result<CaptchaData> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val request = Request.Builder()
+                    .url("$baseUrl/v1/user/captcha")
+                    .post("{}".toRequestBody("application/json".toMediaType()))
+                    .build()
+
+                client.newCall(request).execute().use { response ->
+                    if (response.isSuccessful) {
+                        val captchaResponse = json.decodeFromString(
+                            CaptchaResponse.serializer(),
+                            response.body.string()
+                        )
+                        if (captchaResponse.code == 1 && captchaResponse.data != null) {
+                            Result.success(captchaResponse.data)
+                        } else {
+                            Result.failure(Exception(captchaResponse.msg.ifBlank { "获取验证码图片失败" }))
+                        }
+                    } else {
+                        Result.failure(Exception("HTTP error: ${response.code}"))
+                    }
+                }
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+        }
+    }
+
+    /** 获取短信验证码（需先通过人机验证） */
+    suspend fun sendSmsCode(
+        mobile: String,
+        captchaCode: String,
+        captchaId: String
+    ): Result<Unit> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val verificationRequest = VerificationCodeRequest(
+                    mobile = mobile,
+                    code = captchaCode,
+                    id = captchaId,
+                    platform = "android"
+                )
+
+                val jsonBody = json.encodeToString(
+                    VerificationCodeRequest.serializer(),
+                    verificationRequest
+                )
+                val requestBody = jsonBody.toRequestBody("application/json".toMediaType())
+
+                val request = Request.Builder()
+                    .url("$baseUrl/v1/verification/get-verification-code")
+                    .post(requestBody)
+                    .build()
+
+                client.newCall(request).execute().use { response ->
+                    if (response.isSuccessful) {
+                        val baseResponse = json.decodeFromString(
+                            BaseResponse.serializer(),
+                            response.body.string()
+                        )
+                        if (baseResponse.code == 1) {
+                            Result.success(Unit)
+                        } else {
+                            Result.failure(Exception(baseResponse.msg.ifBlank { "发送验证码失败" }))
+                        }
+                    } else {
+                        Result.failure(Exception("HTTP error: ${response.code}"))
+                    }
+                }
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+        }
+    }
+
+    /** 短信验证码登录 */
+    suspend fun phoneLogin(
+        mobile: String,
+        smsCode: String,
+        deviceId: String
+    ): Result<String> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val phoneLoginRequest = PhoneLoginRequest(
+                    mobile = mobile,
+                    captcha = smsCode,
+                    deviceId = deviceId,
+                    platform = "android"
+                )
+
+                val jsonBody = json.encodeToString(
+                    PhoneLoginRequest.serializer(),
+                    phoneLoginRequest
+                )
+                val requestBody = jsonBody.toRequestBody("application/json".toMediaType())
+
+                val request = Request.Builder()
+                    .url("$baseUrl/v1/user/verification-login")
+                    .post(requestBody)
+                    .build()
+
+                client.newCall(request).execute().use { response ->
+                    if (response.isSuccessful) {
+                        val loginResponse = json.decodeFromString(
+                            LoginResponse.serializer(),
+                            response.body.string()
+                        )
                         if (loginResponse.code == 1 && loginResponse.data != null) {
                             Result.success(loginResponse.data.token)
                         } else {

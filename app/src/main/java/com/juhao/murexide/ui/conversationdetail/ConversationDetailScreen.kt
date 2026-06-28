@@ -150,7 +150,10 @@ private fun UserSection(detail: ConversationDetail) {
             InfoItem(Icons.Rounded.Event, "注册时间", it)
         }
         detail.onlineDay?.let {
-            InfoItem(Icons.Rounded.Schedule, "在线天数", "$it 天")
+            InfoItem(Icons.Rounded.AccessTime, "在线天数", "$it 天")
+        }
+        detail.continuousOnlineDay?.let {
+            InfoItem(Icons.Rounded.MoreTime, "连续在线", "$it 天")
         }
         InfoItem(
             when (detail.gender) {

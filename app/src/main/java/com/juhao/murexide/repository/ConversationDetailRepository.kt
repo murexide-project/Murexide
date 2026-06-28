@@ -67,6 +67,7 @@ class ConversationDetailRepository {
                             nameId = d?.name_id,
                             registerTime = d?.register_time?.takeIf { it.isNotEmpty() },
                             onlineDay = d?.online_day,
+                            continuousOnlineDay = d?.continuous_online_day,
                             ipGeo = d?.ipGeo?.takeIf { it.isNotEmpty() },
                             isVip = (d?.is_vip ?: 0) == 1,
                             gender = d?.profile_info?.gender ?: 3
