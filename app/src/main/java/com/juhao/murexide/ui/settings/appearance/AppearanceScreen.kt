@@ -170,7 +170,7 @@ fun AppearanceScreen(
                             isFirstFromSender = true,
                             isOlderSameSender = true,
                             isNewerSameSender = false,
-                            showAvatar = showMyBubbleAvatar,
+                            showAvatar = true,
                             showMyBubbleAvatarSetting = showMyBubbleAvatar,
                             bubbleOpacity = bubbleOpacity,
                             bubbleCornerRadius = bubbleCornerRadius
