@@ -306,7 +306,7 @@ private fun MainNavHost(
         composable("community") {
             Scaffold (
                 topBar = {
-                    TopAppBar(,
+                    TopAppBar(
                         windowInsets = WindowInsets(top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()),
                         title = {
                             Text("社区")
