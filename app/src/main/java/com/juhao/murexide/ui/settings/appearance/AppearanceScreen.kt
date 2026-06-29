@@ -41,12 +41,12 @@ fun AppearanceScreen(
     var showSticky by remember { mutableStateOf(true) }
     
     val bubbleCornerRadius by settingsStorage.bubbleCornerRadiusFlow.collectAsState(initial = 16f)
-    var localBubbleCornerRadius by remember { mutableStateOf(bubbleCornerRadius) }
+    var localBubbleCornerRadius by remember { mutableFloatStateOf(bubbleCornerRadius) }
     
     val showBubbleAvatar by settingsStorage.showBubbleAvatarFlow.collectAsState(initial = true)
     
     val bubbleOpacity by settingsStorage.bubbleOpacityFlow.collectAsState(initial = 0.9f)
-    var localBubbleOpacity by remember { mutableStateOf(bubbleOpacity) }
+    var localBubbleOpacity by remember { mutableFloatStateOf(bubbleOpacity) }
 
     LaunchedEffect(Unit) {
         squareAvatar = settingsStorage.getSquareAvatar()
@@ -210,7 +210,7 @@ fun AppearanceScreen(
                             color = MaterialTheme.colorScheme.secondaryContainer
                         ) {
                             Text(
-                                text = "${bubbleCornerRadius.toInt()}dp",
+                                text = "${localBubbleCornerRadius.toInt()}dp",
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onSecondaryContainer,
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
@@ -223,7 +223,7 @@ fun AppearanceScreen(
                     
                     Slider(
                         value = localBubbleCornerRadius,
-                        onValueChange = { localBubbleCornerRadiusadius = it },
+                        onValueChange = { localBubbleCornerRadius = it },
                         onValueChangeFinished = {
                             scope.launch {
                                 settingsStorage.setBubbleCornerRadius(localBubbleCornerRadius)
@@ -282,7 +282,7 @@ fun AppearanceScreen(
                             color = MaterialTheme.colorScheme.secondaryContainer
                         ) {
                             Text(
-                                text = "${(bubbleOpacity * 100).toInt()}%",
+                                text = "${(localBubbleOpacity * 100).toInt()}%",
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onSecondaryContainer,
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
