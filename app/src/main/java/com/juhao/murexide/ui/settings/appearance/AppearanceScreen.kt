@@ -40,17 +40,17 @@ fun AppearanceScreen(
     var squareAvatar by remember { mutableStateOf(false) }
     var showSticky by remember { mutableStateOf(true) }
     
-    val bubbleCornerRadius by settingsStorage.bubbleCornerRadiusFlow.collectAsState(initial = 16f)
-    var localBubbleCornerRadius by remember { mutableFloatStateOf(bubbleCornerRadius) }
+    var bubbleCornerRadius by remember { mutableFloatStateOf(16f) }
     
     val showBubbleAvatar by settingsStorage.showBubbleAvatarFlow.collectAsState(initial = true)
     
-    val bubbleOpacity by settingsStorage.bubbleOpacityFlow.collectAsState(initial = 0.9f)
-    var localBubbleOpacity by remember { mutableFloatStateOf(bubbleOpacity) }
+    var bubbleOpacity by remember { mutableFloatStateOf(0.9f) }
 
     LaunchedEffect(Unit) {
         squareAvatar = settingsStorage.getSquareAvatar()
         showSticky = settingsStorage.getShowSticky()
+        bubbleCornerRadius = settingsStorage.getBubbleCornerRadius()
+        bubbleOpacity = settingsStorage.getBubbleOpacity()
     }
 
     val previewMessages = remember {
@@ -210,7 +210,7 @@ fun AppearanceScreen(
                             color = MaterialTheme.colorScheme.secondaryContainer
                         ) {
                             Text(
-                                text = "${localBubbleCornerRadius.toInt()}dp",
+                                text = "${bubbleCornerRadius.toInt()}dp",
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onSecondaryContainer,
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
@@ -222,11 +222,11 @@ fun AppearanceScreen(
                     Spacer(modifier = Modifier.height(4.dp))
                     
                     Slider(
-                        value = localBubbleCornerRadius,
-                        onValueChange = { localBubbleCornerRadius = it },
+                        value = bubbleCornerRadius,
+                        onValueChange = { bubbleCornerRadius = it },
                         onValueChangeFinished = {
                             scope.launch {
-                                settingsStorage.setBubbleCornerRadius(localBubbleCornerRadius)
+                                settingsStorage.setBubbleCornerRadius(bubbleCornerRadius)
                             }
                         },
                         valueRange = 0f..24f,
@@ -282,7 +282,7 @@ fun AppearanceScreen(
                             color = MaterialTheme.colorScheme.secondaryContainer
                         ) {
                             Text(
-                                text = "${(localBubbleOpacity * 100).toInt()}%",
+                                text = "${(bubbleOpacity * 100).toInt()}%",
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onSecondaryContainer,
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
@@ -294,11 +294,11 @@ fun AppearanceScreen(
                     Spacer(modifier = Modifier.height(4.dp))
                     
                     Slider(
-                        value = localBubbleOpacity,
-                        onValueChange = { localBubbleOpacity = it },
+                        value = bubbleOpacity,
+                        onValueChange = { bubbleOpacity = it },
                         onValueChangeFinished = {
                             scope.launch {
-                                settingsStorage.setBubbleOpacity(localBubbleOpacity)
+                                settingsStorage.setBubbleOpacity(bubbleOpacity)
                             }
                         },
                         valueRange = 0.4f..1f,

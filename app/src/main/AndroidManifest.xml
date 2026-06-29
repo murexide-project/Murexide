@@ -35,6 +35,10 @@
             android:exported="false"
             android:theme="@style/Theme.Murexide" />
         <activity
+            android:name=".ui.settings.appearance.AppearanceActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Murexide" />
+        <activity
             android:name=".ui.login.LoginActivity"
             android:exported="false"
             android:theme="@style/Theme.Murexide" />
