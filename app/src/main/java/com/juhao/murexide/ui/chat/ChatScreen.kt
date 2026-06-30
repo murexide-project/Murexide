@@ -30,7 +30,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -347,11 +346,6 @@ fun ChatScreen(
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
-        contentWindowInsets = if (bigScreenMode) {
-            WindowInsets(0, 0, 0, 0)
-        } else {
-            ScaffoldDefaults.contentWindowInsets
-        },
         topBar = {
             AnimatedContent(
                 targetState = selectionMode,
@@ -363,14 +357,6 @@ fun ChatScreen(
             ) { isSelectionMode ->
                 if (isSelectionMode) {
                     TopAppBar(
-                        windowInsets = if (bigScreenMode) {
-                            WindowInsets(
-                                top = WindowInsets.statusBars.asPaddingValues()
-                                    .calculateTopPadding()
-                            )
-                        } else {
-                            TopAppBarDefaults.windowInsets
-                        },
                         title = {
                             AnimatedContent(
                                 targetState = selectedMessages.size,
@@ -426,14 +412,6 @@ fun ChatScreen(
                     )
                 } else {
                     TopAppBar(
-                        windowInsets = if (bigScreenMode) {
-                            WindowInsets(
-                                top = WindowInsets.statusBars.asPaddingValues()
-                                    .calculateTopPadding()
-                            )
-                        } else {
-                            TopAppBarDefaults.windowInsets
-                        },
                         title = {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
@@ -548,12 +526,7 @@ fun ChatScreen(
                             .fillMaxWidth()
                             .background(MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp))
                             .padding(horizontal = 16.dp, vertical = 8.dp)
-                            .then(
-                                if (!bigScreenMode)
-                                    Modifier.navigationBarsPadding()
-                                else
-                                    Modifier
-                            ),
+                            .navigationBarsPadding(),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Button(
@@ -650,7 +623,6 @@ fun ChatScreen(
                             inputText = uiState.inputText,
                             sendType = uiState.sendType,
                             isSending = uiState.isSending,
-                            bigScreenMode = bigScreenMode,
                             onTextChange = { viewModel.updateInputText(it) },
                             onSendClick = { viewModel.sendMessage() },
                             onAddImageClick = { openImagePicker() },
@@ -706,11 +678,7 @@ fun ChatScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(
-                    start = innerPadding.calculateStartPadding(LayoutDirection.Ltr),
-                    end = innerPadding.calculateEndPadding(LayoutDirection.Ltr),
-                    bottom = innerPadding.calculateBottomPadding()
-                )
+                .padding(innerPadding)
         ) {
             uiState.backgroundUrl?.takeIf { it.isNotEmpty() }?.let { bgUrl ->
                 val bgRequest = remember(bgUrl) {

@@ -45,7 +45,6 @@ fun MineScreen(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             TopAppBar(
-                windowInsets = WindowInsets(top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()),
                 title = { Text("我的") },
                 scrollBehavior = scrollBehavior,
                 actions = {
@@ -115,10 +114,7 @@ private fun MineContent(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(
-                top = paddingValues.calculateTopPadding(),
-                end = paddingValues.calculateRightPadding(LayoutDirection.Ltr)
-            )
+            .padding(paddingValues)
             .verticalScroll(scrollState)
     ) {
         SettingsGroup {

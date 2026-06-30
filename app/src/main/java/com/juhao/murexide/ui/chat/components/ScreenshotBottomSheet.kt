@@ -26,7 +26,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.text.font.FontWeight
@@ -43,6 +42,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.*
+import androidx.core.graphics.createBitmap
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -81,7 +81,7 @@ fun ScreenshotBottomSheet(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             AndroidView(
-                factory = { ctx ->
+                factory = { _ ->
                     ComposeView(activity!!).apply {
                         setContent {
                             CompositionLocalProvider(
@@ -115,7 +115,7 @@ fun ScreenshotBottomSheet(
                         scope.launch {
                             val view = screenshotView ?: return@launch
                             withContext(Dispatchers.Main) {
-                                val bitmap = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
+                                val bitmap = createBitmap(view.width, view.height)
                                 val canvas = Canvas(bitmap)
                                 view.draw(canvas)
                                 onSaveImage(bitmap)
@@ -132,7 +132,7 @@ fun ScreenshotBottomSheet(
                         scope.launch {
                             val view = screenshotView ?: return@launch
                             withContext(Dispatchers.Main) {
-                                val bitmap = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
+                                val bitmap = createBitmap(view.width, view.height)
                                 val canvas = Canvas(bitmap)
                                 view.draw(canvas)
                                 saveAndShareBitmap(context, bitmap)

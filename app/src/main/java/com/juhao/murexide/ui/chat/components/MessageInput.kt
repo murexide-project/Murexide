@@ -41,7 +41,6 @@ fun MessageInput(
     inputText: String,
     sendType: String,
     isSending: Boolean = false,
-    bigScreenMode: Boolean = false,
     onTextChange: (String) -> Unit,
     onSendClick: () -> Unit,
     onAddImageClick: () -> Unit,
@@ -73,12 +72,7 @@ fun MessageInput(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(8.dp)
-                .then(
-                    if (!bigScreenMode)
-                        Modifier.navigationBarsPadding()
-                    else
-                        Modifier
-                )
+                .navigationBarsPadding()
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,

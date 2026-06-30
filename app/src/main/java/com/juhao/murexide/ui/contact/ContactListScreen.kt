@@ -14,7 +14,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import com.juhao.murexide.data.ContactItem
 import com.juhao.murexide.ui.components.Avatar
@@ -43,7 +42,6 @@ fun ContactListScreen(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             TopAppBar(
-                windowInsets = WindowInsets(top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()),
                 title = { Text("通讯录") },
                 scrollBehavior = scrollBehavior
             )
@@ -52,10 +50,7 @@ fun ContactListScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(
-                    top = paddingValues.calculateTopPadding(),
-                    end = paddingValues.calculateRightPadding(LayoutDirection.Ltr)
-                ),
+                .padding(paddingValues),
         ) {
             if (uiState.isLoading && uiState.contactGroups.isEmpty()) {
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))

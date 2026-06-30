@@ -21,7 +21,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.LayoutDirection
 import com.juhao.murexide.R
 import com.juhao.murexide.data.ConversationItem
 import com.juhao.murexide.datastore.SettingsStorage
@@ -39,7 +38,6 @@ fun ConversationListScreen(
     token: String,
     onConversationClick: (ConversationItem) -> Unit,
     currentConversation: ConversationItem? = null,
-    bigScreenMode: Boolean = false,
     viewModel: ConversationViewModel = remember { ConversationViewModel(token) }
 ) {
     val context = LocalContext.current
@@ -58,7 +56,6 @@ fun ConversationListScreen(
         modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             TopAppBar(
-                windowInsets = WindowInsets(top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()),
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
@@ -93,13 +90,7 @@ fun ConversationListScreen(
             onRefresh = { viewModel.refresh() },
             modifier = Modifier
                 .fillMaxSize()
-                .padding(
-                    top = it.calculateTopPadding(),
-                )
-                .then(
-                    if (!bigScreenMode) Modifier.padding(end = it.calculateEndPadding(LayoutDirection.Ltr))
-                    else Modifier.padding(bottom = it.calculateBottomPadding())
-                ),
+                .padding(it),
         ) {
             val state = uiState
             if (state is ConversationUiState.Success) {

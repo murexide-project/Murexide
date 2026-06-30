@@ -21,6 +21,7 @@ import okhttp3.WebSocketListener
 import okio.ByteString
 import org.json.JSONObject
 import java.util.UUID
+import kotlin.time.Duration.Companion.milliseconds
 
 class WebSocketManager private constructor() {
     companion object {
@@ -91,6 +92,7 @@ class WebSocketManager private constructor() {
         }
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     private fun startMaintainer() {
         maintainerJob?.cancel()
         maintainerJob = scope.launch {
@@ -108,9 +110,9 @@ class WebSocketManager private constructor() {
                 if (connected) {
                     backoff = 1000L
                 } else {
-                    select<Unit> {
+                    select {
                         connectionSignal.onReceive { }
-                        onTimeout(backoff) {
+                        onTimeout(backoff.milliseconds) {
                         }
                     }
                     backoff = minOf(backoff * 2, 30_000L)
@@ -189,7 +191,7 @@ class WebSocketManager private constructor() {
         val deadline = System.currentTimeMillis() + timeoutMs
         while (System.currentTimeMillis() < deadline) {
             if (isConnected) return true
-            delay(100)
+            delay(100.milliseconds)
         }
         return isConnected
     }
@@ -246,7 +248,7 @@ class WebSocketManager private constructor() {
         heartbeatJob?.cancel()
         heartbeatJob = scope.launch {
             while (isConnected) {
-                delay(HEARTBEAT_INTERVAL)
+                delay(HEARTBEAT_INTERVAL.milliseconds)
                 if (!isConnected) break
                 val now = System.currentTimeMillis()
                 if (now - lastHeartbeatAckTime > HEARTBEAT_INTERVAL * 2) {
@@ -374,7 +376,7 @@ class WebSocketManager private constructor() {
         }
     }
 
-    private fun parseWsMessage(msg: com.juhao.murexide.proto.chat_ws_go.WsMsg): MessageItem {
+    private fun parseWsMessage(msg: WsMsg): MessageItem {
         return MessageItem(
             msgId = msg.msg_id,
             senderId = msg.sender?.chat_id ?: "",
@@ -410,7 +412,7 @@ class WebSocketManager private constructor() {
         )
     }
 
-    private fun parseEditMessage(msg: com.juhao.murexide.proto.chat_ws_go.WsMsg): MessageItem {
+    private fun parseEditMessage(msg: WsMsg): MessageItem {
         return MessageItem(
             msgId = msg.msg_id,
             senderId = "",

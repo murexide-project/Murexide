@@ -14,7 +14,6 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.juhao.murexide.datastore.SettingsStorage
-import com.juhao.murexide.ui.components.MultiImageViewer
 import com.juhao.murexide.ui.theme.ThemeState
 
 @Composable
@@ -55,7 +54,7 @@ fun Avatar(
         modifier = modifier
             .size(size)
             .clip(
-                if (squareAvatar == true) {
+                if (squareAvatar) {
                     RoundedCornerShape(size / 5)
                 } else {
                     CircleShape
@@ -72,7 +71,7 @@ fun Avatar(
     if (viewerVisible) {
         MultiImageViewer(
             images = listOf(url),
-            initialPage = 1,
+            initialPage = 0,
             isVisible = true,
             onDismiss = { viewerVisible = false }
         )
