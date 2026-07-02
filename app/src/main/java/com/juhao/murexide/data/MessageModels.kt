@@ -112,5 +112,7 @@ data class ChatUiState(
     val uploadImagePath: String? = null,
     val requestInputFocus: Boolean = false,
     val selectionMode: Boolean = false,
-    val selectedMessages: Set<MessageItem> = emptySet()
+    val selectedMessages: Set<MessageItem> = emptySet(),
+    val downloadingFiles: Map<String, Float> = emptyMap(),
+    val downloadedFiles: Set<String> = emptySet()
 )

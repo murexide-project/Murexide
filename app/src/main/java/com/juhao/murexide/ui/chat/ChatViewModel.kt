@@ -28,11 +28,13 @@ import com.juhao.murexide.proto.group.info
 import com.juhao.murexide.proto.group.info_send
 import com.juhao.murexide.repository.ChatBackgroundRepository
 import com.juhao.murexide.repository.StickerRepository
+import com.juhao.murexide.utils.FileDownloader.downloadFileWithProgress
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
+import kotlin.time.Duration.Companion.milliseconds
 
 class ChatViewModel(
     private val token: String,
@@ -74,6 +76,9 @@ class ChatViewModel(
 
     private val _stickerPanel = MutableStateFlow(StickerPanelState())
     val stickerPanel: StateFlow<StickerPanelState> = _stickerPanel.asStateFlow()
+
+    private val _downloadingFiles = MutableStateFlow<Map<String, Float>>(emptyMap())
+    val downloadingFiles: StateFlow<Map<String, Float>> = _downloadingFiles.asStateFlow()
 
     private var currentMsgId: String? = null
     private var isLoadingMore = false
@@ -259,30 +264,25 @@ class ChatViewModel(
         val timeSinceLastInput = currentTime - lastUserInputTime
         
         if (timeSinceLastInput < DRAFT_DEBOUNCE_MS) {
-            Log.d(TAG, "Ignoring remote draft: user is typing (${timeSinceLastInput}ms since last input)")
             return
         }
         
         if (draft == lastAppliedDraft) {
-            Log.d(TAG, "Ignoring remote draft: same as last applied draft")
             return
         }
         
         val currentInput = _uiState.value.inputText
         if (currentInput == draft) {
-            Log.d(TAG, "Ignoring remote draft: already matches current input")
             lastAppliedDraft = draft
             return
         }
-        
-        Log.d(TAG, "Applying remote draft: '$draft' (was '$currentInput')")
+
         _uiState.update { it.copy(inputText = draft) }
         lastAppliedDraft = draft
         
         draftClearJob?.cancel()
         draftClearJob = viewModelScope.launch {
-            delay(DRAFT_CLEAR_DELAY_MS)
-            Log.d(TAG, "Clearing draft state after ${DRAFT_CLEAR_DELAY_MS}ms delay")
+            delay(DRAFT_CLEAR_DELAY_MS.milliseconds)
             _uiState.update { it.copy(isRemoteDraft = false) }
         }
     }
@@ -1052,6 +1052,56 @@ class ChatViewModel(
     
     fun onInputFocusConsumed() {
         _uiState.update { it.copy(requestInputFocus = false) }
+    }
+
+    fun startDownload(message: MessageItem, context: Context) {
+        val fileUrl = message.fileUrl ?: return
+        val fileName = message.fileName ?: "file_${System.currentTimeMillis()}"
+
+        viewModelScope.launch {
+            // 开始下载：添加进度，移除旧的已下载标记
+            _uiState.update {
+                it.copy(
+                    downloadingFiles = it.downloadingFiles + (message.msgId to 0f),
+                    downloadedFiles = it.downloadedFiles - message.msgId
+                )
+            }
+
+            downloadFileWithProgress(
+                url = fileUrl,
+                fileName = fileName,
+                context = context,
+                onProgress = { progress ->
+                    _uiState.update {
+                        it.copy(
+                            downloadingFiles = it.downloadingFiles + (message.msgId to progress)
+                        )
+                    }
+                },
+                onComplete = { savedPath ->
+                    _uiState.update {
+                        it.copy(
+                            downloadingFiles = it.downloadingFiles - message.msgId,
+                            downloadedFiles = it.downloadedFiles + message.msgId
+                        )
+                    }
+                    viewModelScope.launch {
+                        _toastMessage.emit("文件已保存到: $savedPath")
+                    }
+                },
+                onError = { error ->
+                    _uiState.update {
+                        it.copy(
+                            downloadingFiles = it.downloadingFiles - message.msgId,
+                            downloadedFiles = it.downloadedFiles - message.msgId
+                        )
+                    }
+                    viewModelScope.launch {
+                        _toastMessage.emit("下载失败: $error")
+                    }
+                }
+            )
+        }
     }
     
     fun deleteFriend(

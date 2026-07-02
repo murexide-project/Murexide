@@ -95,6 +95,8 @@ fun ChatScreen(
     var unreadCount by remember { mutableIntStateOf(0) }
     var firstMessageId by remember { mutableStateOf<String?>(null) }
 
+    val downloadingFiles by viewModel.downloadingFiles.collectAsState()
+
     val settingsStorage = remember { SettingsStorage(context) }
     val avatarFollowEnabled by settingsStorage.avatarFollowFlow.collectAsState(initial = false)
     val bubbleCornerRadius by settingsStorage.bubbleCornerRadiusFlow.collectAsState(initial = 16f)
@@ -866,7 +868,16 @@ fun ChatScreen(
                                     chatName = message.senderName,
                                     chatAvatar = message.senderAvatar
                                 )
-                            }
+                            },
+                            downloadProgress = downloadingFiles[message.msgId],
+                            isDownloaded = message.msgId in uiState.downloadedFiles,
+                            onDownloadClick = { msg ->
+                                if (!selectionMode) {
+                                    viewModel.startDownload(msg, context)
+                                } else {
+                                    viewModel.toggleMessageSelection(msg)
+                                }
+                            },
                         )
                     }
 

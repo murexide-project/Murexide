@@ -77,7 +77,10 @@ fun MessageBubble(
     bubbleCornerRadius: Float = 16f,
     bubbleOpacity: Float = 0.9f,
     showMyBubbleAvatarSetting: Boolean = true,
-    avatarAlignment: Alignment.Vertical = Alignment.Bottom
+    avatarAlignment: Alignment.Vertical = Alignment.Bottom,
+    downloadProgress: Float? = null,
+    isDownloaded: Boolean = false,
+    onDownloadClick: (MessageItem) -> Unit = {},
 ) {
     val clipboardManager = LocalClipboard.current
     val scope = rememberCoroutineScope()
@@ -484,9 +487,13 @@ fun MessageBubble(
                                             }
                                         }
                                     }
-    
+
                                     MessageItem.CONTENT_TYPE_FILE -> {
                                         message.fileName?.let { fileName ->
+                                            val progress = downloadProgress ?: 0f
+                                            val isDownloading = downloadProgress != null && downloadProgress < 1f
+                                            val isComplete = isDownloaded || (downloadProgress != null && progress >= 1f)
+
                                             Row(
                                                 modifier = Modifier
                                                     .fillMaxWidth()
@@ -498,7 +505,7 @@ fun MessageBubble(
                                                                     topEnd = bubbleCornerRadius.dp
                                                                 )
                                                             )
-                                                         else Modifier
+                                                        else Modifier
                                                     )
                                                     .background(
                                                         if (isMine)
@@ -507,7 +514,11 @@ fun MessageBubble(
                                                             MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp).copy(alpha = bubbleOpacity)
                                                     )
                                                     .combinedClickable(
-                                                        onClick = { },
+                                                        onClick = {
+                                                            if (!isDownloading) {
+                                                                onDownloadClick(message)
+                                                            }
+                                                        },
                                                         onLongClick = { onLongPress(message) }
                                                     )
                                                     .padding(12.dp),
@@ -519,17 +530,26 @@ fun MessageBubble(
                                                     modifier = Modifier.size(40.dp)
                                                 ) {
                                                     Box(contentAlignment = Alignment.Center) {
-                                                        Icon(
-                                                            imageVector = getFileIcon(fileName),
-                                                            contentDescription = null,
-                                                            modifier = Modifier.size(24.dp),
-                                                            tint = MaterialTheme.colorScheme.onPrimary
-                                                        )
+                                                        if (isDownloading) {
+                                                            CircularProgressIndicator(
+                                                                progress = { progress },
+                                                                modifier = Modifier.size(30.dp),
+                                                                color = MaterialTheme.colorScheme.onPrimary,
+                                                                strokeWidth = 2.dp
+                                                            )
+                                                        } else {
+                                                            Icon(
+                                                                imageVector = if (isComplete) Icons.Rounded.Check else getFileIcon(fileName),
+                                                                contentDescription = null,
+                                                                modifier = Modifier.size(24.dp),
+                                                                tint = MaterialTheme.colorScheme.onPrimary
+                                                            )
+                                                        }
                                                     }
                                                 }
-    
+
                                                 Spacer(modifier = Modifier.width(12.dp))
-    
+
                                                 Column(modifier = Modifier.weight(1f)) {
                                                     Text(
                                                         text = fileName,
@@ -540,7 +560,7 @@ fun MessageBubble(
                                                         overflow = TextOverflow.Ellipsis,
                                                         color = MaterialTheme.colorScheme.onSurface
                                                     )
-    
+
                                                     Row(modifier = Modifier.padding(top = 2.dp)) {
                                                         message.fileSize?.let { size ->
                                                             Text(
@@ -558,15 +578,51 @@ fun MessageBubble(
                                                             maxLines = 1,
                                                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                                                         )
+
+                                                        if (isDownloading) {
+                                                            Text(
+                                                                text = " ${(progress * 100).toInt()}%",
+                                                                fontSize = 12.sp,
+                                                                lineHeight = 18.sp,
+                                                                color = MaterialTheme.colorScheme.primary
+                                                            )
+                                                        } else if (isComplete) {
+                                                            Text(
+                                                                text = " 已下载",
+                                                                fontSize = 12.sp,
+                                                                lineHeight = 18.sp,
+                                                                color = MaterialTheme.colorScheme.primary
+                                                            )
+                                                        }
                                                     }
                                                 }
-    
-                                                Icon(
-                                                    imageVector = Icons.Rounded.Download,
-                                                    contentDescription = null,
-                                                    modifier = Modifier.size(16.dp),
-                                                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
-                                                )
+
+                                                if (isComplete) {
+                                                    Icon(
+                                                        imageVector = Icons.Rounded.CheckCircle,
+                                                        contentDescription = "已下载",
+                                                        modifier = Modifier.size(20.dp),
+                                                        tint = MaterialTheme.colorScheme.primary
+                                                    )
+                                                } else if (isDownloading) {
+                                                    Icon(
+                                                        imageVector = Icons.Rounded.Close,
+                                                        contentDescription = "取消下载",
+                                                        modifier = Modifier
+                                                            .size(20.dp)
+                                                            .clickable { /* 取消下载逻辑 */ },
+                                                        tint = MaterialTheme.colorScheme.error
+                                                    )
+                                                } else {
+                                                    Icon(
+                                                        imageVector = Icons.Rounded.Download,
+                                                        contentDescription = "下载",
+                                                        modifier = Modifier
+                                                            .size(20.dp)
+                                                            .clickable { onDownloadClick(message) },
+                                                        tint = MaterialTheme.colorScheme.primary
+                                                    )
+                                                }
                                             }
                                         }
                                     }
