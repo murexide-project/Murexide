@@ -104,6 +104,8 @@ fun MainScreen(token: String) {
     
     val isBigScreen = LocalConfiguration.current.screenWidthDp >= 600
 
+    var currentConversation by remember { mutableStateOf<ConversationItem?>(null) }
+
     NavigationSuiteScaffold(
         layoutType = if (bigScreenEnabled && isBigScreen) {
             NavigationSuiteType.NavigationRail
@@ -144,14 +146,13 @@ fun MainScreen(token: String) {
             modifier = Modifier.fillMaxSize()
         ) {
             composable("conversations") {
-                var currentConversation by remember { mutableStateOf<ConversationItem?>(null) }
-
                 Row(modifier = Modifier.fillMaxSize()) {
                     ConversationListScreen(
                         modifier = Modifier
                             .weight(if (isBigScreen && bigScreenEnabled) 0.4f else 1f)
                             .fillMaxHeight(),
                         token = token,
+                        bigScreenMode = isBigScreen && bigScreenEnabled,
                         currentConversation = if (isBigScreen && bigScreenEnabled) currentConversation else null,
                         onConversationClick = { conversation ->
                             if (isBigScreen && bigScreenEnabled) {

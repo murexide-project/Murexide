@@ -36,6 +36,7 @@ import androidx.compose.foundation.shape.CircleShape
 fun ConversationListScreen(
     modifier: Modifier = Modifier,
     token: String,
+    bigScreenMode: Boolean,
     onConversationClick: (ConversationItem) -> Unit,
     currentConversation: ConversationItem? = null,
     viewModel: ConversationViewModel = remember { ConversationViewModel(token) }
@@ -228,7 +229,7 @@ fun ConversationItem(
         modifier = Modifier
             .fillMaxWidth()
             .background(if (isSelected)
-                MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
             else
                 MaterialTheme.colorScheme.surface
             )

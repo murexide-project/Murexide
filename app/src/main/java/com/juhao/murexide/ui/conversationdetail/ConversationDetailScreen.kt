@@ -173,7 +173,7 @@ private fun GroupSection(detail: ConversationDetail) {
             InfoItem(Icons.Rounded.Group, "成员数量", "$it 人")
         }
         detail.groupCode?.let {
-            InfoItem(Icons.Rounded.Tag, "群号", it)
+            InfoItem(Icons.Rounded.Tag, "群口令", it)
         }
         detail.categoryName?.let {
             InfoItem(Icons.Rounded.Category, "分类", it)
