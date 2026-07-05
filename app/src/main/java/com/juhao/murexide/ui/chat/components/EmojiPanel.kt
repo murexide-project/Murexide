@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -53,7 +54,7 @@ fun EmojiPanel(
         SecondaryScrollableTabRow (
             selectedTabIndex = pagerState.currentPage,
             edgePadding = 4.dp,
-            divider = { }, // 不显示底部分割线
+            containerColor = Color.Transparent,
             modifier = Modifier.fillMaxWidth()
         ) {
             tabTitles.forEachIndexed { index, title ->

@@ -546,67 +546,83 @@ fun ChatScreen(
             }
         },
         bottomBar = {
-            AnimatedContent(
-                targetState = selectionMode,
-                transitionSpec = {
-                    fadeIn(animationSpec = tween(200)) togetherWith
-                            fadeOut(animationSpec = tween(200))
-                },
-                label = "bottom_bar_transition"
-            ) { isSelectionMode ->
-                if (isSelectionMode) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp))
-                            .padding(horizontal = 16.dp, vertical = 8.dp)
-                            .navigationBarsPadding(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Button(
-                            onClick = { viewModel.recallSelectedMessages() },
-                            modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+            Box(modifier = Modifier.fillMaxWidth()) {
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .hazeEffect(
+                            state = hazeState,
+                            style = HazeMaterials.thin().copy(
+                                noiseFactor = 0f
+                            ),
+                            block = null
+                        )
+                )
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(0.5.dp)
+                        .align(Alignment.TopCenter)
+                        .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
+                )
+                
+                AnimatedContent(
+                    targetState = selectionMode,
+                    transitionSpec = {
+                        fadeIn(animationSpec = tween(200)) togetherWith
+                                fadeOut(animationSpec = tween(200))
+                    },
+                    label = "bottom_bar_transition"
+                ) { isSelectionMode ->
+                    if (isSelectionMode) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 8.dp)
+                                .navigationBarsPadding(),
+                            horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Icon(Icons.AutoMirrored.Rounded.Undo, contentDescription = null, tint = MaterialTheme.colorScheme.onError)
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("撤回", color = MaterialTheme.colorScheme.onError)
-                        }
-                        Spacer(modifier = Modifier.width(16.dp))
-                        TextButton(
-                            onClick = { /* 转发选中消息 */ },
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.Center
+                            Button(
+                                onClick = { viewModel.recallSelectedMessages() },
+                                modifier = Modifier.weight(1f),
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                             ) {
-                                Icon(Icons.AutoMirrored.Rounded.Redo, contentDescription = null)
+                                Icon(Icons.AutoMirrored.Rounded.Undo, contentDescription = null, tint = MaterialTheme.colorScheme.onError)
                                 Spacer(modifier = Modifier.width(4.dp))
-                                Text("转发")
+                                Text("撤回", color = MaterialTheme.colorScheme.onError)
+                            }
+                            Spacer(modifier = Modifier.width(16.dp))
+                            TextButton(
+                                onClick = { /* 转发选中消息 */ },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center
+                                ) {
+                                    Icon(Icons.AutoMirrored.Rounded.Redo, contentDescription = null)
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("转发")
+                                }
                             }
                         }
-                    }
-                } else {
-                    Column(
-                        modifier = Modifier.imePadding()
-                    ) {
-                        if (uiState.isUploading) {
-                            UploadProgressBar(
-                                progress = uiState.uploadProgress,
-                                imagePath = uiState.uploadImagePath ?: "",
-                                onCancel = { viewModel.cancelUpload() }
-                            )
-                        }
-
-                        AnimatedVisibility(
-                            visible = uiState.replyTo != null,
-                            enter = fadeIn() + expandVertically(),
-                            exit = fadeOut() + shrinkVertically()
+                    } else {
+                        Column(
+                            modifier = Modifier.imePadding()
                         ) {
-                            Surface(
-                                modifier = Modifier.fillMaxWidth(),
-                                color = MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp),
+                            if (uiState.isUploading) {
+                                UploadProgressBar(
+                                    progress = uiState.uploadProgress,
+                                    imagePath = uiState.uploadImagePath ?: "",
+                                    onCancel = { viewModel.cancelUpload() }
+                                )
+                            }
+    
+                            AnimatedVisibility(
+                                visible = uiState.replyTo != null,
+                                enter = fadeIn() + expandVertically(),
+                                exit = fadeOut() + shrinkVertically()
                             ) {
                                 Row(
                                     modifier = Modifier
@@ -651,53 +667,53 @@ fun ChatScreen(
                                     }
                                 }
                             }
-                        }
-
-                        MessageInput(
-                            inputText = uiState.inputText,
-                            sendType = uiState.sendType,
-                            isSending = uiState.isSending,
-                            onTextChange = { viewModel.updateInputText(it) },
-                            onSendClick = { viewModel.sendMessage() },
-                            onAddImageClick = { openImagePicker() },
-                            onAddVideoClick = { openVideoPicker() },
-                            onAddFileClick = { openFilePicker() },
-                            onToggleSendType = { type ->
-                                viewModel.toggleSendType(type)
-                            },
-                            isEmojiPanelVisible = expressions.isVisible,
-                            onEmojiClick = {
-                                if (expressions.isVisible) {
-                                    viewModel.hideStickerPanel()
-                                } else {
-                                    viewModel.toggleStickerPanel()
+    
+                            MessageInput(
+                                inputText = uiState.inputText,
+                                sendType = uiState.sendType,
+                                isSending = uiState.isSending,
+                                onTextChange = { viewModel.updateInputText(it) },
+                                onSendClick = { viewModel.sendMessage() },
+                                onAddImageClick = { openImagePicker() },
+                                onAddVideoClick = { openVideoPicker() },
+                                onAddFileClick = { openFilePicker() },
+                                onToggleSendType = { type ->
+                                    viewModel.toggleSendType(type)
+                                },
+                                isEmojiPanelVisible = expressions.isVisible,
+                                onEmojiClick = {
+                                    if (expressions.isVisible) {
+                                        viewModel.hideStickerPanel()
+                                    } else {
+                                        viewModel.toggleStickerPanel()
+                                    }
                                 }
-                            }
-                        )
-
-                        BackHandler(enabled = expressions.isVisible) {
-                            viewModel.hideStickerPanel()
-                        }
-
-                        AnimatedVisibility(
-                            visible = expressions.isVisible,
-                            enter = fadeIn() + expandVertically(),
-                            exit = fadeOut() + shrinkVertically()
-                        ) {
-                            EmojiPanel(
-                                expressions = expressions.expressions,
-                                isLoading = expressions.isLoading,
-                                onExpressionClick = { expression ->
-                                    viewModel.sendExpression(expression)
-                                },
-                                onStickerItemClick = { stickerItem ->
-                                    viewModel.sendStickerItem(stickerItem)
-                                },
-                                stickerPacks = expressions.stickerPacks,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(280.dp)
                             )
+    
+                            BackHandler(enabled = expressions.isVisible) {
+                                viewModel.hideStickerPanel()
+                            }
+    
+                            AnimatedVisibility(
+                                visible = expressions.isVisible,
+                                enter = fadeIn() + expandVertically(),
+                                exit = fadeOut() + shrinkVertically()
+                            ) {
+                                EmojiPanel(
+                                    expressions = expressions.expressions,
+                                    isLoading = expressions.isLoading,
+                                    onExpressionClick = { expression ->
+                                        viewModel.sendExpression(expression)
+                                    },
+                                    onStickerItemClick = { stickerItem ->
+                                        viewModel.sendStickerItem(stickerItem)
+                                    },
+                                    stickerPacks = expressions.stickerPacks,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(280.dp)
+                                )
+                            }
                         }
                     }
                 }
@@ -708,7 +724,6 @@ fun ChatScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .hazeSource(hazeState)
-                .padding(bottom = innerPadding.calculateBottomPadding())
         ) {
             uiState.backgroundUrl?.takeIf { it.isNotEmpty() }?.let { bgUrl ->
                 val bgRequest = remember(bgUrl) {
@@ -784,7 +799,8 @@ fun ChatScreen(
                     state = listState,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .align(Alignment.BottomCenter),
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = innerPadding.calculateBottomPadding()),
                     reverseLayout = true,
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
