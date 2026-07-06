@@ -1,5 +1,6 @@
 package com.juhao.murexide.ui.chat
 
+import android.content.ClipData
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -33,6 +34,8 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.platform.ClipEntry
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
@@ -84,6 +87,7 @@ fun ChatScreen(
     val density = LocalDensity.current
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val clipboardManager = LocalClipboard.current
     val uiState by viewModel.uiState.collectAsState()
     val expressions by viewModel.stickerPanel.collectAsState()
     val instructionPanel = uiState.instructionPanel
@@ -410,11 +414,25 @@ fun ChatScreen(
                             ),
                             actions = {
                                 if (selectedMessages.size == 1) {
-                                    IconButton(onClick = { 
-                                        selectedMessages.firstOrNull()?.let { viewModel.setReplyTo(it) }
-                                        viewModel.exitSelectionMode()
-                                    }) {
-                                        Icon(Icons.Rounded.FormatQuote, contentDescription = "引用")
+                                    val message = selectedMessages.firstOrNull()
+                                    message?.let { 
+                                        if (it.content.isNotBlank()) {
+                                            IconButton(onClick = { 
+                                                scope.launch {
+                                                    clipboardManager.setClipEntry(ClipEntry(ClipData.newPlainText("msg", it.content)))
+                                                }
+                                                Toast.makeText(context, "复制成功", Toast.LENGTH_SHORT).show()
+                                                viewModel.exitSelectionMode()
+                                            }) {
+                                                Icon(Icons.Rounded.ContentCopy, contentDescription = "引用")
+                                            }
+                                        }
+                                        IconButton(onClick = { 
+                                            viewModel.setReplyTo(it)
+                                            viewModel.exitSelectionMode()
+                                        }) {
+                                            Icon(Icons.Rounded.FormatQuote, contentDescription = "引用")
+                                        }
                                     }
                                 }
                                 IconButton(onClick = { showScreenshotSheet = true }) {

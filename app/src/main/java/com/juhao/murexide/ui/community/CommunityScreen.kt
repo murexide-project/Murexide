@@ -171,7 +171,7 @@ fun PostsList(
         }
     } else {
         LazyColumn(
-            contentPadding = PaddingValues(horizontal = 16.dp)
+            contentPadding = PaddingValues(vertical = 8.dp)
         ) {
             items(posts) { post ->
                 PostCard(
@@ -206,90 +206,92 @@ fun PostCard(
     onCollectClick: (Int) -> Unit,
     onPostClick: (PostItem) -> Unit
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onPostClick(post) }
-            .padding(vertical = 8.dp)
-            .padding(16.dp)
-    ) {
-        // 作者信息
-        Row(
-            verticalAlignment = Alignment.CenterVertically
+    Column {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { onPostClick(post) }
+                .padding(horizontal = 16.dp)
+                .padding(16.dp)
         ) {
-            Avatar(
-                url = post.senderAvatar,
-                size = 36.dp
-            )
-
-            Spacer(modifier = Modifier.width(10.dp))
-
-            Column {
-                Text(
-                    text = post.senderNickname,
-                    fontWeight = FontWeight.Medium,
-                    fontSize = 15.sp
+            // 作者信息
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Avatar(
+                    url = post.senderAvatar,
+                    size = 36.dp
                 )
+    
+                Spacer(modifier = Modifier.width(10.dp))
+    
+                Column {
+                    Text(
+                        text = post.senderNickname,
+                        fontWeight = FontWeight.Medium,
+                        fontSize = 15.sp
+                    )
+                    Text(
+                        text = post.createTimeText,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 12.sp
+                    )
+                }
+            }
+    
+            Spacer(modifier = Modifier.height(10.dp))
+    
+            // 标题
+            Text(
+                text = post.title,
+                fontWeight = FontWeight.Bold,
+                fontSize = 17.sp,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+    
+            if (post.content.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    text = post.createTimeText,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontSize = 12.sp
+                    text = post.content,
+                    fontSize = 14.sp,
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-        }
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        // 标题
-        Text(
-            text = post.title,
-            fontWeight = FontWeight.Bold,
-            fontSize = 17.sp,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis
-        )
-
-        if (post.content.isNotEmpty()) {
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                text = post.content,
-                fontSize = 14.sp,
-                maxLines = 3,
-                overflow = TextOverflow.Ellipsis,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        // 互动按钮
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(20.dp)
-        ) {
-            // 点赞
-            InteractionButton(
-                icon = if (post.isLiked == "1") Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                count = post.likeNum,
-                tint = if (post.isLiked == "1") Color.Red else MaterialTheme.colorScheme.onSurfaceVariant,
-                onClick = { onLikeClick(post.id) }
-            )
-
-            // 评论
-            InteractionButton(
-                icon = Icons.Default.ChatBubbleOutline,
-                count = post.commentNum,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                onClick = { /* TODO: 打开评论 */ }
-            )
-
-            // 收藏
-            InteractionButton(
-                icon = if (post.isCollected == 1) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
-                count = post.collectNum,
-                tint = if (post.isCollected == 1) Color(0xFFFFC107) else MaterialTheme.colorScheme.onSurfaceVariant,
-                onClick = { onCollectClick(post.id) }
-            )
+    
+            Spacer(modifier = Modifier.height(10.dp))
+    
+            // 互动按钮
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(20.dp)
+            ) {
+                // 点赞
+                InteractionButton(
+                    icon = if (post.isLiked == "1") Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                    count = post.likeNum,
+                    tint = if (post.isLiked == "1") Color.Red else MaterialTheme.colorScheme.onSurfaceVariant,
+                    onClick = { onLikeClick(post.id) }
+                )
+    
+                // 评论
+                InteractionButton(
+                    icon = Icons.Default.ChatBubbleOutline,
+                    count = post.commentNum,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    onClick = { /* TODO: 打开评论 */ }
+                )
+    
+                // 收藏
+                InteractionButton(
+                    icon = if (post.isCollected == 1) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
+                    count = post.collectNum,
+                    tint = if (post.isCollected == 1) Color(0xFFFFC107) else MaterialTheme.colorScheme.onSurfaceVariant,
+                    onClick = { onCollectClick(post.id) }
+                )
+            }
         }
         
         HorizontalDivider()
