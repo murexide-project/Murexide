@@ -48,7 +48,7 @@ fun InstructionPanel(
         if (bots.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text(
-                    text = "暂无可用指令",
+                    text = "暂无指令",
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 13.sp
                 )
@@ -59,20 +59,22 @@ fun InstructionPanel(
         val pagerState = rememberPagerState(pageCount = { bots.size })
         val scope = rememberCoroutineScope()
 
-        SecondaryScrollableTabRow(
-            selectedTabIndex = pagerState.currentPage,
-            edgePadding = 4.dp,
-            containerColor = Color.Transparent,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            bots.forEachIndexed { index, bot ->
-                Tab(
-                    selected = pagerState.currentPage == index,
-                    onClick = { scope.launch { pagerState.animateScrollToPage(index) } },
-                    text = {
-                        Text(text = bot.name, maxLines = 1, fontSize = 13.sp)
-                    }
-                )
+        if (bots.size > 1) {
+            SecondaryScrollableTabRow(
+                selectedTabIndex = pagerState.currentPage,
+                edgePadding = 4.dp,
+                containerColor = Color.Transparent,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                bots.forEachIndexed { index, bot ->
+                    Tab(
+                        selected = pagerState.currentPage == index,
+                        onClick = { scope.launch { pagerState.animateScrollToPage(index) } },
+                        text = {
+                            Text(text = bot.name, maxLines = 1, fontSize = 13.sp)
+                        }
+                    )
+                }
             }
         }
 
@@ -98,7 +100,7 @@ private fun InstructionListPage(
     if (instructions.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text(
-                text = "该机器人暂无指令",
+                text = "暂无指令",
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 13.sp
             )

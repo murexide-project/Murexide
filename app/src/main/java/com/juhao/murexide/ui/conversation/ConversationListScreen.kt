@@ -338,7 +338,7 @@ private fun Badges(
                 AnimatedContent(
                     targetState = unreadCount,
                     transitionSpec = {
-                        if (targetState > initialState) {
+                        if (targetState < initialState) {
                             slideInVertically(
                                 initialOffsetY = { fullHeight -> fullHeight },
                                 animationSpec = tween(200)
