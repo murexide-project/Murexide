@@ -77,6 +77,7 @@ fun MessageBubble(
     downloadProgress: Float? = null,
     isDownloaded: Boolean = false,
     onDownloadClick: (MessageItem) -> Unit = {},
+    privateMode: Boolean = false
 ) {
     val clipboardManager = LocalClipboard.current
     val scope = rememberCoroutineScope()
@@ -198,13 +199,25 @@ fun MessageBubble(
                 }
             
                 if (!isMine && showAvatar) {
-                    Avatar(
-                        url = message.senderAvatar,
-                        modifier = Modifier.clickable {
-                            onAvatarClick()
-                        },
-                        size = 36.dp
-                    )
+                    if (privateMode) {
+                        Surface(
+                            modifier = Modifier.size(36.dp),
+                            shape = RoundedCornerShape(18.dp),
+                            color = MaterialTheme.colorScheme.surfaceContainer
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(Icons.Outlined.Incognito, contentDescription = null, modifier = Modifier.size(24.dp))
+                            }
+                        }
+                    } else {
+                        Avatar(
+                            url = message.senderAvatar,
+                            modifier = Modifier.clickable {
+                                onAvatarClick()
+                            },
+                            size = 36.dp
+                        )
+                    }
                     Spacer(modifier = Modifier.width(8.dp))
                 } else if (!isMine) {
                     Spacer(modifier = Modifier.width(44.dp))
@@ -240,7 +253,7 @@ fun MessageBubble(
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Text(
-                                            text = message.senderName,
+                                            text = if (privateMode) "用户 ${message.senderId.maskMiddle()}" else message.senderName,
                                             style = MaterialTheme.typography.labelSmall,
                                             color = MaterialTheme.colorScheme.primary,
                                             fontWeight = FontWeight.Bold
@@ -766,4 +779,12 @@ private fun formatFileSize(size: Long): String {
 private fun extractImageUrls(html: String): List<String> {
     val regex = Regex("""<img[^>]+src\s*=\s*["']([^"']+)["'][^>]*>""", RegexOption.IGNORE_CASE)
     return regex.findAll(html).map { it.groupValues[1] }.toList()
+}
+
+fun String.maskMiddle(): String {
+    return when {
+        length <= 2 -> this
+        length <= 4 -> "${first()}***${last()}"
+        else -> "${first()}${"*".repeat(length - 2)}${last()}"
+    }
 }

@@ -262,7 +262,8 @@ private fun ScreenshotContent(
                         isFirstFromSender = isFirstFromSender,
                         isOlderSameSender = isOlderSameSender,
                         isNewerSameSender = isNewerSameSender,
-                        showAvatar = isFirstFromSender
+                        showAvatar = isFirstFromSender,
+                        privateMode = privateMode
                     )
                 }
             }
