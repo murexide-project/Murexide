@@ -793,14 +793,14 @@ private fun processQuoteText(quoteText: String): String {
     val pattern = Regex("^[^:：]+[:：]\\s*(.*)$")
     val matchResult = pattern.find(quoteText)
     
-    return if (matchResult != null) {
+    return if (matchResult.isNotBlank()) {
         val content = matchResult.groupValues.getOrNull(1)
         if (!content.isNullOrBlank()) {
             "用户：$content"
         } else {
-            "用户：$quoteText"
+            quoteText
         }
     } else {
-        $quoteText
+        quoteText
     }
 }
