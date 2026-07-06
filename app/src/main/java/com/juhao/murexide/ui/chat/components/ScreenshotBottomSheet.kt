@@ -111,8 +111,8 @@ fun ScreenshotBottomSheet(
                 horizontalArrangement = Arrangement.Center
             ) {
                 ScreenshotActionCard(
-                    icon = Icons.Rounded.Incognito,
-                    label = "隐藏会话",
+                    icon = Icons.Rounded.Spy,
+                    label = "隐藏信息",
                     onClick = {
                         scope.launch {
                             val view = screenshotView ?: return@launch
@@ -203,7 +203,7 @@ private fun ScreenshotContent(
                         color = MaterialTheme.colorScheme.surface
                     ) {
                         Box(contentAlignment = Alignment.Center) {
-                            Icon(Icons.Rounded.Incognito, contentDescription = null, modifier = Modifier.size(24.dp))
+                            Icon(Icons.Rounded.Spy, contentDescription = null, modifier = Modifier.size(24.dp))
                         }
                     }
                 } else {
