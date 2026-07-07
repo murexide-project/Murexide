@@ -84,8 +84,9 @@ object FileDownloader {
         onProgress: (Float) -> Unit
     ): String {
         val resolver = context.contentResolver
+        val uniqueName = getUniqueDisplayName(resolver, fileName)
         val contentValues = ContentValues().apply {
-            put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
+            put(MediaStore.MediaColumns.DISPLAY_NAME, uniqueName)
             put(MediaStore.MediaColumns.MIME_TYPE, "application/octet-stream")
             put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
         }
@@ -94,19 +95,7 @@ object FileDownloader {
             ?: throw IOException("无法创建下载条目")
 
         resolver.openOutputStream(uri)?.use { outputStream ->
-            val buffer = ByteArray(8192)
-            var bytesRead: Int
-            var totalBytesRead = 0L
-
-            while (inputStream.read(buffer).also { bytesRead = it } != -1) {
-                outputStream.write(buffer, 0, bytesRead)
-                totalBytesRead += bytesRead
-
-                if (contentLength > 0) {
-                    val progress = totalBytesRead.toFloat() / contentLength
-                    onProgress(progress)
-                }
-            }
+            copyWithProgress(inputStream, outputStream, contentLength, onProgress)
         } ?: throw IOException("无法写入文件")
 
         return uri.toString()
@@ -126,25 +115,102 @@ object FileDownloader {
             downloadDir.mkdirs()
         }
 
-        val file = File(downloadDir, fileName)
+        val file = getUniqueFile(downloadDir, fileName)
 
         FileOutputStream(file).use { outputStream ->
-            val buffer = ByteArray(8192)
-            var bytesRead: Int
-            var totalBytesRead = 0L
-
-            while (inputStream.read(buffer).also { bytesRead = it } != -1) {
-                outputStream.write(buffer, 0, bytesRead)
-                totalBytesRead += bytesRead
-
-                if (contentLength > 0) {
-                    val progress = totalBytesRead.toFloat() / contentLength
-                    onProgress(progress)
-                }
-            }
+            copyWithProgress(inputStream, outputStream, contentLength, onProgress)
         }
 
         return file.absolutePath
+    }
+
+    private fun copyWithProgress(
+        inputStream: java.io.InputStream,
+        outputStream: java.io.OutputStream,
+        contentLength: Long,
+        onProgress: (Float) -> Unit
+    ) {
+        val buffer = ByteArray(8192)
+        var bytesRead: Int
+        var totalBytesRead = 0L
+        var lastProgress = -1f
+
+        while (inputStream.read(buffer).also { bytesRead = it } != -1) {
+            outputStream.write(buffer, 0, bytesRead)
+            totalBytesRead += bytesRead
+
+            if (contentLength > 0) {
+                val progress = (totalBytesRead.toFloat() / contentLength).coerceIn(0f, 1f)
+                if (progress - lastProgress >= 0.01f) {
+                    lastProgress = progress
+                    onProgress(progress)
+                }
+            } else {
+                onProgress(-1f)
+            }
+        }
+
+        outputStream.flush()
+        // 确保进度条走满
+        onProgress(1f)
+    }
+
+    private fun splitName(fileName: String): Pair<String, String> {
+        val dotIndex = fileName.lastIndexOf('.')
+        return if (dotIndex > 0) {
+            fileName.substring(0, dotIndex) to fileName.substring(dotIndex)
+        } else {
+            fileName to ""
+        }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.Q)
+    private fun getUniqueDisplayName(
+        resolver: android.content.ContentResolver,
+        fileName: String
+    ): String {
+        val (base, ext) = splitName(fileName)
+        var candidate = fileName
+        var index = 1
+        while (displayNameExists(resolver, candidate)) {
+            candidate = "$base($index)$ext"
+            index++
+        }
+        return candidate
+    }
+
+    @RequiresApi(Build.VERSION_CODES.Q)
+    private fun displayNameExists(
+        resolver: android.content.ContentResolver,
+        displayName: String
+    ): Boolean {
+        val projection = arrayOf(MediaStore.MediaColumns._ID)
+        val selection = "${MediaStore.MediaColumns.DISPLAY_NAME} = ? AND " +
+            "${MediaStore.MediaColumns.RELATIVE_PATH} LIKE ?"
+        val args = arrayOf(displayName, "%${Environment.DIRECTORY_DOWNLOADS}%")
+        resolver.query(
+            MediaStore.Downloads.EXTERNAL_CONTENT_URI,
+            projection, selection, args, null
+        )?.use { cursor ->
+            return cursor.count > 0
+        }
+        return false
+    }
+
+    /**
+     * Legacy：若目标文件已存在，则在扩展名之前追加 (n)，
+     * 例如 main.lua -> main(1).lua。
+     */
+    private fun getUniqueFile(dir: File, fileName: String): File {
+        var file = File(dir, fileName)
+        if (!file.exists()) return file
+        val (base, ext) = splitName(fileName)
+        var index = 1
+        while (file.exists()) {
+            file = File(dir, "$base($index)$ext")
+            index++
+        }
+        return file
     }
 
     private fun openFile(context: Context, filePathOrUri: String) {

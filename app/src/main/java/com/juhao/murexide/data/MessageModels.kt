@@ -4,7 +4,6 @@ import android.util.Log
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
-/** 消息气泡内的按钮 */
 @Serializable
 data class MessageButton(
     val text: String = "",
@@ -21,10 +20,7 @@ data class MessageButton(
 
 private val buttonsJson = Json { ignoreUnknownKeys = true }
 
-/**
- * 解析消息里的 buttons 字段（服务端存储为 JSON 字符串）。
- * 结构为二维数组：外层为行，内层为一行内的按钮。
- */
+
 fun parseMessageButtons(raw: String?): List<List<MessageButton>> {
     if (raw.isNullOrBlank()) return emptyList()
     return try {
@@ -65,6 +61,10 @@ data class MessageItem(
     val cmdName: String? = null,
     val cmdId: Long? = null,
     val cmdType: Int? = null,
+    val postId: String? = null,
+    val postTitle: String? = null,
+    val postContent: String? = null,
+    val postContentType: Int? = null,
     val buttons: List<List<MessageButton>> = emptyList(),
     val tags: List<MessageTag> = emptyList()
 ) {
@@ -80,6 +80,7 @@ data class MessageItem(
             CONTENT_TYPE_AUDIO -> "[语音消息]"
             CONTENT_TYPE_MARKDOWN -> "[Markdown消息]"
             CONTENT_TYPE_HTML -> "[HTML消息]"
+            CONTENT_TYPE_POST -> "[文章]"
             else -> content.takeIf { it.isNotEmpty() } ?: "[消息]"
         }
     }
@@ -89,6 +90,7 @@ data class MessageItem(
         const val CONTENT_TYPE_IMAGE = 2
         const val CONTENT_TYPE_MARKDOWN = 3
         const val CONTENT_TYPE_FILE = 4
+        const val CONTENT_TYPE_POST = 6
         const val CONTENT_TYPE_STICKER = 7
         const val CONTENT_TYPE_HTML = 8
         const val CONTENT_TYPE_TIP = 9

@@ -501,6 +501,8 @@ fun MessageBubble(
                                             message.fileName?.let { fileName ->
                                                 val progress = downloadProgress ?: 0f
                                                 val isDownloading = downloadProgress != null && downloadProgress < 1f
+                                                // 进度为负表示总长度未知，使用不确定进度动画
+                                                val isIndeterminate = downloadProgress != null && downloadProgress < 0f
                                                 val isComplete = isDownloaded || (downloadProgress != null && progress >= 1f)
     
                                                 Row(
@@ -540,12 +542,20 @@ fun MessageBubble(
                                                     ) {
                                                         Box(contentAlignment = Alignment.Center) {
                                                             if (isDownloading) {
-                                                                CircularProgressIndicator(
-                                                                    progress = { progress },
-                                                                    modifier = Modifier.size(30.dp),
-                                                                    color = MaterialTheme.colorScheme.onPrimary,
-                                                                    strokeWidth = 2.dp
-                                                                )
+                                                                if (isIndeterminate) {
+                                                                    CircularProgressIndicator(
+                                                                        modifier = Modifier.size(30.dp),
+                                                                        color = MaterialTheme.colorScheme.onPrimary,
+                                                                        strokeWidth = 2.dp
+                                                                    )
+                                                                } else {
+                                                                    CircularProgressIndicator(
+                                                                        progress = { progress },
+                                                                        modifier = Modifier.size(30.dp),
+                                                                        color = MaterialTheme.colorScheme.onPrimary,
+                                                                        strokeWidth = 2.dp
+                                                                    )
+                                                                }
                                                             } else {
                                                                 Icon(
                                                                     imageVector = if (isComplete) Icons.Rounded.Check else getFileIcon(fileName),
