@@ -1,5 +1,6 @@
 package com.juhao.murexide.ui.community.detail
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -81,26 +82,28 @@ fun PostDetailScreen(
                 
                 TopAppBar(
                     title = { 
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Avatar(url = uiState.post.senderAvatar, size = 36.dp)
-                            
-                            Spacer(Modifier.width(8.dp))
-                            
-                            Column {
-                                Text(
-                                    uiState.post.senderNickname,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    fontWeight = FontWeight.Bold,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                                Spacer(modifier = Modifier.height(2.dp))
-                                Text(
-                                    uiState.post.createTimeText,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    maxLines = 1
-                                )
+                        uiState.post?.let { post ->
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Avatar(url = post.senderAvatar, size = 36.dp)
+                                
+                                Spacer(Modifier.width(8.dp))
+                                
+                                Column {
+                                    Text(
+                                        post.senderNickname,
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        fontWeight = FontWeight.Bold,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        post.createTimeText,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 1
+                                    )
+                                }
                             }
                         }
                     },
