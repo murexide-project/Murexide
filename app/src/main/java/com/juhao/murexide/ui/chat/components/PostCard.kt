@@ -34,7 +34,7 @@ fun PostCard(
             .clip(RoundedCornerShape(12.dp))
             .border(
                 width = 1.dp,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
                 shape = RoundedCornerShape(12.dp)
             )
             .clickable {
@@ -48,14 +48,14 @@ fun PostCard(
                 fontWeight = FontWeight.Bold,
                 style = MaterialTheme.typography.titleMedium
             )
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(6.dp))
             Text(
                 postContent,
                 maxLines = 5,
                 overflow = TextOverflow.Ellipsis,
                 style = MaterialTheme.typography.bodyMedium
             )
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(6.dp))
             Text(
                 "点击查看文章详情",
                 style = MaterialTheme.typography.bodySmall,

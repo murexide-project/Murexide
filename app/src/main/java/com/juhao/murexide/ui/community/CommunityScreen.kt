@@ -291,7 +291,7 @@ fun PostCard(
                 InteractionButton(
                     icon = if (post.isCollected == 1) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
                     count = post.collectNum,
-                    tint = if (post.isCollected == 1) Color(0xFFFFC107) else MaterialTheme.colorScheme.onSurfaceVariant,
+                    tint = if (post.isCollected == 1) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                     onClick = { onCollectClick(post.id) }
                 )
             }

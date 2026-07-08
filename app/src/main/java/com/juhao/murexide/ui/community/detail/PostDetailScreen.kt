@@ -227,7 +227,7 @@ private fun PostHeader(post: PostDetail, viewModel: PostDetailViewModel) {
             InteractionButton(
                 icon = if (post.isLiked == 1) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
                 count = post.likeNum,
-                tint = if (post.isLiked == 1) Color.Red else MaterialTheme.colorScheme.onSurfaceVariant,
+                tint = if (post.isLiked == 1) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
                 onClick = { viewModel.toggleLike() }
             )
             InteractionButton(
@@ -239,7 +239,7 @@ private fun PostHeader(post: PostDetail, viewModel: PostDetailViewModel) {
             InteractionButton(
                 icon = if (post.isCollected == 1) Icons.Rounded.Bookmark else Icons.Rounded.BookmarkBorder,
                 count = post.collectNum,
-                tint = if (post.isCollected == 1) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                tint = if (post.isCollected == 1) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                 onClick = { viewModel.toggleCollect() }
             )
         }

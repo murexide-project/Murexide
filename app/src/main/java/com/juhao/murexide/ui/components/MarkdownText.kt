@@ -121,19 +121,17 @@ fun MarkdownText(
                                             Row(
                                                 modifier = Modifier
                                                     .padding(vertical = 2.dp),
-                                                verticalAlignment = Alignment.Top
+                                                verticalAlignment = Alignment.CenterVertically
                                             ) {
                                                 Icon(
                                                     imageVector = if (run.checked) {
-                                                        Icons.Filled.CheckBox
+                                                        Icons.Rounded.CheckBox
                                                     } else {
-                                                        Icons.Filled.CheckBoxOutlineBlank
+                                                        Icons.Rounded.CheckBoxOutlineBlank
                                                     },
                                                     contentDescription = if (run.checked) "checked task" else "unchecked task",
                                                     tint = MaterialTheme.colorScheme.primary,
-                                                    modifier = Modifier
-                                                        .size(18.dp)
-                                                        .padding(top = 2.dp)
+                                                    modifier = Modifier.size(20.dp)
                                                 )
                                                 Spacer(modifier = Modifier.width(6.dp))
                                                 Box {

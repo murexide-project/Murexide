@@ -184,7 +184,7 @@ class ConversationViewModel(
         val currentState = _uiState.value
         if (currentState is ConversationUiState.Success) {
             val conversations = currentState.conversations.map {
-                if (it.chatId == chatId) it.copy(unreadMessage = 0) else it
+                if (it.chatId == chatId) it.copy(unreadMessage = 0, at = 0) else it
             }
             _uiState.update { currentState.copy(conversations = conversations) }
         }
