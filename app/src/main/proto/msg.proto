@@ -57,11 +57,11 @@ message Msg {
         string quote_image_name = 17; // 引用图片文件名称
         int64 file_size = 18; // 文件/图片大小(字节)
         string video_url = 19; // 视频URL
-        int64 video_time = 20; // 视频时长
+        int32 video_time = 20; // 视频时长
         string audio_url = 21; // 语音URL
-        int64 audio_time = 22; // 语音时长
+        int32 audio_time = 22; // 语音时长
         string quote_video_url = 23; // 引用视频直链,https://...
-        int64 quote_video_time = 24; // 引用视频时长
+        int32 quote_video_time = 24; // 引用视频时长
         int64 sticker_item_id = 25; // 表情ID
         int64 sticker_pack_id = 26; // 表情包ID
         string call_text = 29; // 语音通话文字

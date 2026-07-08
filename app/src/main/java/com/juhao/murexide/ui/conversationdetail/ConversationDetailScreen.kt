@@ -147,6 +147,9 @@ private fun UserSection(detail: ConversationDetail) {
         detail.continuousOnlineDay?.let {
             InfoItem(Icons.Rounded.LocalFireDepartment, "连续在线", "$it 天")
         }
+        detail.lastActiveTime?.let {
+            InfoItem(Icons.Rounded.AccessTime, "上次活跃", it)
+        }
         InfoItem(
             when (detail.gender) {
                 1 -> Icons.Rounded.Boy

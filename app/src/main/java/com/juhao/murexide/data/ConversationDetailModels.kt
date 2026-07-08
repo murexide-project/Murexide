@@ -21,6 +21,7 @@ data class ConversationDetail(
     // 用户
     val nameId: Long? = null,
     val registerTime: String? = null,
+    val lastActiveTime: String? = null,
     val onlineDay: Int? = null,
     val continuousOnlineDay: Int? = null,
     val ipGeo: String? = null,
