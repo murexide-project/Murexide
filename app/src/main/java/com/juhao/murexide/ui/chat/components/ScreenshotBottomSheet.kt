@@ -122,7 +122,7 @@ fun ScreenshotBottomSheet(
             ) {
                 ScreenshotActionCard(
                     icon = Icons.Rounded.Settings,
-                    label = "隐私设置",
+                    label = "截图设置",
                     onClick = {
                         val intent = Intent(context, ScreenshotSettingsActivity::class.java)
                         context.startActivity(intent)
