@@ -210,12 +210,6 @@ private fun MineContent(
         maskEmail(userInfo.email)
     }
 
-    val visibilityIcon = if (isPhoneVisible) {
-        Icons.Rounded.VisibilityOff
-    } else {
-        Icons.Rounded.Visibility
-    }
-
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -318,7 +312,11 @@ private fun MineContent(
                 icon = Icons.Rounded.Phone,
                 title = "手机号",
                 value = displayPhone,
-                endIcon = visibilityIcon,
+                endIcon = if (isPhoneVisible) {
+                    Icons.Rounded.Visibility
+                } else {
+                    Icons.Rounded.VisibilityOff
+                },
                 onClick = {
                     isPhoneVisible = !isPhoneVisible
                 }
@@ -328,7 +326,11 @@ private fun MineContent(
                 icon = Icons.Rounded.Email,
                 title = "邮箱",
                 value = displayEmail,
-                endIcon = visibilityIcon,
+                endIcon = if (isEmailVisible) {
+                    Icons.Rounded.Visibility
+                } else {
+                    Icons.Rounded.VisibilityOff
+                },
                 onClick = {
                     isEmailVisible = !isEmailVisible
                 }
