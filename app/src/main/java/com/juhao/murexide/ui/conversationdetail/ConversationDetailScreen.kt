@@ -152,18 +152,6 @@ private fun UserSection(detail: ConversationDetail) {
         if (detail.isVip) {
             InfoItem(Icons.Rounded.WorkspacePremium, "会员", "VIP 用户")
         }
-        detail.registerTime?.let {
-            InfoItem(Icons.Rounded.Event, "注册时间", it)
-        }
-        detail.onlineDay?.let {
-            InfoItem(Icons.Rounded.AccessTime, "在线天数", "$it 天")
-        }
-        detail.continuousOnlineDay?.let {
-            InfoItem(Icons.Rounded.LocalFireDepartment, "连续在线", "$it 天")
-        }
-        detail.lastActiveTime?.let {
-            InfoItem(Icons.Rounded.AccessTime, "上次活跃", it)
-        }
         InfoItem(
             when (detail.gender) {
                 1 -> Icons.Rounded.Boy
@@ -177,6 +165,18 @@ private fun UserSection(detail: ConversationDetail) {
                 else -> "其他"
             }
         )
+        detail.registerTime?.let {
+            InfoItem(Icons.Rounded.Event, "注册时间", it)
+        }
+        detail.onlineDay?.let {
+            InfoItem(Icons.Rounded.AccessTime, "在线天数", "$it 天")
+        }
+        detail.continuousOnlineDay?.let {
+            InfoItem(Icons.Rounded.LocalFireDepartment, "连续在线", "$it 天")
+        }
+        detail.lastActiveTime?.let {
+            InfoItem(Icons.Rounded.AccessTime, "上次活跃", it)
+        }
         detail.ipGeo?.let {
             InfoItem(Icons.Rounded.LocationOn, "IP 属地", it)
         }

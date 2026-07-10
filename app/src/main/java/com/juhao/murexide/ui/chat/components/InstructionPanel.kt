@@ -140,7 +140,6 @@ private fun InstructionRow(
                 color = MaterialTheme.colorScheme.onSurface
             )
             if (item.desc.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = item.desc,
                     fontSize = 12.sp,
@@ -163,7 +162,7 @@ private fun InstructionTypeTag(type: Int) {
         else -> "普通"
     }
     Surface(
-        shape = RoundedCornerShape(4.dp),
+        shape = RoundedCornerShape(8.dp),
         color = MaterialTheme.colorScheme.secondaryContainer
     ) {
         Text(

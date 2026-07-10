@@ -23,10 +23,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.Error
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -255,7 +252,7 @@ fun MultiImageViewer(
                             verticalArrangement = Arrangement.Center
                         ) {
                             Icon(
-                                Icons.Default.Error,
+                                Icons.Rounded.Error,
                                 contentDescription = null,
                                 tint = Color.White.copy(alpha = 0.6f),
                                 modifier = Modifier.size(48.dp)
@@ -271,7 +268,7 @@ fun MultiImageViewer(
                                 }
                             ) {
                                 Icon(
-                                    Icons.Default.Refresh,
+                                    Icons.Rounded.Refresh,
                                     contentDescription = "重试",
                                     tint = Color.White
                                 )
@@ -315,7 +312,7 @@ fun MultiImageViewer(
                         }
                     },
                     leadingIcon = {
-                        Icon(Icons.Default.Download, null, Modifier.size(18.dp))
+                        Icon(Icons.Rounded.Download, null, Modifier.size(18.dp))
                     }
                 )
                 DropdownMenuItem(
@@ -328,7 +325,7 @@ fun MultiImageViewer(
                         Toast.makeText(context, "链接已复制", Toast.LENGTH_SHORT).show()
                     },
                     leadingIcon = {
-                        Icon(Icons.Default.Share, null, Modifier.size(18.dp))
+                        Icon(Icons.Rounded.Share, null, Modifier.size(18.dp))
                     }
                 )
             }

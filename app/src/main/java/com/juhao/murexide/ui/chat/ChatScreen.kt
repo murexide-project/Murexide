@@ -457,7 +457,7 @@ fun ChatScreen(
                                     }
                                 }
                                 IconButton(onClick = { showScreenshotSheet = true }) {
-                                    Icon(Icons.Rounded.Crop, contentDescription = "截图")
+                                    Icon(Icons.Rounded.Screenshot, contentDescription = "截图")
                                 }
                             }
                         )
@@ -699,7 +699,8 @@ fun ChatScreen(
                                     onCancel = { viewModel.cancelUpload() }
                                 )
                             }
-    
+
+                            // 引用
                             AnimatedVisibility(
                                 visible = uiState.replyTo != null,
                                 enter = fadeIn() + expandVertically(),
@@ -749,6 +750,7 @@ fun ChatScreen(
                                 }
                             }
 
+                            // 编辑
                             AnimatedVisibility(
                                 visible = uiState.editingMessage != null,
                                 enter = fadeIn() + expandVertically(),
@@ -795,6 +797,7 @@ fun ChatScreen(
                                 }
                             }
 
+                            // 指令
                             AnimatedVisibility(
                                 visible = uiState.pendingCommandId != null,
                                 enter = fadeIn() + expandVertically(),
@@ -807,7 +810,7 @@ fun ChatScreen(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Icon(
-                                        Icons.Rounded.Terminal,
+                                        Icons.Rounded.Code,
                                         contentDescription = null,
                                         modifier = Modifier.size(16.dp),
                                         tint = MaterialTheme.colorScheme.primary

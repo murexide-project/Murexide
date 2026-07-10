@@ -126,6 +126,7 @@ fun SettingsItem(
 @Composable
 fun SettingsItemCell(
     icon: ImageVector,
+    endIcon: ImageVector? = null,
     title: String,
     subtitle: String? = null,
     onClick: () -> Unit,
@@ -164,6 +165,16 @@ fun SettingsItemCell(
                     overflow = TextOverflow.Ellipsis
                 )
             }
+        }
+        
+        if (endIcon != null) {
+            Icon(
+                imageVector = endIcon,
+                contentDescription = null,
+                modifier = Modifier.size(24.dp),
+                tint = if (isDestructive) MaterialTheme.colorScheme.error 
+                       else MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }

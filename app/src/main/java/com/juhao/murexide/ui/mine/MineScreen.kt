@@ -195,6 +195,27 @@ private fun MineContent(
     onEditProfileClick: () -> Unit,
     onAvatarEditClick: () -> Unit
 ) {
+    var isPhoneVisible by remember { mutableStateOf(false) }
+    var isEmailVisible by remember { mutableStateOf(false) }
+
+    val displayPhone = if (isPhoneVisible) {
+        userInfo.phone.ifEmpty { "未绑定" }
+    } else {
+        maskPhoneNumber(userInfo.phone)
+    }
+
+    val displayEmail = if (isEmailVisible) {
+        userInfo.email.ifEmpty { "未设置" }
+    } else {
+        maskEmail(userInfo.email)
+    }
+
+    val visibilityIcon = if (isPhoneVisible) {
+        Icons.Rounded.VisibilityOff
+    } else {
+        Icons.Rounded.Visibility
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -202,14 +223,14 @@ private fun MineContent(
             .verticalScroll(scrollState)
     ) {
         SettingsGroup {
-            CustomItemCell(
-                onClick = onEditProfileClick
-            ) {
+            CustomItemCell(onClick = onEditProfileClick) {
                 Box(contentAlignment = Alignment.BottomEnd) {
                     Avatar(
                         url = userInfo.avatarUrl,
                         size = 64.dp,
-                        modifier = Modifier.clickable { onAvatarEditClick() }
+                        modifier = Modifier.clickable {
+                            onAvatarEditClick()
+                        }
                     )
 
                     Surface(
@@ -219,11 +240,13 @@ private fun MineContent(
                         modifier = Modifier
                             .size(24.dp)
                             .offset(x = 4.dp, y = 4.dp)
-                            .clickable { onAvatarEditClick() }
+                            .clickable {
+                                onAvatarEditClick()
+                            }
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Icon(
-                                Icons.Rounded.Edit,
+                                imageVector = Icons.Rounded.Edit,
                                 contentDescription = "修改头像",
                                 modifier = Modifier.size(14.dp),
                                 tint = MaterialTheme.colorScheme.onPrimaryContainer
@@ -231,11 +254,11 @@ private fun MineContent(
                         }
                     }
                 }
+
                 Spacer(modifier = Modifier.width(16.dp))
+
                 Column(modifier = Modifier.weight(1f)) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             text = userInfo.name.ifEmpty { "未知" },
                             style = MaterialTheme.typography.titleMedium,
@@ -244,22 +267,28 @@ private fun MineContent(
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.weight(1f, fill = false)
                         )
+
                         Spacer(modifier = Modifier.width(4.dp))
+
                         Icon(
-                            Icons.Rounded.ChevronRight,
+                            imageVector = Icons.Rounded.ChevronRight,
                             contentDescription = null,
                             modifier = Modifier.size(16.dp),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
+
                     Spacer(modifier = Modifier.height(2.dp))
+
                     Text(
                         text = "ID: ${userInfo.id}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+
                     if (introduction.isNotBlank()) {
                         Spacer(modifier = Modifier.height(4.dp))
+
                         Text(
                             text = introduction,
                             style = MaterialTheme.typography.bodySmall,
@@ -274,32 +303,92 @@ private fun MineContent(
 
         SettingsGroup(title = "账号信息") {
             InfoItem(
-                Icons.Rounded.Verified,
-                "用户等级",
-                if (userInfo.isVip) "会员" else "普通用户"
+                icon = Icons.Rounded.Verified,
+                title = "用户等级",
+                value = if (userInfo.isVip) "会员" else "普通用户"
             )
-            InfoItem(Icons.Rounded.MonetizationOn, "金币", "${userInfo.coin}")
-            InfoItem(Icons.Rounded.Email, "邮箱", userInfo.email.ifEmpty { "未设置" })
-            InfoItem(Icons.Rounded.Phone, "手机号", userInfo.phone.ifEmpty { "未绑定" })
+
             InfoItem(
-                Icons.Rounded.CardGiftcard,
-                "邀请码",
-                userInfo.invitationCode.ifEmpty { "未设置" })
+                icon = Icons.Rounded.MonetizationOn,
+                title = "金币",
+                value = "${userInfo.coin}"
+            )
+
+            InfoItem(
+                icon = Icons.Rounded.Phone,
+                title = "手机号",
+                value = displayPhone,
+                endIcon = visibilityIcon,
+                onClick = {
+                    isPhoneVisible = !isPhoneVisible
+                }
+            )
+
+            InfoItem(
+                icon = Icons.Rounded.Email,
+                title = "邮箱",
+                value = displayEmail,
+                endIcon = visibilityIcon,
+                onClick = {
+                    isEmailVisible = !isEmailVisible
+                }
+            )
+
+            InfoItem(
+                icon = Icons.Rounded.CardGiftcard,
+                title = "邀请码",
+                value = userInfo.invitationCode.ifEmpty { "未设置" }
+            )
         }
 
         SettingsGroup(title = "活跃度") {
             onlineDay?.let {
-                InfoItem(Icons.Rounded.AccessTime, "在线天数", "$it 天")
+                InfoItem(
+                    icon = Icons.Rounded.AccessTime,
+                    title = "在线天数",
+                    value = "$it 天"
+                )
             }
             continuousOnlineDay?.let {
-                InfoItem(Icons.Rounded.LocalFireDepartment, "连续在线", "$it 天")
+                InfoItem(
+                    icon = Icons.Rounded.LocalFireDepartment,
+                    title = "连续在线",
+                    value = "$it 天"
+                )
             }
             if (onlineDay == null && continuousOnlineDay == null) {
-                InfoItem(Icons.Rounded.Schedule, "在线天数", "加载中…")
+                InfoItem(
+                    icon = Icons.Rounded.Schedule,
+                    title = "在线天数",
+                    value = "加载中…"
+                )
             }
         }
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(16.dp))
+    }
+}
+
+fun maskPhoneNumber(phone: String): String {
+    return if (phone.isEmpty()) {
+        "未绑定"
+    } else if (phone.length >= 2) {
+        phone.first() + "*".repeat(phone.length - 2) + phone.last()
+    } else {
+        phone
+    }
+}
+
+fun maskEmail(email: String): String {
+    return if (email.isEmpty()) {
+        "未设置"
+    } else {
+        val atIndex = email.indexOf('@')
+        if (atIndex > 0) {
+            "*".repeat(atIndex) + email.substring(atIndex)
+        } else {
+            "*".repeat(email.length)
+        }
     }
 }
 
@@ -307,12 +396,15 @@ private fun MineContent(
 private fun InfoItem(
     icon: ImageVector,
     title: String,
-    value: String
+    value: String,
+    endIcon: ImageVector? = null,
+    onClick: () -> Unit = {}
 ) {
     SettingsItemCell(
         icon = icon,
+        endIcon = endIcon,
         title = title,
         subtitle = value,
-        onClick = { /* 仅展示 */ }
+        onClick = onClick
     )
 }
