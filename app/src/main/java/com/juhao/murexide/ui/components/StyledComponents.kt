@@ -11,8 +11,9 @@ import com.juhao.murexide.ui.theme.ThemeState
 @Composable
 fun StyledSwitch(
     checked: Boolean,
-    onCheckedChange: (() -> Unit)? = null,
-    enabled: Boolean = true
+    onCheckedChange: ((Boolean) -> Unit)? = null,
+    enabled: Boolean = true,
+    modifier: Modifier = Modifier
 ) {
     val themeStyle by ThemeState.themeStyle
     
@@ -20,13 +21,15 @@ fun StyledSwitch(
         Switch(
             checked = checked,
             onCheckedChange = onCheckedChange,
-            enabled = enabled
+            enabled = enabled,
+            modifier = modifier
         )
     } else {
         Switch(
             checked = checked,
             onCheckedChange = onCheckedChange,
             enabled = enabled,
+            modifier = modifier,
             thumbContent = {
                 Icon(
                     imageVector = if (checked) Icons.Rounded.Check else Icons.Rounded.Close,
