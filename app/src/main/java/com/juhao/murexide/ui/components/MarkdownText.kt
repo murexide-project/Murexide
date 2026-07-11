@@ -365,9 +365,9 @@ private fun MarkdownText(
     val referenceLinkHandler = remember { PersistentReferenceLinkHandler() }
     
     val customComponents = markdownComponents(
-        table = { content ->
+        table = {
             Box(modifier = Modifier.horizontalScroll(rememberScrollState())) {
-                content()
+                it()
             }
         }
     )
