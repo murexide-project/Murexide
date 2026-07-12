@@ -347,7 +347,7 @@ private fun generateStyledHtml(
         </style>
     </head>
     <body>
-        $processedHtml
+        $htmlContent
     </body>
     </html>
     """.trimIndent()
