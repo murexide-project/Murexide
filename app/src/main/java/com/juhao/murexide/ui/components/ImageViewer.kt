@@ -6,6 +6,7 @@ import android.media.MediaScannerConnection
 import android.os.Environment
 import android.widget.Toast
 import androidx.core.graphics.drawable.toBitmap
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -290,7 +291,7 @@ fun MultiImageViewer(
                 Surface(
                     modifier = Modifier.align(Alignment.Center),
                     color = Color.Black.copy(alpha = 0.6f),
-                    shape = MaterialTheme.shapes.small
+                    shape = RoundedCornerShape(50.dp)
                 ) {
                     Text(
                         text = "${pagerState.currentPage + 1} / ${images.size}",
