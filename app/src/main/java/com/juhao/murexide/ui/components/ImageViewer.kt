@@ -88,12 +88,12 @@ fun MultiImageViewer(
 
     val pagerState = rememberPagerState(initialPage = initialPage) { images.size }
 
-    val imageStates = remember(images.size) {
-        MutableList(images.size) { mutableStateOf(ImageState()) }
+    val imageStates = remember(images) {
+        List(images.size) { mutableStateOf(ImageState()) }
     }
-
-    val loadStates = remember(images.size) {
-        MutableList(images.size) { mutableIntStateOf(1) }
+    
+    val loadStates = remember(images) {
+        List(images.size) { mutableIntStateOf(1) }
     }
 
     var showMenu by remember { mutableStateOf(false) }
@@ -119,9 +119,11 @@ fun MultiImageViewer(
                 modifier = Modifier.fillMaxSize(),
                 userScrollEnabled = imageStates[pagerState.currentPage].value.scale <= 1.001f
             ) { page ->
+                var retryCount by remember { mutableIntStateOf(0) }
                 val imageRequest = remember(images[page]) {
                     ImageRequest.Builder(context)
                         .data(images[page])
+                        .setParameter("retry", retryCount)
                         .apply {
                             if (images[page].contains("chat-img.jwznb.com") ||
                                 images[page].contains("jwznb.com") ||
@@ -265,6 +267,7 @@ fun MultiImageViewer(
                             IconButton(
                                 onClick = {
                                     loadStates[page].intValue = 1
+                                    retryCount++
                                 }
                             ) {
                                 Icon(

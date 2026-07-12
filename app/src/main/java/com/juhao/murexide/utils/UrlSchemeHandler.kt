@@ -15,7 +15,7 @@ import com.juhao.murexide.ui.community.detail.PostDetailActivity
  * - yunhu://post-detail?id=xxx     跳转文章详情
  * - yunhu://chat-add?id=xxx&type=  打开聊天（user/group/bot）
  * - yunhu://alley-detail?id=xxx    跳转文章分区（暂未实现独立页面）
- * - yunhu://ad?id=xxx              观看广告（暂不支持）
+ * - yunhu://ad?id=xxx              观看广告（不支持）
  *
  * 供 markdown 链接、HTML WebView、消息点击等各处复用。
  */

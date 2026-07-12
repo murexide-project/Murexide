@@ -343,6 +343,7 @@ fun WebViewScreen(
                                 uiState = uiState.copy(
                                     url = urlStr ?: uiState.url,
                                     canGoBack = view?.canGoBack() ?: false,
+                                    progress = 0f,
                                     canGoForward = view?.canGoForward() ?: false
                                 )
                             }

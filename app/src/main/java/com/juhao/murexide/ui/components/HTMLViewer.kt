@@ -1,8 +1,9 @@
 package com.juhao.murexide.ui.components
 
-import android.webkit.JavascriptInterface
+import android.content.Intent
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
+import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -10,18 +11,18 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.net.toUri
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import androidx.core.net.toUri
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.juhao.murexide.network.NetworkClient
 
@@ -40,8 +41,26 @@ fun UnifiedHtmlWebView(
     val linkColor = MaterialTheme.colorScheme.primary.toArgb()
     val codeBackgroundColor = MaterialTheme.colorScheme.surfaceVariant.toArgb()
 
-    val styledHtml = remember(htmlContent, backgroundColor, textColor, linkColor, codeBackgroundColor, isDarkTheme) {
-        generateStyledHtml(htmlContent, backgroundColor, textColor, linkColor, codeBackgroundColor, isDarkTheme)
+    val processedHtml = remember(htmlContent) {
+        wrapImagesWithClickableLink(htmlContent)
+    }
+
+    val styledHtml = remember(
+        processedHtml,
+        backgroundColor,
+        textColor,
+        linkColor,
+        codeBackgroundColor,
+        isDarkTheme
+    ) {
+        generateStyledHtml(
+            processedHtml,
+            backgroundColor,
+            textColor,
+            linkColor,
+            codeBackgroundColor,
+            isDarkTheme
+        )
     }
 
     var webViewRef by remember { mutableStateOf<WebView?>(null) }
@@ -58,9 +77,10 @@ fun UnifiedHtmlWebView(
                     webViewRef?.resumeTimers()
                 }
                 Lifecycle.Event.ON_DESTROY -> {
-                    webViewRef?.let {
-                        it.loadUrl("about:blank")
-                        it.destroy()
+                    webViewRef?.apply {
+                        stopLoading()
+                        loadUrl("about:blank")
+                        destroy()
                     }
                     webViewRef = null
                 }
@@ -70,10 +90,12 @@ fun UnifiedHtmlWebView(
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
-            webViewRef?.let {
-                it.loadUrl("about:blank")
-                it.destroy()
+            webViewRef?.apply {
+                stopLoading()
+                loadUrl("about:blank")
+                destroy()
             }
+            webViewRef = null
         }
     }
 
@@ -84,12 +106,16 @@ fun UnifiedHtmlWebView(
                 setLayerType(WebView.LAYER_TYPE_SOFTWARE, null)
 
                 webViewClient = object : WebViewClient() {
+
                     @Deprecated("Deprecated in Java")
-                    override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean {
+                    override fun shouldOverrideUrlLoading(
+                        view: WebView?,
+                        url: String?
+                    ): Boolean {
                         if (url == null) return true
 
-                        if (url.startsWith("image://")) {
-                            val imageUrl = url.removePrefix("image://")
+                        if (url.startsWith("imageclick://")) {
+                            val imageUrl = url.removePrefix("imageclick://")
                             onImageClick?.invoke(imageUrl)
                             return true
                         }
@@ -105,12 +131,11 @@ fun UnifiedHtmlWebView(
                             } else {
                                 url
                             }
-                            val intent = android.content.Intent(android.content.Intent.ACTION_VIEW,
-                                finalUrl.toUri())
-                            intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                            val intent = Intent(Intent.ACTION_VIEW, finalUrl.toUri())
+                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                             context.startActivity(intent)
-                        } catch (e: Exception) {
-                            e.printStackTrace()
+                        } catch (_: Exception) {
+                            // 无可用浏览器
                         }
                         return true
                     }
@@ -119,7 +144,8 @@ fun UnifiedHtmlWebView(
                         view: WebView?,
                         request: WebResourceRequest?
                     ): WebResourceResponse? {
-                        val url = request?.url?.toString() ?: return super.shouldInterceptRequest(view, request)
+                        val url = request?.url?.toString()
+                            ?: return super.shouldInterceptRequest(view, request)
 
                         if (url.startsWith("https://chat-img.jwznb.com")) {
                             try {
@@ -128,59 +154,40 @@ fun UnifiedHtmlWebView(
                                     .header("Referer", "https://myapp.jwznb.com")
                                     .build()
                                 val resp = NetworkClient.okHttpClient.newCall(req).execute()
-                                val bodyStream = resp.body.byteStream()
                                 if (resp.isSuccessful) {
-                                    val contentType = (resp.header("Content-Type") ?: "image/*")
-                                        .substringBefore(';').trim()
-                                    return WebResourceResponse(contentType, null, bodyStream)
+                                    val contentType =
+                                        (resp.header("Content-Type") ?: "image/*")
+                                            .substringBefore(';').trim()
+                                    return WebResourceResponse(
+                                        contentType,
+                                        null,
+                                        resp.body.byteStream()
+                                    )
                                 }
                                 resp.close()
-                            } catch (e: Exception) {
-                                e.printStackTrace()
+                            } catch (_: Exception) {
+                                // fallback to default
                             }
                         }
                         return super.shouldInterceptRequest(view, request)
-                    }
-
-                    override fun onPageFinished(view: WebView?, url: String?) {
-                        super.onPageFinished(view, url)
-                        view?.evaluateJavascript(
-                            """
-                            window.ImageClickHandler = {
-                                onImageClick: function(url) {
-                                    window.location.href = 'image://' + url;
-                                }
-                            };
-                            """.trimIndent(),
-                            null
-                        )
                     }
                 }
 
                 settings.apply {
                     javaScriptEnabled = false
-                    domStorageEnabled = true
+                    domStorageEnabled = false
                     allowFileAccess = false
                     allowContentAccess = false
                     setSupportZoom(true)
                     builtInZoomControls = false
                     displayZoomControls = false
-                    cacheMode = android.webkit.WebSettings.LOAD_DEFAULT
+                    cacheMode = WebSettings.LOAD_DEFAULT
                     loadsImagesAutomatically = true
                     blockNetworkImage = false
-                    mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+                    mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
                     offscreenPreRaster = false
                 }
                 setBackgroundColor(backgroundColor)
-
-                if (onImageClick != null) {
-                    addJavascriptInterface(object {
-                        @JavascriptInterface
-                        fun onImageClick(imageUrl: String) {
-                            onImageClick(imageUrl)
-                        }
-                    }, "ImageClickHandler")
-                }
 
                 webViewRef = this
             }
@@ -194,6 +201,17 @@ fun UnifiedHtmlWebView(
             }
         }
     )
+}
+
+private fun wrapImagesWithClickableLink(html: String): String {
+    val imgRegex = Regex(
+        """<img[^>]*src\s*=\s*["']([^"']+)["'][^>]*/?>""",
+        RegexOption.IGNORE_CASE
+    )
+    return imgRegex.replace(html) { match ->
+        val src = match.groupValues[1]
+        """<a href="imageclick://$src"><img src="$src" style="cursor:pointer;" /></a>"""
+    }
 }
 
 private fun generateStyledHtml(
@@ -230,6 +248,7 @@ private fun generateStyledHtml(
                 padding: 4px;
                 word-wrap: break-word;
                 overflow-wrap: break-word;
+                -webkit-tap-highlight-color: transparent;
             }
             p, div, span, h1, h2, h3, h4, h5, h6, li, blockquote {
                 color: $textHex;
@@ -326,28 +345,9 @@ private fun generateStyledHtml(
                 color: $textHex;
             }
         </style>
-        <script>
-            (function() {
-                document.addEventListener('click', function(e) {
-                    var target = e.target;
-                    if (target.tagName === 'IMG' && target.src) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        try {
-                            var imgSrc = target.src;
-                            if (window.ImageClickHandler && typeof window.ImageClickHandler.onImageClick === 'function') {
-                                window.ImageClickHandler.onImageClick(imgSrc);
-                            }
-                        } catch (err) {
-                            console.error('Image click error:', err);
-                        }
-                    }
-                }, true);
-            })();
-        </script>
     </head>
     <body>
-        $htmlContent
+        $processedHtml
     </body>
     </html>
     """.trimIndent()

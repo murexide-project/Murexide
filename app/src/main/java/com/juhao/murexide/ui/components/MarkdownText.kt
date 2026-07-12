@@ -78,116 +78,124 @@ fun MarkdownText(
     }
 
     val normalizedMarkdown = MarkdownRendererCache.getNormalizedMarkdown(displayMarkdown)
-    val segments = MarkdownRendererCache.getSegments(normalizedMarkdown)
+    var segments by remember { mutableStateOf(emptyList<MarkdownSegment>()) }
+
+    LaunchedEffect(normalizedMarkdown) {
+        segments = withContext(Dispatchers.Default) {
+            MarkdownRendererCache.getSegments(normalizedMarkdown)
+        }
+    }
 
     Column(
         modifier = modifier.background(backgroundColor),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         segments.forEach { segment ->
-            when (segment) {
-                is MarkdownSegment.Text -> {
-                    if (segment.content.isNotBlank()) {
-                        val taskRuns = MarkdownRendererCache.getTaskRuns(segment.content)
-                        val textContent: @Composable () -> Unit = {
-                            Column {
-                                taskRuns.forEach { run ->
-                                    when (run) {
-                                        is TaskRun.Markdown -> {
-                                            if (run.content.isBlank()) return@forEach
-                                            MarkdownRendererCache.getMarkdownRenderBlocks(run.content).forEach { block ->
-                                                if (block.isNotBlank()) {
-                                                    MarkdownTextRun(
-                                                        content = block,
-                                                        latexEnabled = latexEnabled,
-                                                        highlightKeyword = highlightKeyword,
-                                                        persistRenderState = persistRenderState,
-                                                        enableTextSelection = enableTextSelection,
-                                                        onLinkClicked = { url ->
-                                                            try {
-                                                                openMarkdownLink(context, url)
-                                                            } catch (_: Exception) {
+            key(segment.hashCode()) {
+                when (segment) {
+                    is MarkdownSegment.Text -> {
+                        if (segment.content.isNotBlank()) {
+                            val taskRuns = MarkdownRendererCache.getTaskRuns(segment.content)
+                            val textContent: @Composable () -> Unit = {
+                                Column {
+                                    taskRuns.forEach { run ->
+                                        when (run) {
+                                            is TaskRun.Markdown -> {
+                                                if (run.content.isBlank()) return@forEach
+                                                MarkdownRendererCache.getMarkdownRenderBlocks(run.content).forEach { block ->
+                                                    if (block.isNotBlank()) {
+                                                        MarkdownTextRun(
+                                                            content = block,
+                                                            latexEnabled = latexEnabled,
+                                                            highlightKeyword = highlightKeyword,
+                                                            persistRenderState = persistRenderState,
+                                                            enableTextSelection = enableTextSelection,
+                                                            onLinkClicked = { url ->
+                                                                try {
+                                                                    openMarkdownLink(context, url)
+                                                                } catch (_: Exception) {
+                                                                }
                                                             }
-                                                        }
-                                                    )
+                                                        )
+                                                    }
                                                 }
                                             }
-                                        }
-                                        is TaskRun.Task -> {
-                                            Row(
-                                                modifier = Modifier
-                                                    .padding(vertical = 2.dp),
-                                                verticalAlignment = Alignment.CenterVertically
-                                            ) {
-                                                Icon(
-                                                    imageVector = if (run.checked) {
-                                                        Icons.Rounded.CheckBox
-                                                    } else {
-                                                        Icons.Rounded.CheckBoxOutlineBlank
-                                                    },
-                                                    contentDescription = if (run.checked) "checked task" else "unchecked task",
-                                                    tint = MaterialTheme.colorScheme.primary,
-                                                    modifier = Modifier.size(20.dp)
-                                                )
-                                                Spacer(modifier = Modifier.width(6.dp))
-                                                Box {
-                                                    MarkdownTextRun(
-                                                        content = run.content,
-                                                        latexEnabled = latexEnabled,
-                                                        highlightKeyword = highlightKeyword,
-                                                        persistRenderState = persistRenderState,
-                                                        enableTextSelection = enableTextSelection,
-                                                        onLinkClicked = { url ->
-                                                            try {
-                                                                openMarkdownLink(context, url)
-                                                            } catch (_: Exception) {
-                                                            }
-                                                        }
+                                            is TaskRun.Task -> {
+                                                Row(
+                                                    modifier = Modifier
+                                                        .padding(vertical = 2.dp),
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    Icon(
+                                                        imageVector = if (run.checked) {
+                                                            Icons.Rounded.CheckBox
+                                                        } else {
+                                                            Icons.Rounded.CheckBoxOutlineBlank
+                                                        },
+                                                        contentDescription = if (run.checked) "checked task" else "unchecked task",
+                                                        tint = MaterialTheme.colorScheme.primary,
+                                                        modifier = Modifier.size(20.dp)
                                                     )
+                                                    Spacer(modifier = Modifier.width(6.dp))
+                                                    Box {
+                                                        MarkdownTextRun(
+                                                            content = run.content,
+                                                            latexEnabled = latexEnabled,
+                                                            highlightKeyword = highlightKeyword,
+                                                            persistRenderState = persistRenderState,
+                                                            enableTextSelection = enableTextSelection,
+                                                            onLinkClicked = { url ->
+                                                                try {
+                                                                    openMarkdownLink(context, url)
+                                                                } catch (_: Exception) {
+                                                                }
+                                                            }
+                                                        )
+                                                    }
                                                 }
                                             }
                                         }
                                     }
                                 }
                             }
+                            textContent()
                         }
-                        textContent()
                     }
-                }
-
-                is MarkdownSegment.Image -> {
-                    MarkdownInlineImage(
-                        url = segment.url,
-                        alt = segment.alt,
-                        imageReferer = imageReferer,
-                        onClick = { url ->
-                            onImageClick?.invoke(url) ?: run {
-                                previewImageUrl = url
+    
+                    is MarkdownSegment.Image -> {
+                        MarkdownInlineImage(
+                            url = segment.url,
+                            alt = segment.alt,
+                            imageReferer = imageReferer,
+                            onClick = { url ->
+                                onImageClick?.invoke(url) ?: run {
+                                    previewImageUrl = url
+                                }
                             }
-                        }
-                    )
+                        )
+                    }
+    
+                    is MarkdownSegment.CodeBlock -> {
+                        CodeBlockComponent(
+                            code = segment.code,
+                            language = segment.language,
+                            enableTextSelection = enableTextSelection
+                        )
+                    }
+    
+                    is MarkdownSegment.Details -> {
+                        MarkdownDetailsBlock(
+                            summary = segment.summary,
+                            contentMarkdown = segment.content,
+                            textColor = textColor,
+                            imageReferer = imageReferer,
+                            onImageClick = onImageClick,
+                            highlightKeyword = highlightKeyword
+                        )
+                    }
+    
+                    else -> {}
                 }
-
-                is MarkdownSegment.CodeBlock -> {
-                    CodeBlockComponent(
-                        code = segment.code,
-                        language = segment.language,
-                        enableTextSelection = enableTextSelection
-                    )
-                }
-
-                is MarkdownSegment.Details -> {
-                    MarkdownDetailsBlock(
-                        summary = segment.summary,
-                        contentMarkdown = segment.content,
-                        textColor = textColor,
-                        imageReferer = imageReferer,
-                        onImageClick = onImageClick,
-                        highlightKeyword = highlightKeyword
-                    )
-                }
-
-                else -> {}
             }
         }
     }
@@ -425,7 +433,7 @@ private fun rememberStreamingMarkdown(markdown: String): String {
     return renderedMarkdown.ifBlank { markdown }
 }
 
-private const val STREAMING_MARKDOWN_FRAME_MS = 32L
+private const val STREAMING_MARKDOWN_FRAME_MS = 50L
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -521,18 +529,20 @@ private fun MarkdownInlineImage(
     onClick: (String) -> Unit
 ) {
     val context = LocalContext.current
-
-    AsyncImage(
-        model = ImageRequest.Builder(context)
+    
+    val imageRequest = remember(url, imageReferer) {
+        ImageRequest.Builder(context)
             .data(url)
             .apply {
-                imageReferer?.let {
-                    setHeader("Referer", it)
-                }
+                imageReferer?.let { setHeader("Referer", it) }
                 setHeader("User-Agent", "Mozilla/5.0 (Linux; Android 10; Mobile) AppleWebKit/537.36")
                 crossfade(true)
             }
-            .build(),
+            .build()
+    }
+
+    AsyncImage(
+        model = imageRequest,
         contentDescription = alt ?: "Markdown图片",
         modifier = Modifier
             .clip(RoundedCornerShape(12.dp))
@@ -642,7 +652,7 @@ private object MarkdownRendererCache {
     private const val HIGHLIGHT_CACHE_SIZE = 1024
     private const val DETAILS_STATE_CACHE_SIZE = 256
     private const val LATEX_SEGMENT_CACHE_SIZE = 1024
-    private const val MARKDOWN_STATE_CACHE_SIZE = 128
+    private const val MARKDOWN_STATE_CACHE_SIZE = 64
     private const val MARKDOWN_RENDER_BLOCK_CACHE_SIZE = 256
 
     private val normalizedMarkdownCache = createLruCache<String, String>(NORMALIZED_MARKDOWN_CACHE_SIZE)
