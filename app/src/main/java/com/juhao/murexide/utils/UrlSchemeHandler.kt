@@ -5,7 +5,8 @@ import android.content.Intent
 import android.util.Log
 import android.widget.Toast
 import androidx.core.net.toUri
-import com.juhao.murexide.ui.chat.ChatActivity
+import com.juhao.murexide.ui.addchat.AddChatActivity
+import com.juhao.murexide.ui.community.ba.BaDetailActivity
 import com.juhao.murexide.ui.community.detail.PostDetailActivity
 
 /**
@@ -14,7 +15,7 @@ import com.juhao.murexide.ui.community.detail.PostDetailActivity
  * 支持：
  * - yunhu://post-detail?id=xxx     跳转文章详情
  * - yunhu://chat-add?id=xxx&type=  打开聊天（user/group/bot）
- * - yunhu://alley-detail?id=xxx    跳转文章分区（暂未实现独立页面）
+ * - yunhu://alley-detail?id=xxx    跳转文章分区页面
  * - yunhu://ad?id=xxx              观看广告（不支持）
  *
  * 供 markdown 链接、HTML WebView、消息点击等各处复用。
@@ -23,12 +24,8 @@ object UrlSchemeHandler {
 
     private const val TAG = "UrlSchemeHandler"
 
-    /** 是否为需要本处理器接管的 yunhu:// 链接 */
     fun isYunhuScheme(url: String): Boolean = url.startsWith("yunhu://")
 
-    /**
-     * 处理链接。返回 true 表示已消费（无论成功与否），调用方不应再继续默认处理。
-     */
     fun handle(context: Context, url: String): Boolean {
         if (!isYunhuScheme(url)) return false
 
@@ -49,12 +46,10 @@ object UrlSchemeHandler {
                     val id = uri.getQueryParameter("id")
                     val type = uri.getQueryParameter("type")
                     if (!id.isNullOrEmpty()) {
-                        ChatActivity.start(
+                        AddChatActivity.start(
                             context = context,
                             chatId = id,
-                            chatType = chatTypeOf(type),
-                            chatName = "",
-                            chatAvatar = ""
+                            chatType = chatTypeOf(type)
                         )
                     } else {
                         toast(context, "无效的聊天链接")
@@ -63,8 +58,12 @@ object UrlSchemeHandler {
                 }
 
                 "alley-detail" -> {
-                    // TODO: 分区详情页尚未实现
-                    toast(context, "暂不支持打开文章分区")
+                    val id = uri.getQueryParameter("id")?.toIntOrNull()
+                    if (id != null && id > 0) {
+                        BaDetailActivity.start(context, id)
+                    } else {
+                        toast(context, "无效的分区链接")
+                    }
                     true
                 }
 

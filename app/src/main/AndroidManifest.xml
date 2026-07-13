@@ -46,6 +46,43 @@
             </intent-filter>
         </activity>
         <activity
+            android:name=".ui.community.ba.BaDetailActivity"
+            android:exported="true"
+            android:theme="@style/Theme.Murexide">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data
+                    android:scheme="yunhu"
+                    android:host="alley-detail" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name=".ui.community.ba.CreatePostActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize"
+            android:theme="@style/Theme.Murexide" />
+        <activity
+            android:name=".ui.community.myposts.MyPostsActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Murexide" />
+        <activity
+            android:name=".ui.addchat.AddChatActivity"
+            android:exported="true"
+            android:theme="@style/Theme.Murexide">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data
+                    android:scheme="yunhu"
+                    android:host="chat-add" />
+            </intent-filter>
+        </activity>
+        <activity
             android:name=".ui.settings.SettingsActivity"
             android:exported="false"
             android:theme="@style/Theme.Murexide" />

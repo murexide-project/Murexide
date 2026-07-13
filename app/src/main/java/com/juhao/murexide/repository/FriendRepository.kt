@@ -70,6 +70,50 @@ class FriendRepository {
         }
     }
     
+    /**
+     * 添加用户/群聊/机器人。
+     * @param type 1-用户，2-群聊，3-机器人
+     * code: 1 正常，-1 不存在，-9 已在群聊中
+     */
+    suspend fun apply(token: String, chatId: String, chatType: Int, remark: String = ""): Result<Int> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val params = buildJsonObject {
+                    put("chatId", chatId)
+                    put("chatType", chatType)
+                    put("remark", remark)
+                }
+                val requestBody = json.encodeToString(params).toRequestBody("application/json".toMediaType())
+
+                val httpRequest = Request.Builder()
+                    .url("$baseUrl/v1/friend/apply")
+                    .post(requestBody)
+                    .header("token", token)
+                    .build()
+
+                client.newCall(httpRequest).execute().use { response ->
+                    if (response.isSuccessful) {
+                        val result = json.decodeFromString<DeleteFriendResponse>(response.body.string())
+                        Result.success(result.code)
+                    } else {
+                        Result.failure(Exception("HTTP error: ${response.code}"))
+                    }
+                }
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+        }
+    }
+
+    /** 判断某会话是否已在通讯录中（已添加）。 */
+    suspend fun isAdded(token: String, chatId: String, chatType: Int): Result<Boolean> {
+        return getAddressBook(token).map { groups ->
+            groups.any { g ->
+                g.chatType == chatType && g.contacts.any { it.chatId == chatId }
+            }
+        }
+    }
+
     suspend fun deleteFriend(token: String, id: String, type: Int = 1): Result<Boolean> {
         return withContext(Dispatchers.IO) {
             try {
