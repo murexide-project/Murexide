@@ -56,7 +56,7 @@ jobs:
       - name: Generate changelog and create release
         run: npx changelogithub
         env:
-          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload APK to release
         run: |
@@ -64,7 +64,7 @@ jobs:
           echo "APK file: $APK_FILE"
           gh release upload ${{ github.ref_name }} "$APK_FILE"
         env:
-          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Prepare release announcement
         id: build_message
