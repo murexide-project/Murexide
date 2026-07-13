@@ -121,7 +121,7 @@ fun ScreenshotBottomSheet(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 ScreenshotActionCard(
-                    icon = Icons.Rounded.Save,
+                    icon = Icons.Rounded.SaveAlt,
                     label = "保存图片",
                     onClick = {
                         scope.launch {

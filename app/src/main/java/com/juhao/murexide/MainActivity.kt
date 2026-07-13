@@ -21,10 +21,10 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import kotlinx.coroutines.launch
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteType
 import androidx.compose.ui.Alignment
@@ -50,6 +50,7 @@ import com.juhao.murexide.ui.chat.ChatScreen
 import com.juhao.murexide.ui.chat.ChatViewModel
 import com.juhao.murexide.ui.community.CommunityScreen
 import com.juhao.murexide.ui.settings.SettingsActivity
+import com.juhao.murexide.utils.getAppVersionInfo
 
 private data class NavItem(
     val route: String,
@@ -96,7 +97,7 @@ class MainActivity : ComponentActivity() {
 fun MainScreen(token: String) {
     val navController = rememberNavController()
     val context = LocalContext.current
-
+    
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
     
@@ -106,6 +107,22 @@ fun MainScreen(token: String) {
     val isBigScreen = LocalConfiguration.current.screenWidthDp >= 600
 
     var currentConversation by remember { mutableStateOf<ConversationItem?>(null) }
+    
+    var showDevTip by remember { mutableStateOf(context.getAppVersionInfo().commitHash == "dev") }
+    
+    if (showDevTip) {
+        AlertDialog(
+            onDismissRequest = { showDevTip = false },
+            icon = { Icon(Icons.Outlined.Info, contentDescription = null) },
+            title = { Text("正在使用开发版本") },
+            text = { Text("你正在使用内部开发版本，可能出现问题。如果发现问题，可在交流群反馈。此弹窗会在每次应用启动时弹出。此版本仅为测试使用，不能作为日用版本，请及时更新至正式版或快照版。开发版本的检查更新不可用。") },
+            confirmButton = {
+                TextButton(onClick = { showDevTip = false }) {
+                    Text("了解")
+                }
+            }
+        )
+    }
 
     NavigationSuiteScaffold(
         layoutType = if (bigScreenEnabled && isBigScreen) {
