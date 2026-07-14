@@ -286,7 +286,7 @@ fun MultiImageViewer(
                 modifier = Modifier
                     .fillMaxWidth()
                     .align(Alignment.BottomCenter)
-                    .padding(bottom = 24.dp)
+                    .padding(bottom = 20.dp)
             ) {
                 Surface(
                     modifier = Modifier.align(Alignment.Center),

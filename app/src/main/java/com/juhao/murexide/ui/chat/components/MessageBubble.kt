@@ -359,7 +359,7 @@ fun MessageBubble(
                                         ) {
                                             Box(
                                                 modifier = Modifier
-                                                    .width(2.dp)
+                                                    .width(3.dp)
                                                     .fillMaxHeight()
                                                     .background(MaterialTheme.colorScheme.primary)
                                             )

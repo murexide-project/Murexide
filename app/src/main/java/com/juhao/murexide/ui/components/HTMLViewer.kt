@@ -104,7 +104,6 @@ fun UnifiedHtmlWebView(
     AndroidView(
         modifier = modifier
             .fillMaxWidth()
-            .heightIn(max = 2000.dp)
             .clipToBounds(),
         factory = { ctx ->
             WebView(ctx).apply {
@@ -182,16 +181,16 @@ fun UnifiedHtmlWebView(
                 isHorizontalScrollBarEnabled = false
                 settings.apply {
                     javaScriptEnabled = false
-                    domStorageEnabled = false
+                    domStorageEnabled = true
                     allowFileAccess = false
                     allowContentAccess = false
                     setSupportZoom(false)
                     builtInZoomControls = false
                     displayZoomControls = false
-                    cacheMode = WebSettings.LOAD_DEFAULT
+                    cacheMode = WebSettings.LOAD_NO_CACHE
                     loadsImagesAutomatically = true
                     blockNetworkImage = false
-                    mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+                    mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
                     offscreenPreRaster = false
                     useWideViewPort = true
                     loadWithOverviewMode = true
@@ -253,7 +252,7 @@ private fun generateStyledHtml(
                 color: $textHex;
                 font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
                 font-size: 14px;
-                line-height: 1.5;
+                line-height: 1.4;
                 padding: 4px;
                 word-wrap: break-word;
                 overflow-wrap: break-word;
@@ -273,7 +272,6 @@ private fun generateStyledHtml(
             img {
                 max-width: 100%;
                 height: auto;
-                display: block;
                 margin: 8px 0;
                 border-radius: 8px;
                 cursor: pointer;
