@@ -242,10 +242,10 @@ fun MessageBubble(
                     Column(horizontalAlignment = if (isMine) Alignment.End else Alignment.Start) {
                         Card(
                             shape = RoundedCornerShape(
-                                topStart = if (isMine) bubbleCornerRadius.dp else if (isLastFromSender) bubbleCornerRadius.dp else (bubbleCornerRadius / 4).dp,
-                                topEnd = if (isMine) if (isLastFromSender) bubbleCornerRadius.dp else (bubbleCornerRadius / 4).dp else bubbleCornerRadius.dp,
-                                bottomStart = if (isMine) bubbleCornerRadius.dp else if (isFirstFromSender) bubbleCornerRadius.dp else (bubbleCornerRadius / 4).dp,
-                                bottomEnd = if (isMine) if (isFirstFromSender) bubbleCornerRadius.dp else (bubbleCornerRadius / 4).dp else bubbleCornerRadius.dp
+                                topStart = if (!isMine && !isLastFromSender) (bubbleCornerRadius / 4).dp else bubbleCornerRadius.dp,
+                                topEnd = if (isMine && !isLastFromSender) (bubbleCornerRadius / 4).dp else bubbleCornerRadius.dp,
+                                bottomStart = if (!isMine && !isFirstFromSender) (bubbleCornerRadius / 4).dp else bubbleCornerRadius.dp,
+                                bottomEnd = if (isMine && !isFirstFromSender) (bubbleCornerRadius / 4).dp else bubbleCornerRadius.dp
                             ),
                             colors = CardDefaults.cardColors(
                                 containerColor = if (isMine)
@@ -254,9 +254,16 @@ fun MessageBubble(
                                     MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp).copy(alpha = bubbleOpacity)
                             )
                         ) {
-                            Column {
+                            Column(
+                                horizontalAlignment = if (isMine) Alignment.End else Alignment.Start
+                            ) {
                                 Column(
-                                    modifier = Modifier.padding(top = 8.dp, start = 8.dp, end = 8.dp)
+                                    modifier = Modifier
+                                        .padding(
+                                            top = if (isMine && message.quoteMsgText == null) 0.dp else 8.dp,
+                                            start = 8.dp,
+                                            end = 8.dp
+                                        )
                                 ) {
                                     if (!isMine && isLastFromSender) {
                                         Row(
@@ -400,8 +407,7 @@ fun MessageBubble(
                                 }
     
                                 Column(
-                                    modifier = if (noMsgPadding) Modifier else Modifier.padding(bottom = 8.dp, start = 8.dp, end = 8.dp),
-                                    horizontalAlignment = if (isMine) Alignment.End else Alignment.Start
+                                    modifier = if (noMsgPadding) Modifier else Modifier.padding(bottom = 8.dp, start = 8.dp, end = 8.dp)
                                 ) {
                                     if (message.isRecalled) {
                                         Text(
@@ -562,10 +568,9 @@ fun MessageBubble(
                                                                     .clip(
                                                                         RoundedCornerShape(
                                                                             topStart = bubbleCornerRadius.dp,
-                                                                            topEnd = bubbleCornerRadius.dp,
-                                                                            bottomStart = if (isMine) bubbleCornerRadius.dp else if (isFirstFromSender) bubbleCornerRadius.dp else (bubbleCornerRadius / 4).dp,
-                                                                            bottomEnd = if (isMine) if (isFirstFromSender) bubbleCornerRadius.dp else (bubbleCornerRadius / 4).dp else bubbleCornerRadius.dp
-                                                                            
+                                                                            topEnd = if (isMine && !isLastFromSender) (bubbleCornerRadius / 4).dp else bubbleCornerRadius.dp,
+                                                                            bottomStart = if (!isMine && !isFirstFromSender) (bubbleCornerRadius / 4).dp else bubbleCornerRadius.dp,
+                                                                            bottomEnd = if (isMine && !isFirstFromSender) (bubbleCornerRadius / 4).dp else bubbleCornerRadius.dp
                                                                         )
                                                                     )
                                                                     .combinedClickable(
