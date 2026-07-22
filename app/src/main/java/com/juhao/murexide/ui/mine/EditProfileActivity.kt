@@ -19,7 +19,11 @@ class EditProfileActivity : ComponentActivity() {
             MurexideTheme {
                 EditProfileScreen(
                     token = token,
-                    onBackClick = { finish() }
+                    onBackClick = { finish() },
+                    onProfileSaved = {
+                        setResult(RESULT_OK)
+                        finish()
+                    }
                 )
             }
         }
@@ -28,11 +32,14 @@ class EditProfileActivity : ComponentActivity() {
     companion object {
         private const val EXTRA_TOKEN = "extra_token"
 
-        fun start(context: Context, token: String) {
-            val intent = Intent(context, EditProfileActivity::class.java).apply {
+        fun createIntent(context: Context, token: String): Intent {
+            return Intent(context, EditProfileActivity::class.java).apply {
                 putExtra(EXTRA_TOKEN, token)
             }
-            context.startActivity(intent)
+        }
+
+        fun start(context: Context, token: String) {
+            context.startActivity(createIntent(context, token))
         }
     }
 }

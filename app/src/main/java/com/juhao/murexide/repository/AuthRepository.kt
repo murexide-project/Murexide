@@ -6,14 +6,35 @@ import com.juhao.murexide.proto.user.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.Request
+import okhttp3.Response
 import okhttp3.RequestBody.Companion.toRequestBody
 
 class AuthRepository {
     private val client = NetworkClient.okHttpClient
     private val baseUrl = NetworkClient.BASE_URL
     private val json = Json { ignoreUnknownKeys = true }
+
+    private fun httpError(response: Response, fallback: String): Exception {
+        val responseBody = response.body.string().trim()
+        val apiMessage = runCatching {
+            json.parseToJsonElement(responseBody)
+                .jsonObject["msg"]
+                ?.jsonPrimitive
+                ?.content
+        }.getOrNull()?.takeIf { it.isNotBlank() }
+        val plainMessage = responseBody.takeIf {
+            it.isNotBlank() &&
+                it.length <= 200 &&
+                !it.startsWith("{") &&
+                !it.startsWith("<")
+        }
+
+        return Exception(apiMessage ?: plainMessage ?: "$fallback（HTTP ${response.code}）")
+    }
 
     suspend fun login(email: String, password: String, deviceId: String): Result<String> {
         return withContext(Dispatchers.IO) {
@@ -242,7 +263,7 @@ class AuthRepository {
                             Result.failure(Exception(protoResponse.status?.msg ?: "修改昵称失败"))
                         }
                     } else {
-                        Result.failure(Exception("HTTP error: ${response.code}"))
+                        Result.failure(httpError(response, "修改昵称失败"))
                     }
                 }
             } catch (e: Exception) {
@@ -304,7 +325,7 @@ class AuthRepository {
                             Result.failure(Exception(baseResponse.msg.ifBlank { "修改个人资料失败" }))
                         }
                     } else {
-                        Result.failure(Exception("HTTP error: ${response.code}"))
+                        Result.failure(httpError(response, "修改个人资料失败"))
                     }
                 }
             } catch (e: Exception) {

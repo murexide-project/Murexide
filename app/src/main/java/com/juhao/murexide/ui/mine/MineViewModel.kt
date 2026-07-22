@@ -25,7 +25,8 @@ sealed class MineUiState {
         val introduction: String = "",
         val userProfile: UserProfileData? = null,
         val isUploadingAvatar: Boolean = false,
-        val uploadProgress: Float = 0f
+        val uploadProgress: Float = 0f,
+        val isSavingProfile: Boolean = false
     ) : MineUiState()
     data class Error(val message: String) : MineUiState()
 }
@@ -91,14 +92,6 @@ class MineViewModel(
         }
     }
 
-    fun updateNickname(nickname: String) {
-        viewModelScope.launch {
-            repository.editNickname(token, nickname).onSuccess {
-                loadUserInfo()
-            }
-        }
-    }
-
     /** 上传并修改头像 */
     fun uploadAndChangeAvatar(context: Context, uri: Uri) {
         viewModelScope.launch {
@@ -144,8 +137,9 @@ class MineViewModel(
         }
     }
 
-    /** 修改个人资料 */
-    fun updateProfile(
+    /** 按 API 约束依次保存昵称和个人资料。 */
+    fun saveProfile(
+        nickname: String,
         introduction: String,
         gender: Int,
         birthday: Long,
@@ -154,23 +148,99 @@ class MineViewModel(
         district: String,
         locationCode: String
     ) {
+        val normalizedNickname = nickname.trim()
+        val normalizedProvince = province.trim()
+        val normalizedCity = city.trim()
+        val normalizedDistrict = district.trim()
+        val normalizedLocationCode = locationCode.trim()
+        val validationError = validateProfile(
+            nickname = normalizedNickname,
+            gender = gender,
+            birthday = birthday,
+            province = normalizedProvince,
+            city = normalizedCity,
+            district = normalizedDistrict,
+            locationCode = normalizedLocationCode
+        )
+
+        if (validationError != null) {
+            viewModelScope.launch {
+                _eventFlow.emit(MineEvent.ShowToast(validationError))
+            }
+            return
+        }
+
         viewModelScope.launch {
+            val current = _uiState.value as? MineUiState.Success ?: return@launch
+            if (current.isSavingProfile) return@launch
+            _uiState.value = current.copy(isSavingProfile = true)
+
+            if (normalizedNickname != current.userInfo.name) {
+                val nicknameResult = repository.editNickname(token, normalizedNickname)
+                val nicknameError = nicknameResult.exceptionOrNull()
+                if (nicknameError != null) {
+                    setProfileSaving(false)
+                    _eventFlow.emit(
+                        MineEvent.ShowToast(nicknameError.message ?: "昵称保存失败")
+                    )
+                    return@launch
+                }
+
+                val savingState = _uiState.value
+                if (savingState is MineUiState.Success) {
+                    _uiState.value = savingState.copy(
+                        userInfo = savingState.userInfo.copy(name = normalizedNickname)
+                    )
+                }
+            }
+
             val request = SaveUserDataRequest(
-                introduction = introduction,
+                introduction = introduction.trim(),
                 gender = gender,
                 birthday = birthday,
-                province = province,
-                city = city,
-                district = district,
-                locationCode = locationCode
+                province = normalizedProvince,
+                city = normalizedCity,
+                district = normalizedDistrict,
+                locationCode = normalizedLocationCode
             )
+
             repository.saveUserData(token, request).onSuccess {
+                setProfileSaving(false)
                 _eventFlow.emit(MineEvent.ShowToast("个人资料修改成功"))
                 _eventFlow.emit(MineEvent.ProfileUpdated)
-                loadUserInfo()
             }.onFailure { error ->
+                setProfileSaving(false)
                 _eventFlow.emit(MineEvent.ShowToast(error.message ?: "修改个人资料失败"))
             }
         }
+    }
+
+    private fun setProfileSaving(isSaving: Boolean) {
+        val current = _uiState.value
+        if (current is MineUiState.Success) {
+            _uiState.value = current.copy(isSavingProfile = isSaving)
+        }
+    }
+
+    private fun validateProfile(
+        nickname: String,
+        gender: Int,
+        birthday: Long,
+        province: String,
+        city: String,
+        district: String,
+        locationCode: String
+    ): String? {
+        if (nickname.isBlank()) return "昵称不能为空"
+        if (gender !in 1..3) return "请选择性别"
+        if (birthday <= 0L) return "请选择生日"
+        if (birthday > System.currentTimeMillis() / 1000L) return "生日不能晚于今天"
+        if (province.isBlank() || city.isBlank() || district.isBlank()) {
+            return "请完整填写省份、城市和区县"
+        }
+        if (!locationCode.matches(Regex("\\d{6}"))) {
+            return "地区代码应为 6 位数字"
+        }
+        return null
     }
 }

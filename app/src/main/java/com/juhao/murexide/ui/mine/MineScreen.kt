@@ -1,5 +1,6 @@
 package com.juhao.murexide.ui.mine
 
+import android.app.Activity
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -14,13 +15,11 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.foundation.clickable
 import com.juhao.murexide.repository.UserInfo
 import com.juhao.murexide.ui.components.*
-import com.juhao.murexide.ui.theme.UiState
 import androidx.compose.ui.platform.LocalContext
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -29,6 +28,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import java.text.NumberFormat
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -48,11 +48,7 @@ fun MineScreen(
     val context = LocalContext.current
     val scrollState = rememberScrollState()
     val uiState by viewModel.uiState.collectAsState()
-    
-    val themeStyle by UiState.themeStyle
-    
-    val scrollBehavior = if (themeStyle == "md3") TopAppBarDefaults.pinnedScrollBehavior()
-        else TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
 
     val avatarLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -62,10 +58,18 @@ fun MineScreen(
         }
     }
 
+    val editProfileLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            viewModel.loadUserInfo()
+        }
+    }
+
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            StyledTopBar(
+            TopAppBar(
                 title = { Text("我的") },
                 scrollBehavior = scrollBehavior,
                 actions = {
@@ -81,10 +85,7 @@ fun MineScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(
-                            top = it.calculateTopPadding(),
-                            end = it.calculateRightPadding(LayoutDirection.Ltr)
-                        ),
+                        .padding(it),
                     contentAlignment = Alignment.Center
                 ) {
                     CircularProgressIndicator()
@@ -95,10 +96,7 @@ fun MineScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(
-                            top = it.calculateTopPadding(),
-                            end = it.calculateRightPadding(LayoutDirection.Ltr)
-                        ),
+                        .padding(it),
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -120,7 +118,9 @@ fun MineScreen(
                     paddingValues = it,
                     introduction = state.introduction,
                     onEditProfileClick = {
-                        EditProfileActivity.start(context, token)
+                        editProfileLauncher.launch(
+                            EditProfileActivity.createIntent(context, token)
+                        )
                     },
                     onAvatarEditClick = {
                         avatarLauncher.launch("image/*")
@@ -205,98 +205,17 @@ private fun MineContent(
             .padding(paddingValues)
             .verticalScroll(scrollState)
     ) {
-        SettingsGroup {
-            CustomItemCell(onClick = onEditProfileClick) {
-                Box(contentAlignment = Alignment.BottomEnd) {
-                    Avatar(
-                        url = userInfo.avatarUrl,
-                        size = 64.dp,
-                        modifier = Modifier.clickable {
-                            onAvatarEditClick()
-                        }
-                    )
+        ProfileCard(
+            userInfo = userInfo,
+            introduction = introduction,
+            onEditProfileClick = onEditProfileClick,
+            onAvatarEditClick = onAvatarEditClick,
+            modifier = Modifier.padding(horizontal = 16.dp)
+        )
 
-                    Surface(
-                        shape = CircleShape,
-                        color = MaterialTheme.colorScheme.primaryContainer,
-                        tonalElevation = 2.dp,
-                        modifier = Modifier
-                            .size(24.dp)
-                            .offset(x = 4.dp, y = 4.dp)
-                            .clickable {
-                                onAvatarEditClick()
-                            }
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                imageVector = Icons.Rounded.Edit,
-                                contentDescription = "修改头像",
-                                modifier = Modifier.size(14.dp),
-                                tint = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.width(16.dp))
-
-                Column(modifier = Modifier.weight(1f)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = userInfo.name.ifEmpty { "未知" },
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f, fill = false)
-                        )
-
-                        Spacer(modifier = Modifier.width(4.dp))
-
-                        Icon(
-                            imageVector = Icons.Rounded.ChevronRight,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(2.dp))
-
-                    Text(
-                        text = "ID: ${userInfo.id}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-
-                    if (introduction.isNotBlank()) {
-                        Spacer(modifier = Modifier.height(4.dp))
-
-                        Text(
-                            text = introduction,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 3,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                }
-            }
-        }
+        Spacer(modifier = Modifier.height(8.dp))
 
         SettingsGroup(title = "账号信息") {
-            InfoItem(
-                icon = Icons.Rounded.Verified,
-                title = "用户等级",
-                value = if (userInfo.isVip) "会员" else "普通用户"
-            )
-
-            InfoItem(
-                icon = Icons.Rounded.MonetizationOn,
-                title = "金币",
-                value = "${userInfo.coin}"
-            )
-
             InfoItem(
                 icon = Icons.Rounded.Phone,
                 title = "手机号",
@@ -357,6 +276,171 @@ private fun MineContent(
         }
 
         Spacer(modifier = Modifier.height(16.dp))
+    }
+}
+
+@Composable
+private fun ProfileCard(
+    userInfo: UserInfo,
+    introduction: String,
+    onEditProfileClick: () -> Unit,
+    onAvatarEditClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val formattedCoin = remember(userInfo.coin) {
+        NumberFormat.getNumberInstance().apply {
+            minimumFractionDigits = 0
+            maximumFractionDigits = 2
+        }.format(userInfo.coin)
+    }
+
+    ElevatedCard(
+        onClick = onEditProfileClick,
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(28.dp),
+        colors = CardDefaults.elevatedCardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+        ),
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 1.dp)
+    ) {
+        Column(modifier = Modifier.padding(20.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(contentAlignment = Alignment.BottomEnd) {
+                    Avatar(
+                        url = userInfo.avatarUrl,
+                        size = 72.dp,
+                        modifier = Modifier.clickable {
+                            onAvatarEditClick()
+                        }
+                    )
+
+                    Surface(
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        tonalElevation = 2.dp,
+                        modifier = Modifier
+                            .size(26.dp)
+                            .offset(x = 3.dp, y = 3.dp)
+                            .clickable {
+                                onAvatarEditClick()
+                            }
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Rounded.Edit,
+                                contentDescription = "修改头像",
+                                modifier = Modifier.size(15.dp),
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.width(16.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = userInfo.name.ifEmpty { "未知" },
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+
+                    Spacer(modifier = Modifier.height(3.dp))
+
+                    Text(
+                        text = "ID: ${userInfo.id}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    if (introduction.isNotBlank()) {
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        Text(
+                            text = introduction,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 3,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+                Icon(
+                    imageVector = Icons.Rounded.ChevronRight,
+                    contentDescription = "编辑资料",
+                    modifier = Modifier.size(22.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            Spacer(modifier = Modifier.height(18.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                ProfileStat(
+                    icon = Icons.Rounded.Verified,
+                    label = "用户等级",
+                    value = if (userInfo.isVip) "会员" else "普通用户",
+                    modifier = Modifier.weight(1f)
+                )
+
+                ProfileStat(
+                    icon = Icons.Rounded.MonetizationOn,
+                    label = "金币",
+                    value = formattedCoin,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProfileStat(
+    icon: ImageVector,
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(18.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                modifier = Modifier.size(22.dp),
+                tint = MaterialTheme.colorScheme.primary
+            )
+
+            Spacer(modifier = Modifier.width(10.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1
+                )
+                Text(
+                    text = value,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
     }
 }
 
