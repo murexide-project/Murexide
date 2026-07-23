@@ -14,6 +14,9 @@ message Status {
 }
 
 // 对象请求列表
+// 当前协议没有请求字段，但接口仍要求 protobuf 请求体。
+message request_list_send {}
+
 message request_list {
   Status status = 1;
 

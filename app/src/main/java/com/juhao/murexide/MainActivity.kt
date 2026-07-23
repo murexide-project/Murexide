@@ -107,6 +107,8 @@ fun MainScreen(token: String) {
     val isBigScreen = LocalConfiguration.current.screenWidthDp >= 600
 
     var currentConversation by remember { mutableStateOf<ConversationItem?>(null) }
+
+    var isContactNewMessagesVisible by remember { mutableStateOf(false) }
     
     var showDevTip by remember { mutableStateOf(context.getAppVersionInfo().commitHash == "dev") }
     
@@ -125,10 +127,10 @@ fun MainScreen(token: String) {
     }
 
     NavigationSuiteScaffold(
-        layoutType = if (bigScreenEnabled && isBigScreen) {
-            NavigationSuiteType.NavigationRail
-        } else {
-            NavigationSuiteType.NavigationBar
+        layoutType = when {
+            bigScreenEnabled && isBigScreen -> NavigationSuiteType.NavigationRail
+            currentRoute == "contacts" && isContactNewMessagesVisible -> NavigationSuiteType.None
+            else -> NavigationSuiteType.NavigationBar
         },
         navigationSuiteItems = {
             navItems.forEach { item ->
@@ -238,6 +240,9 @@ fun MainScreen(token: String) {
             composable("contacts") {
                 ContactListScreen(
                     token = token,
+                    onNewMessagesVisibilityChanged = { isVisible ->
+                        isContactNewMessagesVisible = isVisible
+                    },
                     onContactClick = { contact ->
                         ChatActivity.start(
                             context = context,

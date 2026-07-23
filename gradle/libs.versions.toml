@@ -17,6 +17,7 @@ multiplatformMarkdownRendererM3 = "0.43.0"
 multiplatformMarkdownRendererCoil2 = "0.43.0"
 navigation = "2.8.4"
 haze = "1.7.2"
+junit = "4.13.2"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -50,6 +51,7 @@ androidx-material-icons-extended = { group = "androidx.compose.material", name =
 
 # Wire (Protobuf)
 wire-runtime = { group = "com.squareup.wire", name = "wire-runtime", version.ref = "wire" }
+junit = { group = "junit", name = "junit", version.ref = "junit" }
 
 # DataStore
 datastore-preferences = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "datastore" }

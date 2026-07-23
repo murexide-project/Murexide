@@ -65,6 +65,9 @@ class WebSocketManager private constructor() {
     private val _messageFlow = MutableSharedFlow<WsEvent>()
     val messageFlow: SharedFlow<WsEvent> = _messageFlow.asSharedFlow()
 
+    private val _invitationFlow = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val invitationFlow: SharedFlow<Unit> = _invitationFlow.asSharedFlow()
+
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val client = NetworkClient.okHttpClient
 
@@ -298,6 +301,10 @@ class WebSocketManager private constructor() {
                     Log.d(TAG, "Heartbeat ACK received")
                     lastHeartbeatAckTime = System.currentTimeMillis()
                 }
+                "invite_apply" -> {
+                    Log.d(TAG, "Invitation update received (Text)")
+                    _invitationFlow.tryEmit(Unit)
+                }
                 else -> {
                     Log.d(TAG, "Unknown command: $cmd")
                 }
@@ -350,6 +357,10 @@ class WebSocketManager private constructor() {
                 "file_send_message" -> {
                     val fileMsg = file_send_message.ADAPTER.decode(data)
                     Log.d(TAG, "File send message: ${fileMsg.data_?.sender?.send_type}")
+                }
+                "invite_apply" -> {
+                    Log.d(TAG, "Invitation update received (Binary)")
+                    _invitationFlow.tryEmit(Unit)
                 }
                 "bot_board_message" -> {
                     val boardMsg = bot_board_message.ADAPTER.decode(data)

@@ -101,6 +101,8 @@ dependencies {
     implementation(libs.datastore.preferences)
     implementation(libs.datastore)
 
+    testImplementation(libs.junit)
+
     implementation(libs.haze)
     implementation(libs.haze.materials)
 
