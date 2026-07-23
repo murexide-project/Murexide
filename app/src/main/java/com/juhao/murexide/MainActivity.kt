@@ -6,7 +6,9 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -31,10 +33,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.juhao.murexide.ui.chat.ChatActivity
@@ -51,6 +56,7 @@ import com.juhao.murexide.ui.chat.ChatViewModel
 import com.juhao.murexide.ui.community.CommunityScreen
 import com.juhao.murexide.ui.settings.SettingsActivity
 import com.juhao.murexide.utils.getAppVersionInfo
+import kotlinx.coroutines.delay
 
 private data class NavItem(
     val route: String,
@@ -65,6 +71,19 @@ private val navItems = listOf(
     NavItem("discover", "发现", Icons.Rounded.Explore),
     NavItem("mine", "我的", Icons.Rounded.Person),
 )
+
+private const val TAB_TRANSITION_DURATION_MILLIS = 300
+
+private fun AnimatedContentTransitionScope<NavBackStackEntry>.tabSlideDirection():
+    AnimatedContentTransitionScope.SlideDirection {
+    val initialIndex = navItems.indexOfFirst { it.route == initialState.destination.route }
+    val targetIndex = navItems.indexOfFirst { it.route == targetState.destination.route }
+    return if (targetIndex > initialIndex) {
+        AnimatedContentTransitionScope.SlideDirection.Left
+    } else {
+        AnimatedContentTransitionScope.SlideDirection.Right
+    }
+}
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -100,6 +119,18 @@ fun MainScreen(token: String) {
     
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
+    var previousRoute by remember { mutableStateOf<String?>(null) }
+    var blockContentInput by remember { mutableStateOf(false) }
+
+    LaunchedEffect(currentRoute) {
+        val routeChanged = previousRoute != null && previousRoute != currentRoute
+        previousRoute = currentRoute
+        if (routeChanged) {
+            blockContentInput = true
+            delay(TAB_TRANSITION_DURATION_MILLIS.toLong())
+            blockContentInput = false
+        }
+    }
     
     val settingsStorage = remember { SettingsStorage(context) }
     val bigScreenEnabled by settingsStorage.bigScreenFlow.collectAsState(initial = true)
@@ -163,7 +194,43 @@ fun MainScreen(token: String) {
         NavHost(
             navController = navController,
             startDestination = "conversations",
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier
+                .fillMaxSize()
+                .pointerInput(blockContentInput) {
+                    if (blockContentInput) {
+                        awaitPointerEventScope {
+                            while (true) {
+                                awaitPointerEvent(PointerEventPass.Initial).changes.forEach {
+                                    it.consume()
+                                }
+                            }
+                        }
+                    }
+                },
+            enterTransition = {
+                slideIntoContainer(
+                    towards = tabSlideDirection(),
+                    animationSpec = tween(TAB_TRANSITION_DURATION_MILLIS)
+                )
+            },
+            exitTransition = {
+                slideOutOfContainer(
+                    towards = tabSlideDirection(),
+                    animationSpec = tween(TAB_TRANSITION_DURATION_MILLIS)
+                )
+            },
+            popEnterTransition = {
+                slideIntoContainer(
+                    towards = tabSlideDirection(),
+                    animationSpec = tween(TAB_TRANSITION_DURATION_MILLIS)
+                )
+            },
+            popExitTransition = {
+                slideOutOfContainer(
+                    towards = tabSlideDirection(),
+                    animationSpec = tween(TAB_TRANSITION_DURATION_MILLIS)
+                )
+            }
         ) {
             composable("conversations") {
                 Row(modifier = Modifier.fillMaxSize()) {

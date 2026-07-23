@@ -276,7 +276,10 @@ fun EditProfileScreen(
                 }
             }
         ) {
-            DatePicker(state = datePickerState)
+            DatePicker(
+                state = datePickerState,
+                showModeToggle = false
+            )
         }
     }
 
@@ -421,28 +424,20 @@ private fun EditProfileContent(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        ProfileSectionCard(
+        ProfileInlinePickerCard(
             icon = Icons.Rounded.LocationOn,
-            title = "所在地",
-            description = "选择你所在的省、市和区县"
-        ) {
-            ProfilePickerField(
-                icon = Icons.Rounded.LocationOn,
-                label = "所在地",
-                value = if (locationCode.isBlank()) {
-                    "请选择所在地"
-                } else {
-                    listOf(province, city, district)
-                        .filter { it.isNotBlank() }
-                        .joinToString(" · ")
-                        .ifBlank { "请选择所在地" }
-                },
-                trailingIcon = Icons.Rounded.ChevronRight,
-                trailingContentDescription = "选择所在地",
-                onClick = onLocationClick,
-                enabled = enabled,
-            )
-        }
+            label = "所在地",
+            value = if (locationCode.isBlank()) {
+                "请选择所在地"
+            } else {
+                listOf(province, city, district)
+                    .filter { it.isNotBlank() }
+                    .joinToString(" · ")
+                    .ifBlank { "请选择所在地" }
+            },
+            onClick = onLocationClick,
+            enabled = enabled
+        )
 
         Spacer(modifier = Modifier.height(24.dp))
     }
@@ -502,31 +497,81 @@ private fun ProfileSectionCard(
 }
 
 @Composable
-private fun ProfilePickerField(
+private fun ProfileInlinePickerCard(
     icon: ImageVector,
+    label: String,
+    value: String,
+    onClick: () -> Unit,
+    enabled: Boolean
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+        )
+    ) {
+        Row(
+            modifier = Modifier.padding(18.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Surface(
+                shape = RoundedCornerShape(14.dp),
+                color = MaterialTheme.colorScheme.primaryContainer
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.padding(10.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            ProfilePickerField(
+                icon = null,
+                label = label,
+                value = value,
+                trailingIcon = Icons.Rounded.ChevronRight,
+                trailingContentDescription = "选择$label",
+                onClick = onClick,
+                enabled = enabled,
+                modifier = Modifier.weight(1f)
+            )
+        }
+    }
+}
+
+@Composable
+private fun ProfilePickerField(
+    icon: ImageVector?,
     label: String,
     value: String,
     onClick: () -> Unit,
     enabled: Boolean,
     trailingIcon: ImageVector = Icons.Rounded.CalendarMonth,
-    trailingContentDescription: String = "选择$label"
+    trailingContentDescription: String = "选择$label",
+    modifier: Modifier = Modifier
 ) {
     OutlinedCard(
         onClick = onClick,
         enabled = enabled,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp)
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.width(16.dp))
+            if (icon != null) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.width(16.dp))
+            }
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = label,
