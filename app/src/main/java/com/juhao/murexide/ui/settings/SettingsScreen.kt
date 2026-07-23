@@ -44,11 +44,8 @@ fun SettingsScreen(
     val updateEnabled = context.getAppVersionInfo().commitHash != "dev"
     val settingsStorage = remember { SettingsStorage(context) }
     val scope = rememberCoroutineScope()
-    
-    val themeStyle by UiState.themeStyle
-    
-    val scrollBehavior = if (themeStyle == "md3") TopAppBarDefaults.pinnedScrollBehavior()
-        else TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+        
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     
     var showUpdateDialog by remember { mutableStateOf(false) }
     var updateInfo by remember { mutableStateOf<UpdateInfo?>(null) }

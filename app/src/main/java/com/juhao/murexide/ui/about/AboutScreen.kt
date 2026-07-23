@@ -27,10 +27,7 @@ import com.juhao.murexide.utils.getAppVersionInfo
 fun AboutScreen(
     onBack: () -> Unit
 ) {
-    val themeStyle by UiState.themeStyle
-    
-    val scrollBehavior = if (themeStyle == "md3") TopAppBarDefaults.pinnedScrollBehavior()
-        else TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     
     val context = LocalContext.current
     val scrollState = rememberScrollState()
@@ -38,27 +35,15 @@ fun AboutScreen(
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            if (themeStyle == "md3") {
-                TopAppBar(
-                    title = { Text("关于") },
-                    scrollBehavior = scrollBehavior,
-                    navigationIcon = {
-                        StyledIconButton(onClick = onBack) {
-                            Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "返回")
-                        }
+            LargeTopAppBar(
+                title = { Text("关于") },
+                scrollBehavior = scrollBehavior,
+                navigationIcon = {
+                    StyledIconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "返回")
                     }
-                )
-            } else {
-                LargeTopAppBar(
-                    title = { Text("关于") },
-                    scrollBehavior = scrollBehavior,
-                    navigationIcon = {
-                        StyledIconButton(onClick = onBack) {
-                            Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "返回")
-                        }
-                    }
-                )
-            }
+                }
+            )
         }
     ) { padding ->
         Column(

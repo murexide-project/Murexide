@@ -43,11 +43,7 @@ fun ScreenshotPrivacyScreen(
     val settingsStorage = remember { SettingsStorage(context) }
     val scope = rememberCoroutineScope()
     
-    val themeStyle by UiState.themeStyle
-        
-    val scrollBehavior = if (themeStyle == "md3") TopAppBarDefaults.pinnedScrollBehavior()
-        else TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
-        
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()    
     val state = rememberScrollState()
 
     var hideSenderInfo by remember { mutableStateOf(false) }
@@ -65,27 +61,15 @@ fun ScreenshotPrivacyScreen(
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            if (themeStyle == "md3") {
-                TopAppBar(
-                    title = { Text("截图设置") },
-                    navigationIcon = {
-                        StyledIconButton(onClick = onBack) {
-                            Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "返回")
-                        }
-                    },
-                    scrollBehavior = scrollBehavior
-                )
-            } else {
-                LargeTopAppBar(
-                    title = { Text("截图设置") },
-                    navigationIcon = {
-                        StyledIconButton(onClick = onBack) {
-                            Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "返回")
-                        }
-                    },
-                    scrollBehavior = scrollBehavior
-                )
-            }
+            LargeTopAppBar(
+                title = { Text("截图设置") },
+                navigationIcon = {
+                    StyledIconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "返回")
+                    }
+                },
+                scrollBehavior = scrollBehavior
+            )
         }
     ) { padding ->
         Column(

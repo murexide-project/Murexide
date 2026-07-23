@@ -35,11 +35,9 @@ fun AppearanceScreen(
     val scope = rememberCoroutineScope()
 
     val themeMode by UiState.themeMode
-    val themeStyle by UiState.themeStyle
     val themeColor by UiState.themeColor
     
-    val scrollBehavior = if (themeStyle == "md3") TopAppBarDefaults.pinnedScrollBehavior()
-        else TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
     val squareAvatar by UiState.squareAvatar
     var showSticky by remember { mutableStateOf(true) }
@@ -103,27 +101,15 @@ fun AppearanceScreen(
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            if (themeStyle == "md3") {
-                TopAppBar(
-                    title = { Text("外观设置") },
-                    scrollBehavior = scrollBehavior,
-                    navigationIcon = {
-                        StyledIconButton(onClick = onBack) {
-                            Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "返回")
-                        }
+            LargeTopAppBar(
+                title = { Text("外观设置") },
+                scrollBehavior = scrollBehavior,
+                navigationIcon = {
+                    StyledIconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "返回")
                     }
-                )
-            } else {
-                LargeTopAppBar(
-                    title = { Text("外观设置") },
-                    scrollBehavior = scrollBehavior,
-                    navigationIcon = {
-                        StyledIconButton(onClick = onBack) {
-                            Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "返回")
-                        }
-                    }
-                )
-            }
+                }
+            )
         }
     ) { padding ->
         Column(
@@ -154,25 +140,6 @@ fun AppearanceScreen(
                         UiState.themeMode.value = selected
                         scope.launch {
                             settingsStorage.setThemeMode(selected)
-                        }
-                    }
-                )
-                SettingsDropdownItem(
-                    icon = Icons.Rounded.Style,
-                    title = "主题样式",
-                    subtitle = when (themeStyle) {
-                        "md3e" -> "Material 3 Expressive"
-                        else -> "Material 3"
-                    },
-                    options = listOf(
-                        "md3e" to "Material 3 Expressive",
-                        "md3" to "Material 3"
-                    ),
-                    selectedValue = themeStyle,
-                    onOptionSelected = { selected ->
-                        UiState.themeStyle.value = selected
-                        scope.launch {
-                            settingsStorage.setThemeStyle(selected)
                         }
                     }
                 )

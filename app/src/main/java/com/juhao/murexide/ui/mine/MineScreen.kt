@@ -50,9 +50,7 @@ fun MineScreen(
     val scrollState = rememberScrollState()
     val uiState by viewModel.uiState.collectAsState()
     
-    val themeStyle by UiState.themeStyle
-    val scrollBehavior = if (themeStyle == "md3") TopAppBarDefaults.pinnedScrollBehavior()
-        else TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
     val avatarLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()

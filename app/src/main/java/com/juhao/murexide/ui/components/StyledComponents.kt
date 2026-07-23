@@ -6,7 +6,6 @@ import androidx.compose.material3.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.runtime.*
-import com.juhao.murexide.ui.theme.UiState
 
 @Composable
 fun StyledSwitch(
@@ -15,35 +14,24 @@ fun StyledSwitch(
     enabled: Boolean = true,
     modifier: Modifier = Modifier
 ) {
-    val themeStyle by UiState.themeStyle
-    
-    if (themeStyle == "md3") {
-        Switch(
-            checked = checked,
-            onCheckedChange = onCheckedChange,
-            enabled = enabled,
-            modifier = modifier
-        )
-    } else {
-        Switch(
-            checked = checked,
-            onCheckedChange = onCheckedChange,
-            enabled = enabled,
-            modifier = modifier,
-            thumbContent = {
-                Icon(
-                    imageVector = if (checked) Icons.Rounded.Check else Icons.Rounded.Close,
-                    contentDescription = null,
-                    modifier = Modifier.size(SwitchDefaults.IconSize),
-                    tint = if (checked) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.surfaceContainerHighest
-                    }
-                )
-            }
-        )
-    }
+    Switch(
+        checked = checked,
+        onCheckedChange = onCheckedChange,
+        enabled = enabled,
+        modifier = modifier,
+        thumbContent = {
+            Icon(                 
+                imageVector = if (checked) Icons.Rounded.Check else Icons.Rounded.Close,
+                contentDescription = null,
+                modifier = Modifier.size(SwitchDefaults.IconSize),
+                tint = if (checked) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.surfaceContainerHighest
+                }
+            )
+        }
+    )
 }
 
 @Composable
@@ -53,24 +41,12 @@ fun StyledIconButton(
     enabled: Boolean = true,
     content: @Composable () -> Unit
 ) {
-    val themeStyle by UiState.themeStyle
-    
-    if (themeStyle == "md3") {
-        IconButton(
-            onClick = onClick,
-            enabled = enabled,
-            modifier = modifier
-        ) {
-            content()
-        }
-    } else {
-        FilledTonalIconButton(
-            onClick = onClick,
-            enabled = enabled,
-            modifier = modifier
-        ) {
-            content()
-        }
+    FilledTonalIconButton(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = modifier
+    ) {
+        content()
     }
 }
 
@@ -82,21 +58,10 @@ fun StyledTopBar(
     navigationIcon: @Composable (() -> Unit) = {},
     actions: @Composable (RowScope.() -> Unit) = {}
 ) {
-    val themeStyle by UiState.themeStyle
-
-    if (themeStyle == "md3") {
-        TopAppBar(
-            title = title,
-            scrollBehavior = scrollBehavior,
-            navigationIcon = navigationIcon,
-            actions = actions
-        )
-    } else {
-        LargeTopAppBar(
-            title = title,
-            scrollBehavior = scrollBehavior,
-            navigationIcon = navigationIcon,
-            actions = actions
-        )
-    }
+    LargeTopAppBar(
+        title = title,
+        scrollBehavior = scrollBehavior,
+        navigationIcon = navigationIcon,
+        actions = actions
+    )
 }

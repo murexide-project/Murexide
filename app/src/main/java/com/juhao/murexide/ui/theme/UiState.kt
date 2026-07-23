@@ -5,7 +5,6 @@ import com.juhao.murexide.data.ConversationItem
 
 object UiState {
     var themeMode = mutableStateOf("system")
-    var themeStyle = mutableStateOf("md3")
     var themeColor = mutableStateOf("DYNAMIC")
     var squareAvatar = mutableStateOf(false)
 }

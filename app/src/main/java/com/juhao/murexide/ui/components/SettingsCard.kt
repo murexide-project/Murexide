@@ -15,7 +15,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.juhao.murexide.ui.theme.UiState
 import androidx.compose.foundation.shape.RoundedCornerShape
 
 /**
@@ -27,46 +26,26 @@ fun SettingsGroup(
     disableCornerShape: Boolean = false,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    val themeStyle by UiState.themeStyle
-
-    if (themeStyle == "md3") {
-        Column {
-            if (title != "") {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(start = 16.dp, bottom = 8.dp)
-                )
-            }
-
-            Column(content = content)
-
-            Spacer(modifier = Modifier.height(8.dp))
-        }
-    } else {
-        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-            if (title.isNotEmpty()) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(start = 16.dp, bottom = 8.dp)
-                )
-            }
-
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .then(
-                        if (!disableCornerShape) Modifier.clip(RoundedCornerShape(24.dp))
-                        else Modifier
-                    ),
-                verticalArrangement = Arrangement.spacedBy(2.dp),
-                content = content
+    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+        if (title.isNotEmpty()) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(start = 16.dp, bottom = 8.dp)
             )
         }
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .then(
+                    if (!disableCornerShape) Modifier.clip(RoundedCornerShape(24.dp))
+                    else Modifier
+                ),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+            content = content
+        )
     }
 }
 
@@ -334,14 +313,18 @@ fun CustomItemCell(
     isEnabled: Boolean = true,
     content: @Composable RowScope.() -> Unit
 ) {
-    val themeStyle by UiState.themeStyle
     val alpha = if (isEnabled) 1f else 0.38f
 
-    if (themeStyle == "md3") {
+    Surface(
+        shape = RoundedCornerShape(4.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        modifier = Modifier
+            .fillMaxWidth()
+            .alpha(alpha)
+    ) {
         Row(
             modifier = modifier
                 .fillMaxWidth()
-                .alpha(alpha)
                 .then(
                     if (onClick != null && isEnabled) {
                         Modifier.clickable(onClick = onClick)
@@ -349,32 +332,9 @@ fun CustomItemCell(
                         Modifier
                     }
                 )
-                .padding(horizontal = 24.dp, vertical = 12.dp),
+                .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
             content = content
         )
-    } else {
-        Surface(
-            shape = RoundedCornerShape(4.dp),
-            color = MaterialTheme.colorScheme.surfaceContainerHigh,
-            modifier = Modifier
-                .fillMaxWidth()
-                .alpha(alpha)
-        ) {
-            Row(
-                modifier = modifier
-                    .fillMaxWidth()
-                    .then(
-                        if (onClick != null && isEnabled) {
-                            Modifier.clickable(onClick = onClick)
-                        } else {
-                            Modifier
-                        }
-                    )
-                    .padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                content = content
-            )
-        }
     }
 }
