@@ -214,7 +214,13 @@ private fun MineContent(
             modifier = Modifier.padding(horizontal = 16.dp)
         )
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(12.dp))
+
+        ActivityOverviewCard(
+            onlineDay = onlineDay,
+            continuousOnlineDay = continuousOnlineDay,
+            modifier = Modifier.padding(horizontal = 16.dp)
+        )
 
         SettingsGroup(title = "账号信息") {
             InfoItem(
@@ -252,31 +258,94 @@ private fun MineContent(
             )
         }
 
-        SettingsGroup(title = "活跃度") {
-            onlineDay?.let {
-                InfoItem(
-                    icon = Icons.Rounded.AccessTime,
-                    title = "在线天数",
-                    value = "$it 天"
-                )
+        Spacer(modifier = Modifier.height(16.dp))
+    }
+}
+
+@Composable
+private fun ActivityOverviewCard(
+    onlineDay: Int?,
+    continuousOnlineDay: Int?,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+        )
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 18.dp, vertical = 16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Surface(
+                modifier = Modifier.size(48.dp),
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.tertiaryContainer
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Rounded.LocalFireDepartment,
+                        contentDescription = null,
+                        modifier = Modifier.size(26.dp),
+                        tint = MaterialTheme.colorScheme.onTertiaryContainer
+                    )
+                }
             }
-            continuousOnlineDay?.let {
-                InfoItem(
-                    icon = Icons.Rounded.LocalFireDepartment,
-                    title = "连续在线",
-                    value = "$it 天"
+
+            Spacer(modifier = Modifier.width(14.dp))
+
+            Row(
+                modifier = Modifier.weight(1f),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                ActivityMetric(
+                    label = "在线天数",
+                    value = onlineDay,
+                    modifier = Modifier.weight(1f)
                 )
-            }
-            if (onlineDay == null && continuousOnlineDay == null) {
-                InfoItem(
-                    icon = Icons.Rounded.Schedule,
-                    title = "在线天数",
-                    value = "加载中…"
+
+                VerticalDivider(
+                    modifier = Modifier.height(38.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant
+                )
+
+                ActivityMetric(
+                    label = "连续在线",
+                    value = continuousOnlineDay,
+                    modifier = Modifier.weight(1f)
                 )
             }
         }
+    }
+}
 
-        Spacer(modifier = Modifier.height(16.dp))
+@Composable
+private fun ActivityMetric(
+    label: String,
+    value: Int?,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = value?.let { "$it 天" } ?: "—",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+        Spacer(modifier = Modifier.height(2.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1
+        )
     }
 }
 
