@@ -821,25 +821,20 @@ fun ChatScreen(
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             val message = selectedMessages.firstOrNull()
-                            AnimatedVisibility(
-                                visible = selectedMessages.size == 1 && message != null && message?.isRecalled == false,
-                                enter = fadeIn() + expandVertically(),
-                                exit = fadeOut() + shrinkVertically()
-                            ) {
-                                message?.let { 
-                                    TextButton(
-                                        onClick = { 
-                                            viewModel.setReplyTo(it)
-                                            viewModel.exitSelectionMode()
-                                        },
-                                        modifier = Modifier.weight(1f),
-                                    ) {
-                                        Icon(Icons.Rounded.FormatQuote, contentDescription = null)
-                                        Spacer(modifier = Modifier.width(4.dp))
-                                        Text("引用")
-                                    }
-                                    Spacer(modifier = Modifier.width(16.dp))
+                            message?.let { 
+                                Button(
+                                    onClick = { 
+                                        viewModel.setReplyTo(it)
+                                        viewModel.exitSelectionMode()
+                                    },
+                                    modifier = Modifier.weight(1f),
+                                    enabled = selectedMessages.size == 1 && !it.isRecalled
+                                ) {
+                                    Icon(Icons.Rounded.FormatQuote, contentDescription = null)
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("引用")
                                 }
+                                Spacer(modifier = Modifier.width(16.dp))
                             }
                             TextButton(
                                 onClick = { /* 转发选中消息 */ },
