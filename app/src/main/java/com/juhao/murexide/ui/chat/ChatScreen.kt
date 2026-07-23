@@ -1005,12 +1005,10 @@ fun ChatScreen(
                                 isSending = uiState.isSending,
                                 onTextChange = { viewModel.updateInputText(it) },
                                 onSendClick = { viewModel.sendMessage() },
+                                onSendWithType = { type -> viewModel.sendMessage(type) },
                                 onAddImageClick = { openImagePicker() },
                                 onAddVideoClick = { openVideoPicker() },
                                 onAddFileClick = { openFilePicker() },
-                                onToggleSendType = { type ->
-                                    viewModel.toggleSendType(type)
-                                },
                                 isEmojiPanelVisible =
                                     expressions.isVisible ||
                                         pendingInputPanel == ChatInputPanel.Emoji,

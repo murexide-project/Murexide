@@ -356,10 +356,6 @@ class ChatViewModel(
         _uiState.update { it.copy(inputText = text) }
     }
 
-    fun toggleSendType(type: String) {
-        _uiState.update { it.copy(sendType = type) }
-    }
-
     fun setReplyTo(message: MessageItem) {
         _uiState.update { it.copy(replyTo = message) }
     }
@@ -368,17 +364,17 @@ class ChatViewModel(
         _uiState.update { it.copy(replyTo = null) }
     }
 
-    fun sendMessage() {
+    fun sendMessage(sendTypeOverride: String? = null) {
         val state = _uiState.value
         if (state.editingMessage != null) {
-            editCurrentMessage()
+            editCurrentMessage(sendTypeOverride)
             return
         }
         if (state.inputText.isBlank() || state.isSending) return
 
         viewModelScope.launch {
             _uiState.update { it.copy(isSending = true) }
-            val contentType = when (state.sendType) {
+            val contentType = when (sendTypeOverride ?: state.sendType) {
                 "markdown" -> MessageItem.CONTENT_TYPE_MARKDOWN
                 "html" -> MessageItem.CONTENT_TYPE_HTML
                 else -> MessageItem.CONTENT_TYPE_TEXT
@@ -897,12 +893,12 @@ class ChatViewModel(
         }
     }
 
-    private fun editCurrentMessage() {
+    private fun editCurrentMessage(sendTypeOverride: String? = null) {
         val state = _uiState.value
         val message = state.editingMessage ?: return
         if (state.inputText.isBlank() || state.isSending) return
 
-        val contentType = when (state.sendType) {
+        val contentType = when (sendTypeOverride ?: state.sendType) {
             "markdown" -> MessageItem.CONTENT_TYPE_MARKDOWN
             "html" -> MessageItem.CONTENT_TYPE_HTML
             else -> MessageItem.CONTENT_TYPE_TEXT
