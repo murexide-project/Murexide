@@ -1,13 +1,10 @@
 package com.juhao.murexide.ui.chat.components
 
-import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkHorizontally
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -73,17 +70,25 @@ fun MessageInput(
             .padding(horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        MoreActionsButton(
+            sendType = sendType,
+            onAddImageClick = onAddImageClick,
+            onAddVideoClick = onAddVideoClick,
+            onAddFileClick = onAddFileClick,
+            onToggleSendType = onToggleSendType
+        )
+        
         IconButton(
-            onClick = onInstructionClick,
+            onClick = onEmojiClick,
             modifier = Modifier.size(44.dp)
         ) {
             Icon(
-                imageVector = if (isInstructionPanelVisible) {
+                imageVector = if (isEmojiPanelVisible) {
                     Icons.Rounded.Keyboard
                 } else {
-                    Icons.Rounded.Code
+                    Icons.Rounded.Mood
                 },
-                contentDescription = if (isInstructionPanelVisible) "切换到键盘" else "指令",
+                contentDescription = if (isEmojiPanelVisible) "切换到键盘" else "表情",
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
@@ -134,65 +139,50 @@ fun MessageInput(
             }
         )
 
-        IconButton(
-            onClick = onEmojiClick,
-            modifier = Modifier.size(44.dp)
-        ) {
-            Icon(
-                imageVector = if (isEmojiPanelVisible) {
-                    Icons.Rounded.Keyboard
-                } else {
-                    Icons.Rounded.Mood
-                },
-                contentDescription = if (isEmojiPanelVisible) "切换到键盘" else "表情",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-
-        MoreActionsButton(
-            sendType = sendType,
-            onAddImageClick = onAddImageClick,
-            onAddVideoClick = onAddVideoClick,
-            onAddFileClick = onAddFileClick,
-            onToggleSendType = onToggleSendType
-        )
-
-        AnimatedVisibility(
-            visible = inputText.isNotBlank(),
-            enter = expandHorizontally(
-                expandFrom = Alignment.Start,
-                animationSpec = tween(durationMillis = 220)
-            ) + slideInHorizontally(
-                animationSpec = tween(durationMillis = 220),
-                initialOffsetX = { fullWidth -> fullWidth }
-            ) + fadeIn(animationSpec = tween(durationMillis = 160)),
-            exit = shrinkHorizontally(
-                shrinkTowards = Alignment.Start,
-                animationSpec = tween(durationMillis = 180)
-            ) + slideOutHorizontally(
-                animationSpec = tween(durationMillis = 180),
-                targetOffsetX = { fullWidth -> fullWidth }
-            ) + fadeOut(animationSpec = tween(durationMillis = 120))
-        ) {
-            IconButton(
-                onClick = onSendClick,
-                enabled = !isSending,
-                modifier = Modifier
-                    .size(44.dp)
-                    .focusProperties { canFocus = false }
-            ) {
-                if (isSending) {
-                    CircularProgressIndicator(
-                        modifier = Modifier
-                            .size(20.dp)
-                            .focusProperties { canFocus = false },
-                        strokeWidth = 2.dp,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                } else {
+        AnimatedContent(
+            targetState = inputText.isNotBlank(),
+            transitionSpec = {
+                fadeIn(animationSpec = tween(200)) togetherWith
+                        fadeOut(animationSpec = tween(200))
+            },
+            label = "bottom_bar_button_transition"
+        ) { isNotBlank ->
+            if (isNotBlank) {
+                IconButton(
+                    onClick = onSendClick,
+                    enabled = !isSending,
+                    modifier = Modifier
+                        .size(44.dp)
+                        .focusProperties { canFocus = false }
+                ) {
+                    if (isSending) {
+                        CircularProgressIndicator(
+                            modifier = Modifier
+                                .size(20.dp)
+                                .focusProperties { canFocus = false },
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    } else {
+                        Icon(
+                            Icons.AutoMirrored.Rounded.Send,
+                            contentDescription = "发送",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            } else {
+                IconButton(
+                    onClick = onInstructionClick,
+                    modifier = Modifier.size(44.dp)
+                ) {
                     Icon(
-                        Icons.AutoMirrored.Rounded.Send,
-                        contentDescription = "发送",
+                        imageVector = if (isInstructionPanelVisible) {
+                            Icons.Rounded.Keyboard
+                        } else {
+                            Icons.Rounded.Code
+                        },
+                        contentDescription = if (isInstructionPanelVisible) "切换到键盘" else "指令",
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
