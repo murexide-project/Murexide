@@ -65,6 +65,7 @@ import com.juhao.murexide.ui.chat.components.ScreenshotBottomSheet
 import com.juhao.murexide.ui.chat.components.GroupMemberSheet
 import com.juhao.murexide.datastore.SettingsStorage
 import com.juhao.murexide.data.MessageItem
+import com.juhao.murexide.data.resolveStickerMessageUrl
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -1258,8 +1259,10 @@ fun ChatScreen(
                                         MessageItem.CONTENT_TYPE_STICKER -> {
                                             // Stickers can still be viewed at full size, but
                                             // never become pages in the photo gallery.
-                                            (msg.stickerUrl ?: msg.imageUrl)
-                                                ?.takeIf { it.isNotBlank() }
+                                            resolveStickerMessageUrl(
+                                                imageUrl = msg.imageUrl,
+                                                stickerUrl = msg.stickerUrl
+                                            )
                                                 ?.let { url ->
                                                     showImageViewer(
                                                         context = context,

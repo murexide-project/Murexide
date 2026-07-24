@@ -6,7 +6,6 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.ContextWrapper
 import android.os.Bundle
-import com.flyjingfish.shapeimageviewlib.ShapeImageView
 import android.widget.Toast
 import com.flyjingfish.openimagelib.OpenImage
 import com.flyjingfish.openimagelib.beans.OpenImageUrl
@@ -81,10 +80,7 @@ fun showImageViewer(
         // original image.  Keep one page on either side warm while swiping.
         .setBothLoadCover(true)
         .setPreloadCount(false, 1)
-        // The viewer is intentionally not edge-to-edge and images are fitted
-        // inside the black canvas so a small top/bottom border remains.
         .setOpenImageStyle(R.style.Theme_Murexide_OpenImage)
-        .setSrcImageViewScaleType(ShapeImageView.ShapeScaleType.FIT_CENTER, false)
         .setOpenImageActivityCls(
             MurexideOpenImageActivity::class.java,
             MurexideOpenImageActivity.EXTRA_VIEWER_OPTIONS,

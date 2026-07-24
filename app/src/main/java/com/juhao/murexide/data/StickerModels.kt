@@ -2,7 +2,25 @@ package com.juhao.murexide.data
 
 import kotlinx.serialization.Serializable
 
-fun resolveStickerUrl(url: String): String = if (url.startsWith("http")) url else "https://chat-img.jwznb.com/$url"
+private const val STICKER_IMAGE_BASE_URL = "https://chat-img.jwznb.com"
+
+fun resolveStickerUrl(url: String): String {
+    val value = url.trim()
+    return when {
+        value.isEmpty() -> value
+        value.startsWith("http://", ignoreCase = true) ||
+            value.startsWith("https://", ignoreCase = true) -> value
+        value.startsWith("//") -> "https:$value"
+        else -> "$STICKER_IMAGE_BASE_URL/${value.trimStart('/')}"
+    }
+}
+
+fun resolveStickerMessageUrl(imageUrl: String?, stickerUrl: String?): String? {
+    return sequenceOf(imageUrl, stickerUrl)
+        .mapNotNull { it?.takeIf(String::isNotBlank) }
+        .firstOrNull()
+        ?.let(::resolveStickerUrl)
+}
 
 // ---------- 表情包 (sticker/list) ----------
 

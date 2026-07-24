@@ -42,6 +42,7 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.juhao.murexide.data.MessageButton
 import com.juhao.murexide.data.MessageItem
+import com.juhao.murexide.data.resolveStickerMessageUrl
 import com.juhao.murexide.ui.components.Avatar
 import com.juhao.murexide.ui.components.UnifiedHtmlWebView
 import com.juhao.murexide.ui.components.fullImagePreviewItem
@@ -537,11 +538,23 @@ fun MessageBubble(
                                             } else {
                                                 val isImageMessage = message.contentType == MessageItem.CONTENT_TYPE_IMAGE
                                                 val imageUrl = if (message.contentType == MessageItem.CONTENT_TYPE_STICKER) {
-                                                    message.stickerUrl ?: message.imageUrl
+                                                    resolveStickerMessageUrl(
+                                                        imageUrl = message.imageUrl,
+                                                        stickerUrl = message.stickerUrl
+                                                    )
                                                 } else {
                                                     message.imageUrl
                                                 }
                                                 imageUrl?.let { url ->
+                                                    val imageRatio = imageAspectRatio(
+                                                        message.imageWidth,
+                                                        message.imageHeight
+                                                    )
+                                                    val imageMaxWidth = if (imageRatio >= 1f) {
+                                                        200.dp
+                                                    } else {
+                                                        100.dp
+                                                    }
                                                     val displayUrl = if (isImageMessage) imageThumbnailUrl(url) else url
                                                     var retryCount by remember(url) { mutableIntStateOf(0) }
                                                     var loadState by remember(url, retryCount) { mutableIntStateOf(0) }
@@ -562,18 +575,23 @@ fun MessageBubble(
 
                                                     Box(
                                                         modifier = Modifier
-                                                            .widthIn(min = 100.dp, max = 280.dp)
                                                             .then(
                                                                 if (isImageMessage) {
-                                                                    Modifier.aspectRatio(
-                                                                        imageAspectRatio(message.imageWidth, message.imageHeight)
-                                                                    )
-                                                                } else {
                                                                     Modifier
+                                                                        .widthIn(min = 100.dp, max = imageMaxWidth)
+                                                                        .aspectRatio(imageRatio)
+                                                                } else {
+                                                                    Modifier.size(96.dp)
                                                                 }
                                                             )
                                                             .clip(imageShape)
-                                                            .background(MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp))
+                                                            .background(
+                                                                if (isImageMessage) {
+                                                                    MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp)
+                                                                } else {
+                                                                    Color.Transparent
+                                                                }
+                                                            )
                                                             .combinedClickable(
                                                                 onClick = { onImageClick(message) },
                                                                 onLongClick = { onLongPress(message) }
@@ -582,23 +600,27 @@ fun MessageBubble(
                                                         AsyncImage(
                                                             model = imageRequest,
                                                             contentDescription = null,
-                                                            contentScale = if (isImageMessage) ContentScale.Crop else ContentScale.FillWidth,
-                                                            modifier = if (isImageMessage) Modifier.fillMaxSize() else Modifier,
+                                                            contentScale = if (isImageMessage) ContentScale.Crop else ContentScale.Fit,
+                                                            modifier = Modifier.fillMaxSize(),
                                                             onLoading = { loadState = 0 },
                                                             onSuccess = { loadState = 1 },
                                                             onError = { loadState = 2 }
                                                         )
 
-                                                        if (isImageMessage && loadState == 0) {
+                                                        if (loadState == 0) {
                                                             Icon(
-                                                                imageVector = Icons.Rounded.Image,
+                                                                imageVector = if (isImageMessage) {
+                                                                    Icons.Rounded.Image
+                                                                } else {
+                                                                    Icons.Rounded.Mood
+                                                                },
                                                                 contentDescription = null,
                                                                 modifier = Modifier
                                                                     .align(Alignment.Center)
                                                                     .size(28.dp),
                                                                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f)
                                                             )
-                                                        } else if (isImageMessage && loadState == 2) {
+                                                        } else if (loadState == 2) {
                                                             IconButton(
                                                                 onClick = { retryCount++ },
                                                                 modifier = Modifier.align(Alignment.Center)

@@ -1,11 +1,10 @@
 package com.juhao.murexide.ui.components
 
-import android.graphics.Color
 import android.os.Bundle
 import android.util.Log
-import android.view.View
-import android.view.ViewGroup
 import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.viewpager2.widget.ViewPager2
 import com.flyjingfish.openimagelib.OpenImageFragmentStateAdapter
@@ -14,13 +13,8 @@ import com.juhao.murexide.data.ConversationImage
 import com.juhao.murexide.datastore.AccountStorage
 import com.juhao.murexide.repository.MessageRepository
 import kotlinx.coroutines.launch
-import kotlin.math.roundToInt
 
-/**
- * OpenImage activity with an explicit image viewport. OpenImage's stock
- * activity forces an edge-to-edge window, so theme flags alone cannot leave a
- * stable black border on Android 15+.
- */
+/** OpenImage activity with chat image pagination and immersive system bars. */
 class MurexideOpenImageActivity : StandardOpenImageActivity() {
     private val viewerOptions by lazy(LazyThreadSafetyMode.NONE) {
         intent.getBundleExtra(EXTRA_VIEWER_OPTIONS)
@@ -74,8 +68,7 @@ class MurexideOpenImageActivity : StandardOpenImageActivity() {
         super.onCreate(savedInstanceState)
         if (isFinishing) return
 
-        configureBlackSystemBars()
-        addImageViewportInsets()
+        enterImmersiveMode()
 
         viewPager2.registerOnPageChangeCallback(pageChangeCallback)
         callbackRegistered = true
@@ -83,38 +76,21 @@ class MurexideOpenImageActivity : StandardOpenImageActivity() {
         viewPager2.post { maybeLoadMore(viewPager2.currentItem) }
     }
 
-    private fun configureBlackSystemBars() {
-        WindowCompat.setDecorFitsSystemWindows(window, true)
-        @Suppress("DEPRECATION")
-        window.statusBarColor = Color.BLACK
-        @Suppress("DEPRECATION")
-        window.navigationBarColor = Color.BLACK
-        WindowCompat.getInsetsController(window, window.decorView).apply {
-            isAppearanceLightStatusBars = false
-            isAppearanceLightNavigationBars = false
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus && !isFinishing) {
+            enterImmersiveMode()
         }
-
-        @Suppress("DEPRECATION")
-        window.decorView.systemUiVisibility = window.decorView.systemUiVisibility and
-            View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN.inv() and
-            View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION.inv()
     }
 
-    private fun addImageViewportInsets() {
-        val verticalInset = (VIEWPORT_VERTICAL_INSET_DP * resources.displayMetrics.density)
-            .roundToInt()
-        val params = viewPager2.layoutParams
-        if (params is ViewGroup.MarginLayoutParams) {
-            params.topMargin = verticalInset
-            params.bottomMargin = verticalInset
-            viewPager2.layoutParams = params
-        } else {
-            viewPager2.setPadding(
-                viewPager2.paddingLeft,
-                verticalInset,
-                viewPager2.paddingRight,
-                verticalInset
-            )
+    private fun enterImmersiveMode() {
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        WindowCompat.getInsetsController(window, window.decorView).apply {
+            systemBarsBehavior =
+                WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            isAppearanceLightStatusBars = false
+            isAppearanceLightNavigationBars = false
+            hide(WindowInsetsCompat.Type.systemBars())
         }
     }
 
@@ -243,7 +219,6 @@ class MurexideOpenImageActivity : StandardOpenImageActivity() {
         const val EXTRA_CHAT_ID = "murexide_open_image_chat_id"
         const val EXTRA_CHAT_TYPE = "murexide_open_image_chat_type"
 
-        private const val VIEWPORT_VERTICAL_INSET_DP = 24f
         private const val PRELOAD_RADIUS = 1
         private const val LOAD_THRESHOLD = 1
         private const val PAGE_SIZE = 20

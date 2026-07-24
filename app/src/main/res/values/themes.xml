@@ -12,16 +12,11 @@
         <item name="android:windowLightStatusBar">?attr/isLightTheme</item>
     </style>
 
-    <!-- OpenImage's default theme displays a position indicator and uses an
-         edge-to-edge window.  Keep the viewer on a black canvas, hide the
-         indicator, and leave system-bar space around the image. -->
+    <!-- Keep the image canvas full-bleed and let the viewer activity manage
+         transient immersive system bars. -->
     <style name="Theme.Murexide.OpenImage" parent="Theme.OpenImageTheme">
         <item name="openImage.indicator.type">none</item>
-        <item name="openImage.statusBar.fontStyle">dark</item>
+        <item name="openImage.statusBar.fontStyle">full_screen</item>
         <item name="openImage.background">@android:color/black</item>
-        <item name="android:windowFullscreen">false</item>
-        <item name="android:statusBarColor">@android:color/black</item>
-        <item name="android:navigationBarColor">@android:color/black</item>
-        <item name="android:windowLightStatusBar">false</item>
     </style>
 </resources>
