@@ -44,8 +44,11 @@ import com.juhao.murexide.data.MessageButton
 import com.juhao.murexide.data.MessageItem
 import com.juhao.murexide.ui.components.Avatar
 import com.juhao.murexide.ui.components.UnifiedHtmlWebView
-import com.juhao.murexide.ui.components.MultiImageViewer
+import com.juhao.murexide.ui.components.fullImagePreviewItem
 import com.juhao.murexide.ui.components.MarkdownText
+import com.juhao.murexide.ui.components.showImageViewer
+import com.juhao.murexide.utils.imageAspectRatio
+import com.juhao.murexide.utils.imageThumbnailUrl
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -95,10 +98,6 @@ fun MessageBubble(
     val isMine = if (hideMyInfo) false else message.isMine
     val context = LocalContext.current
 
-    var showImageViewer by remember { mutableStateOf(false) }
-    var imageList by remember { mutableStateOf<List<String>>(emptyList()) }
-    var currentImageIndex by remember { mutableIntStateOf(0) }
-
     val timestampDisplay = remember(message.timestamp) {
         try {
             val date = Date(message.timestamp)
@@ -133,15 +132,6 @@ fun MessageBubble(
         animationSpec = tween(durationMillis = 300),
         label = "message_alpha"
     )
-    
-    if (showImageViewer) {
-        MultiImageViewer(
-            images = imageList,
-            initialPage = currentImageIndex,
-            isVisible = true,
-            onDismiss = { showImageViewer = false }
-        )
-    }
     
     Row(
         modifier = Modifier
@@ -496,9 +486,11 @@ fun MessageBubble(
                                                 modifier = Modifier.fillMaxWidth(),
                                                 onImageClick = { imageUrl ->
                                                     val allImages = extractImageUrls(message.content)
-                                                    imageList = allImages
-                                                    currentImageIndex = allImages.indexOf(imageUrl).coerceAtLeast(0)
-                                                    showImageViewer = true
+                                                    showImageViewer(
+                                                        context = context,
+                                                        images = allImages.map(::fullImagePreviewItem),
+                                                        initialIndex = allImages.indexOf(imageUrl).coerceAtLeast(0)
+                                                    )
                                                 },
                                                 bgColor = if (isMine)
                                                     MaterialTheme.colorScheme.primaryContainer
@@ -544,35 +536,74 @@ fun MessageBubble(
                                                 }
                                             } else {
                                                 message.imageUrl?.let { url ->
-                                                    val builder = ImageRequest.Builder(context)
-                                                        .data(url)
-
-                                                    if (url.contains("chat-img.jwznb.com") ||
-                                                        url.contains("jwznb.com") ||
-                                                        url.contains("myapp.jwznb.com")) {
-                                                        builder.setHeader("Referer", "https://myapp.jwznb.com")
+                                                    val isImageMessage = message.contentType == MessageItem.CONTENT_TYPE_IMAGE
+                                                    val displayUrl = if (isImageMessage) imageThumbnailUrl(url) else url
+                                                    var retryCount by remember(url) { mutableIntStateOf(0) }
+                                                    var loadState by remember(url, retryCount) { mutableIntStateOf(0) }
+                                                    val imageRequest = remember(displayUrl, retryCount) {
+                                                        ImageRequest.Builder(context)
+                                                            .data(displayUrl)
+                                                            .setParameter("retry", retryCount)
+                                                            .crossfade(false)
+                                                            .build()
                                                     }
 
-                                                    Box {
-                                                        AsyncImage(
-                                                            model = builder.build(),
-                                                            contentDescription = null,
-                                                            contentScale = ContentScale.FillWidth,
-                                                            modifier = Modifier
-                                                                .widthIn(min = 100.dp, max = 280.dp)
-                                                                .clip(
-                                                                    RoundedCornerShape(
-                                                                        topStart = if (!isMine && !isLastFromSender && message.quoteMsgText == null) (bubbleCornerRadius / 4).dp else bubbleCornerRadius.dp,
-                                                                        topEnd = if (isMine && !isLastFromSender && message.quoteMsgText == null) (bubbleCornerRadius / 4).dp else bubbleCornerRadius.dp,
-                                                                        bottomStart = if (!isMine && !isFirstFromSender) (bubbleCornerRadius / 4).dp else bubbleCornerRadius.dp,
-                                                                        bottomEnd = if (isMine && !isFirstFromSender) (bubbleCornerRadius / 4).dp else bubbleCornerRadius.dp
+                                                    val imageShape = RoundedCornerShape(
+                                                        topStart = if (!isMine && !isLastFromSender && message.quoteMsgText == null) (bubbleCornerRadius / 4).dp else bubbleCornerRadius.dp,
+                                                        topEnd = if (isMine && !isLastFromSender && message.quoteMsgText == null) (bubbleCornerRadius / 4).dp else bubbleCornerRadius.dp,
+                                                        bottomStart = if (!isMine && !isFirstFromSender) (bubbleCornerRadius / 4).dp else bubbleCornerRadius.dp,
+                                                        bottomEnd = if (isMine && !isFirstFromSender) (bubbleCornerRadius / 4).dp else bubbleCornerRadius.dp
+                                                    )
+
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .widthIn(min = 100.dp, max = 280.dp)
+                                                            .then(
+                                                                if (isImageMessage) {
+                                                                    Modifier.aspectRatio(
+                                                                        imageAspectRatio(message.imageWidth, message.imageHeight)
                                                                     )
-                                                                )
-                                                                .combinedClickable(
-                                                                    onClick = { onImageClick(message) },
-                                                                    onLongClick = { onLongPress(message) }
-                                                                )
+                                                                } else {
+                                                                    Modifier
+                                                                }
+                                                            )
+                                                            .clip(imageShape)
+                                                            .background(MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp))
+                                                            .combinedClickable(
+                                                                onClick = { onImageClick(message) },
+                                                                onLongClick = { onLongPress(message) }
+                                                            )
+                                                    ) {
+                                                        AsyncImage(
+                                                            model = imageRequest,
+                                                            contentDescription = null,
+                                                            contentScale = if (isImageMessage) ContentScale.Crop else ContentScale.FillWidth,
+                                                            modifier = if (isImageMessage) Modifier.fillMaxSize() else Modifier,
+                                                            onLoading = { loadState = 0 },
+                                                            onSuccess = { loadState = 1 },
+                                                            onError = { loadState = 2 }
                                                         )
+
+                                                        if (isImageMessage && loadState == 0) {
+                                                            Icon(
+                                                                imageVector = Icons.Rounded.Image,
+                                                                contentDescription = null,
+                                                                modifier = Modifier
+                                                                    .align(Alignment.Center)
+                                                                    .size(28.dp),
+                                                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f)
+                                                            )
+                                                        } else if (isImageMessage && loadState == 2) {
+                                                            IconButton(
+                                                                onClick = { retryCount++ },
+                                                                modifier = Modifier.align(Alignment.Center)
+                                                            ) {
+                                                                Icon(
+                                                                    imageVector = Icons.Rounded.Refresh,
+                                                                    contentDescription = "重试加载图片"
+                                                                )
+                                                            }
+                                                        }
                                                         
                                                         if (!isMine && isLastFromSender) {
                                                             Row(
