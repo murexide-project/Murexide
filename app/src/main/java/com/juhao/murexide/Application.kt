@@ -17,6 +17,7 @@ import coil.ImageLoader
 import coil.ImageLoaderFactory
 import coil.decode.GifDecoder
 import coil.decode.ImageDecoderDecoder
+import coil.decode.VideoFrameDecoder
 import coil.request.ImageRequest
 import coil.request.SuccessResult
 import com.flyjingfish.openimagelib.OpenImageConfig
@@ -28,6 +29,7 @@ import com.juhao.murexide.repository.AuthRepository
 import com.juhao.murexide.ui.theme.UiCache
 import com.juhao.murexide.ui.components.MurexideBigImageHelper
 import com.juhao.murexide.ui.components.MurexideDownloadMediaHelper
+import com.juhao.murexide.ui.components.MurexideVideoFragmentCreate
 import com.juhao.murexide.utils.AppForegroundState
 import com.juhao.murexide.utils.NotificationHelper
 import com.juhao.murexide.utils.isYunhuImageUrl
@@ -47,6 +49,7 @@ class MyApplication : Application(), ImageLoaderFactory {
         OpenImageConfig.getInstance().apply {
             bigImageHelper = MurexideBigImageHelper()
             downloadMediaHelper = MurexideDownloadMediaHelper()
+            videoFragmentCreate = MurexideVideoFragmentCreate()
         }
         NotificationHelper.createNotificationChannel(this)
         AppForegroundState.init(this)
@@ -213,6 +216,7 @@ class MyApplication : Application(), ImageLoaderFactory {
                     .build()
             }
             .components {
+                add(VideoFrameDecoder.Factory())
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                     add(ImageDecoderDecoder.Factory())
                 } else {

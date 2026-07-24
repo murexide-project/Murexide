@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.PopupProperties
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import coil.request.videoFrameMillis
 import com.juhao.murexide.data.MessageButton
 import com.juhao.murexide.data.MessageItem
 import com.juhao.murexide.data.resolveStickerMessageUrl
@@ -228,6 +229,7 @@ fun MessageBubble(
                 val hideCard = remember(message.contentType, message.isRecalled) {
                     (message.contentType == MessageItem.CONTENT_TYPE_IMAGE
                         || message.contentType == MessageItem.CONTENT_TYPE_STICKER
+                        || message.contentType == MessageItem.CONTENT_TYPE_VIDEO
                         || message.contentType == MessageItem.CONTENT_TYPE_FILE)
                         && !message.isRecalled
                 }
@@ -501,7 +503,8 @@ fun MessageBubble(
                                         }
 
                                         MessageItem.CONTENT_TYPE_IMAGE,
-                                        MessageItem.CONTENT_TYPE_STICKER -> {
+                                        MessageItem.CONTENT_TYPE_STICKER,
+                                        MessageItem.CONTENT_TYPE_VIDEO -> {
                                             if (hideImages) {
                                                 Surface(
                                                     modifier = Modifier
@@ -526,10 +529,11 @@ fun MessageBubble(
                                                         )
                                                         Spacer(modifier = Modifier.height(8.dp))
                                                         Text(
-                                                            text = if (message.contentType == MessageItem.CONTENT_TYPE_STICKER)
-                                                                "表情包已隐藏"
-                                                            else
-                                                                "图片已隐藏",
+                                                            text = when (message.contentType) {
+                                                                MessageItem.CONTENT_TYPE_STICKER -> "表情包已隐藏"
+                                                                MessageItem.CONTENT_TYPE_VIDEO -> "视频已隐藏"
+                                                                else -> "图片已隐藏"
+                                                            },
                                                             style = MaterialTheme.typography.bodySmall,
                                                             color = MaterialTheme.colorScheme.onSurface
                                                         )
@@ -537,19 +541,29 @@ fun MessageBubble(
                                                 }
                                             } else {
                                                 val isImageMessage = message.contentType == MessageItem.CONTENT_TYPE_IMAGE
-                                                val imageUrl = if (message.contentType == MessageItem.CONTENT_TYPE_STICKER) {
-                                                    resolveStickerMessageUrl(
+                                                val isVideoMessage = message.contentType == MessageItem.CONTENT_TYPE_VIDEO
+                                                val mediaUrl = when (message.contentType) {
+                                                    MessageItem.CONTENT_TYPE_STICKER -> resolveStickerMessageUrl(
                                                         imageUrl = message.imageUrl,
                                                         stickerUrl = message.stickerUrl
                                                     )
-                                                } else {
-                                                    message.imageUrl
+                                                    MessageItem.CONTENT_TYPE_VIDEO -> message.videoUrl
+                                                    else -> message.imageUrl
                                                 }
-                                                imageUrl?.let { url ->
-                                                    val imageRatio = imageAspectRatio(
-                                                        message.imageWidth,
-                                                        message.imageHeight
-                                                    )
+                                                mediaUrl?.let { url ->
+                                                    val videoDuration = if (isVideoMessage) {
+                                                        formatVideoDuration(message.videoTime)
+                                                    } else {
+                                                        null
+                                                    }
+                                                    val imageRatio = if (isVideoMessage) {
+                                                        16f / 9f
+                                                    } else {
+                                                        imageAspectRatio(
+                                                            message.imageWidth,
+                                                            message.imageHeight
+                                                        )
+                                                    }
                                                     val imageMaxWidth = if (imageRatio >= 1f) {
                                                         200.dp
                                                     } else {
@@ -558,12 +572,13 @@ fun MessageBubble(
                                                     val displayUrl = if (isImageMessage) imageThumbnailUrl(url) else url
                                                     var retryCount by remember(url) { mutableIntStateOf(0) }
                                                     var loadState by remember(url, retryCount) { mutableIntStateOf(0) }
-                                                    val imageRequest = remember(displayUrl, retryCount) {
-                                                        ImageRequest.Builder(context)
+                                                    val imageRequest = remember(displayUrl, isVideoMessage, retryCount) {
+                                                        val request = ImageRequest.Builder(context)
                                                             .data(displayUrl)
                                                             .setParameter("retry", retryCount)
                                                             .crossfade(false)
-                                                            .build()
+                                                        if (isVideoMessage) request.videoFrameMillis(0)
+                                                        request.build()
                                                     }
 
                                                     val imageShape = RoundedCornerShape(
@@ -580,13 +595,17 @@ fun MessageBubble(
                                                                     Modifier
                                                                         .widthIn(min = 100.dp, max = imageMaxWidth)
                                                                         .aspectRatio(imageRatio)
+                                                                } else if (isVideoMessage) {
+                                                                    Modifier
+                                                                        .width(200.dp)
+                                                                        .aspectRatio(imageRatio)
                                                                 } else {
                                                                     Modifier.size(96.dp)
                                                                 }
                                                             )
                                                             .clip(imageShape)
                                                             .background(
-                                                                if (isImageMessage) {
+                                                                if (isImageMessage || isVideoMessage) {
                                                                     MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp)
                                                                 } else {
                                                                     Color.Transparent
@@ -599,8 +618,12 @@ fun MessageBubble(
                                                     ) {
                                                         AsyncImage(
                                                             model = imageRequest,
-                                                            contentDescription = null,
-                                                            contentScale = if (isImageMessage) ContentScale.Crop else ContentScale.Fit,
+                                                            contentDescription = if (isVideoMessage) "视频缩略图" else null,
+                                                            contentScale = if (message.contentType == MessageItem.CONTENT_TYPE_STICKER) {
+                                                                ContentScale.Fit
+                                                            } else {
+                                                                ContentScale.Crop
+                                                            },
                                                             modifier = Modifier.fillMaxSize(),
                                                             onLoading = { loadState = 0 },
                                                             onSuccess = { loadState = 1 },
@@ -609,10 +632,10 @@ fun MessageBubble(
 
                                                         if (loadState == 0) {
                                                             Icon(
-                                                                imageVector = if (isImageMessage) {
-                                                                    Icons.Rounded.Image
-                                                                } else {
-                                                                    Icons.Rounded.Mood
+                                                                imageVector = when {
+                                                                    isVideoMessage -> Icons.Rounded.VideoFile
+                                                                    isImageMessage -> Icons.Rounded.Image
+                                                                    else -> Icons.Rounded.Mood
                                                                 },
                                                                 contentDescription = null,
                                                                 modifier = Modifier
@@ -627,11 +650,61 @@ fun MessageBubble(
                                                             ) {
                                                                 Icon(
                                                                     imageVector = Icons.Rounded.Refresh,
-                                                                    contentDescription = "重试加载图片"
+                                                                    contentDescription = if (isVideoMessage) {
+                                                                        "重试加载视频缩略图"
+                                                                    } else {
+                                                                        "重试加载图片"
+                                                                    }
                                                                 )
                                                             }
                                                         }
-                                                        
+
+                                                        if (isVideoMessage && loadState == 1) {
+                                                            Surface(
+                                                                modifier = Modifier
+                                                                    .align(Alignment.Center)
+                                                                    .size(48.dp),
+                                                                shape = CircleShape,
+                                                                color = Color.Black.copy(alpha = 0.5f)
+                                                            ) {
+                                                                Icon(
+                                                                    imageVector = Icons.Rounded.PlayArrow,
+                                                                    contentDescription = "播放视频",
+                                                                    modifier = Modifier.padding(8.dp),
+                                                                    tint = Color.White
+                                                                )
+                                                            }
+                                                        }
+
+                                                        videoDuration?.let { duration ->
+                                                            Row(
+                                                                verticalAlignment = Alignment.CenterVertically,
+                                                                horizontalArrangement = Arrangement.spacedBy(3.dp),
+                                                                modifier = Modifier
+                                                                    .align(Alignment.BottomStart)
+                                                                    .padding(start = 6.dp, bottom = 6.dp)
+                                                                    .background(
+                                                                        color = Color.Black.copy(alpha = 0.45f),
+                                                                        shape = RoundedCornerShape(50.dp)
+                                                                    )
+                                                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                                                            ) {
+                                                                Icon(
+                                                                    imageVector = Icons.Rounded.PlayCircle,
+                                                                    contentDescription = null,
+                                                                    modifier = Modifier.size(12.dp),
+                                                                    tint = Color.White
+                                                                )
+                                                                Text(
+                                                                    text = duration,
+                                                                    fontSize = 10.sp,
+                                                                    lineHeight = 16.sp,
+                                                                    maxLines = 1,
+                                                                    color = Color.White
+                                                                )
+                                                            }
+                                                        }
+
                                                         if (!isMine && isLastFromSender) {
                                                             Row(
                                                                 verticalAlignment = Alignment.CenterVertically,
@@ -676,7 +749,7 @@ fun MessageBubble(
                                                             if (message.contentType == MessageItem.CONTENT_TYPE_STICKER) {
                                                                 Icon(
                                                                     imageVector = Icons.Rounded.Mood,
-                                                                    contentDescription = "mood",
+                                                                    contentDescription = null,
                                                                     modifier = Modifier.size(12.dp),
                                                                     tint = Color.White
                                                                 )
@@ -1062,6 +1135,18 @@ private fun formatFileSize(size: Long): String {
         size < 1024 * 1024 -> "${size / 1024}KB"
         size < 1024 * 1024 * 1024 -> "${"%.1f".format(size.toFloat() / (1024 * 1024))}MB"
         else -> "${"%.2f".format(size.toFloat() / (1024 * 1024 * 1024))}GB"
+    }
+}
+
+internal fun formatVideoDuration(totalSeconds: Int?): String? {
+    val duration = totalSeconds?.takeIf { it >= 0 } ?: return null
+    val hours = duration / 3600
+    val minutes = (duration % 3600) / 60
+    val seconds = duration % 60
+    return if (hours > 0) {
+        String.format(Locale.ROOT, "%d:%02d:%02d", hours, minutes, seconds)
+    } else {
+        String.format(Locale.ROOT, "%d:%02d", minutes, seconds)
     }
 }
 

@@ -14,6 +14,7 @@ okhttp = "5.4.0"
 kotlinxSerialization = "1.11.0"
 coil = "2.7.0"
 openImage = "2.5.2"
+media3 = "1.10.1"
 wire = "6.4.5"
 datastore = "1.1.1"
 multiplatformMarkdownRenderer = "0.43.0"
@@ -52,7 +53,11 @@ kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-
 # Coil
 coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil" }
 coil-gif = { group = "io.coil-kt", name = "coil-gif", version.ref = "coil" }
+coil-video = { group = "io.coil-kt", name = "coil-video", version.ref = "coil" }
 openimage-base = { group = "io.github.flyjingfish", name = "openimage-base", version.ref = "openImage" }
+androidx-media3-common = { group = "androidx.media3", name = "media3-common", version.ref = "media3" }
+androidx-media3-exoplayer = { group = "androidx.media3", name = "media3-exoplayer", version.ref = "media3" }
+androidx-media3-ui = { group = "androidx.media3", name = "media3-ui", version.ref = "media3" }
 
 # Material Icons Extended
 androidx-material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended" }

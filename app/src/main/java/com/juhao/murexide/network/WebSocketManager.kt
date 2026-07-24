@@ -416,6 +416,7 @@ class WebSocketManager private constructor() {
             audioUrl = msg.content?.audio_url?.takeIf { it.isNotEmpty() },
             audioTime = if ((msg.content?.audio_time ?: 0) > 0) msg.content?.audio_time?.toInt() else null,
             videoUrl = msg.content?.video_url?.takeIf { it.isNotEmpty() },
+            videoTime = if ((msg.content?.video_time ?: 0) > 0) msg.content?.video_time?.toInt() else null,
             fileUrl = msg.content?.file_url?.takeIf { it.isNotEmpty() },
             fileName = msg.content?.file_name?.takeIf { it.isNotEmpty() },
             fileSize = if ((msg.content?.file_size ?: 0) > 0) msg.content?.file_size else null,

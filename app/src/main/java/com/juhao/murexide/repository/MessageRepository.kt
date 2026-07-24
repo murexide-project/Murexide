@@ -78,6 +78,7 @@ class MessageRepository {
                                     imageHeight = msg.content?.height?.takeIf { it > 0 },
                                     audioTime = if ((msg.content?.audio_time ?: 0) > 0) msg.content?.audio_time else null,
                                     videoUrl = msg.content?.video_url?.takeIf { it.isNotEmpty() },
+                                    videoTime = if ((msg.content?.video_time ?: 0) > 0) msg.content?.video_time else null,
                                     fileUrl = msg.content?.file_url?.takeIf { it.isNotEmpty() },
                                     fileName = msg.content?.file_name?.takeIf { it.isNotEmpty() },
                                     fileSize = if ((msg.content?.file_size ?: 0) > 0) msg.content?.file_size else null,
