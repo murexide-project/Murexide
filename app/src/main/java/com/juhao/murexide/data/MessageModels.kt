@@ -38,6 +38,7 @@ data class MessageItem(
     val audioUrl: String? = null,
     val audioTime: Int? = null,
     val videoUrl: String? = null,
+    val videoTime: Int? = null,
     val fileUrl: String? = null,
     val fileName: String? = null,
     val fileSize: Long? = null,

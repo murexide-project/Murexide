@@ -67,6 +67,7 @@ message WsMsg {
         string quote_image_name = 17; // 引用图片文件名称
         int64 file_size = 18; // 文件/图片大小(字节)
         string video_url = 19; // 视频URL
+        int64 video_time = 20; // 视频时长
         string audio_url = 21; // 语音URL
         int64 audio_time = 22; // 语音时长
         string quote_video_url = 23; // 引用视频直链,https://...

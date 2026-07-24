@@ -6,8 +6,11 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.ContextWrapper
 import android.os.Bundle
+import android.view.Gravity
+import android.widget.FrameLayout
 import android.widget.Toast
 import com.flyjingfish.openimagelib.OpenImage
+import com.flyjingfish.openimagelib.beans.DownloadParams
 import com.flyjingfish.openimagelib.beans.OpenImageUrl
 import com.flyjingfish.openimagelib.enums.MediaType
 import com.juhao.murexide.R
@@ -17,15 +20,17 @@ data class OpenImageItem(
     val originalUrl: String,
     val thumbnailUrl: String = originalUrl,
     val messageId: String? = null,
-    val imageId: Long? = null
+    val imageId: Long? = null,
+    val mediaType: MediaType = MediaType.IMAGE,
+    val playbackUrl: String? = null
 ) : OpenImageUrl {
     override fun getImageUrl(): String = originalUrl
 
-    override fun getVideoUrl(): String = ""
+    override fun getVideoUrl(): String = playbackUrl.orEmpty()
 
     override fun getCoverImageUrl(): String = thumbnailUrl
 
-    override fun getType(): MediaType = MediaType.IMAGE
+    override fun getType(): MediaType = mediaType
 }
 
 fun imageMessagePreviewItem(
@@ -40,6 +45,13 @@ fun imageMessagePreviewItem(
 )
 
 fun fullImagePreviewItem(url: String): OpenImageItem = OpenImageItem(originalUrl = url)
+
+fun videoMessagePreviewItem(url: String): OpenImageItem = OpenImageItem(
+    originalUrl = url,
+    thumbnailUrl = url,
+    mediaType = MediaType.VIDEO,
+    playbackUrl = url
+)
 
 data class ImageViewerPagination(
     val chatId: String,
@@ -86,18 +98,31 @@ fun showImageViewer(
             MurexideOpenImageActivity.EXTRA_VIEWER_OPTIONS,
             viewerOptions
         )
-        .setShowDownload()
+        .setShowDownload(viewerDownloadParams(activity))
         .setShowClose()
         .setNoneClickView()
         .setClickPosition(selectedIndex)
         .setOnItemLongClickListener { _, image, _ ->
+            val mediaUrl = if (image.type == MediaType.VIDEO) image.videoUrl else image.imageUrl
             val clipboard = activity.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-            clipboard.setPrimaryClip(ClipData.newPlainText("Image URL", image.imageUrl))
+            clipboard.setPrimaryClip(ClipData.newPlainText("Media URL", mediaUrl))
             Toast.makeText(activity, "链接已复制", Toast.LENGTH_SHORT).show()
         }
 
     viewer.show()
     return true
+}
+
+private fun viewerDownloadParams(context: Context): DownloadParams {
+    val density = context.resources.displayMetrics.density
+    fun dp(value: Int): Int = (value * density).toInt()
+
+    val layoutParams = FrameLayout.LayoutParams(dp(24), dp(24)).apply {
+        gravity = Gravity.BOTTOM or Gravity.END
+        marginEnd = dp(14)
+        bottomMargin = dp(72)
+    }
+    return DownloadParams().setDownloadLayoutParams(layoutParams)
 }
 
 private tailrec fun Context.findActivity(): Activity? = when (this) {

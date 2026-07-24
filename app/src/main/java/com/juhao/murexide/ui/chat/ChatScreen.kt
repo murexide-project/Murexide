@@ -52,6 +52,7 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.juhao.murexide.ui.components.fullImagePreviewItem
 import com.juhao.murexide.ui.components.imageMessagePreviewItem
+import com.juhao.murexide.ui.components.videoMessagePreviewItem
 import com.juhao.murexide.ui.components.ImageViewerPagination
 import com.juhao.murexide.ui.components.showImageViewer
 import com.juhao.murexide.ui.chat.components.MessageBubble
@@ -1269,6 +1270,14 @@ fun ChatScreen(
                                                         images = listOf(fullImagePreviewItem(url))
                                                     )
                                                 }
+                                        }
+                                        MessageItem.CONTENT_TYPE_VIDEO -> {
+                                            msg.videoUrl?.let { url ->
+                                                showImageViewer(
+                                                    context = context,
+                                                    images = listOf(videoMessagePreviewItem(url))
+                                                )
+                                            }
                                         }
                                     }
                                 } else {

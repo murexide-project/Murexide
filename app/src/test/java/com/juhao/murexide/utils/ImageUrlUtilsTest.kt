@@ -1,6 +1,8 @@
 package com.juhao.murexide.utils
 
+import com.flyjingfish.openimagelib.enums.MediaType
 import com.juhao.murexide.ui.components.imageMessagePreviewItem
+import com.juhao.murexide.ui.components.videoMessagePreviewItem
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -57,6 +59,19 @@ class ImageUrlUtilsTest {
     }
 
     @Test
+    fun `video preview item exposes OpenImage video media`() {
+        val url = "https://chat-video1.jwznb.com/messages/clip.mp4"
+
+        val item = videoMessagePreviewItem(url)
+
+        assertEquals(url, item.originalUrl)
+        assertEquals(url, item.getImageUrl())
+        assertEquals(url, item.getCoverImageUrl())
+        assertEquals(url, item.getVideoUrl())
+        assertEquals(MediaType.VIDEO, item.getType())
+    }
+
+    @Test
     fun `aspect ratio uses valid dimensions and falls back for missing dimensions`() {
         assertEquals(16f / 9f, imageAspectRatio(1920, 1080), 0.0001f)
         assertEquals(4f / 3f, imageAspectRatio(null, 1080), 0.0001f)
@@ -71,4 +86,5 @@ class ImageUrlUtilsTest {
         assertFalse(isYunhuImageUrl("https://jwznb.com.example.com/photo.jpg"))
         assertFalse(isYunhuImageUrl("not a url"))
     }
+
 }
