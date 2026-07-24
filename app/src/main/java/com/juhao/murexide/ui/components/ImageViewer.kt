@@ -1,393 +1,107 @@
 package com.juhao.murexide.ui.components
 
+import android.app.Activity
 import android.content.ClipData
-import android.graphics.Bitmap
-import android.media.MediaScannerConnection
-import android.os.Environment
+import android.content.ClipboardManager
+import android.content.Context
+import android.content.ContextWrapper
+import android.os.Bundle
 import android.widget.Toast
-import androidx.core.graphics.drawable.toBitmap
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.rememberTransformableState
-import androidx.compose.foundation.gestures.transformable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.*
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalClipboard
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
-import coil.ImageLoader
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
-import coil.request.SuccessResult
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import java.io.File
-import java.io.FileOutputStream
+import com.flyjingfish.openimagelib.OpenImage
+import com.flyjingfish.openimagelib.beans.OpenImageUrl
+import com.flyjingfish.openimagelib.enums.MediaType
+import com.juhao.murexide.R
+import com.juhao.murexide.utils.imageThumbnailUrl
 
-private data class ImageState(
-    val scale: Float = 1f,
-    val offset: Offset = Offset.Zero,
-    val containerSize: Size = Size.Zero
-)
+data class OpenImageItem(
+    val originalUrl: String,
+    val thumbnailUrl: String = originalUrl,
+    val messageId: String? = null,
+    val imageId: Long? = null
+) : OpenImageUrl {
+    override fun getImageUrl(): String = originalUrl
 
-@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
-@Composable
-fun MultiImageViewer(
-    images: List<String>,
-    initialPage: Int = 0,
-    isVisible: Boolean,
-    onDismiss: () -> Unit
-) {
-    if (!isVisible || images.isEmpty()) return
+    override fun getVideoUrl(): String = ""
 
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    val clipboard = LocalClipboard.current
+    override fun getCoverImageUrl(): String = thumbnailUrl
 
-    val pagerState = rememberPagerState(initialPage = initialPage) { images.size }
-
-    val imageStates = remember(images) {
-        List(images.size) { mutableStateOf(ImageState()) }
-    }
-    
-    val loadStates = remember(images) {
-        List(images.size) { mutableIntStateOf(1) }
-    }
-
-    var showMenu by remember { mutableStateOf(false) }
-
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(
-            usePlatformDefaultWidth = false,
-            decorFitsSystemWindows = false,
-            dismissOnBackPress = true,
-            dismissOnClickOutside = true
-        )
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.95f))
-                .statusBarsPadding()
-                .navigationBarsPadding()
-        ) {
-            HorizontalPager(
-                state = pagerState,
-                modifier = Modifier.fillMaxSize(),
-                userScrollEnabled = imageStates[pagerState.currentPage].value.scale <= 1.001f
-            ) { page ->
-                var retryCount by remember { mutableIntStateOf(0) }
-                val imageRequest = remember(images[page]) {
-                    ImageRequest.Builder(context)
-                        .data(images[page])
-                        .setParameter("retry", retryCount)
-                        .apply {
-                            if (images[page].contains("chat-img.jwznb.com") ||
-                                images[page].contains("jwznb.com") ||
-                                images[page].contains("myapp.jwznb.com")
-                            ) {
-                                setHeader("Referer", "https://myapp.jwznb.com")
-                            }
-                        }
-                        .build()
-                }
-
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                ) {
-                    AsyncImage(
-                        model = imageRequest,
-                        contentDescription = null,
-                        modifier = Modifier
-                            .align(Alignment.Center)
-                            .fillMaxSize()
-                            .clipToBounds()
-                            .onSizeChanged { size ->
-                                if (imageStates[page].value.containerSize != Size(size.width.toFloat(), size.height.toFloat())) {
-                                    imageStates[page].value = imageStates[page].value.copy(
-                                        containerSize = Size(size.width.toFloat(), size.height.toFloat())
-                                    )
-                                }
-                            }
-                            .graphicsLayer(
-                                scaleX = imageStates[page].value.scale,
-                                scaleY = imageStates[page].value.scale,
-                                translationX = imageStates[page].value.offset.x,
-                                translationY = imageStates[page].value.offset.y
-                            )
-                            .transformable(
-                                state = rememberTransformableState { zoomChange, panChange, _ ->
-                                    val currentState = imageStates[page].value
-                                    val currentScale = currentState.scale
-                                    val currentOffset = currentState.offset
-                                    val container = currentState.containerSize
-                                    
-                                    val newScale = (currentScale * zoomChange).coerceIn(1f, 5f)
-                                    
-                                    if (newScale > 1.001f || zoomChange != 1f) {
-                                        val maxOffsetX = if (container.width > 0) 
-                                            maxOf(0f, (container.width * newScale - container.width) / 2) else 0f
-                                        val maxOffsetY = if (container.height > 0) 
-                                            maxOf(0f, (container.height * newScale - container.height) / 2) else 0f
-                                        
-                                        var newX = currentOffset.x + panChange.x
-                                        var newY = currentOffset.y + panChange.y
-                                        
-                                        newX = newX.coerceIn(-maxOffsetX, maxOffsetX)
-                                        newY = newY.coerceIn(-maxOffsetY, maxOffsetY)
-                                        
-                                        imageStates[page].value = currentState.copy(
-                                            scale = newScale,
-                                            offset = Offset(newX, newY)
-                                        )
-                                    }
-                                },
-                                canPan = { 
-                                    imageStates[page].value.scale > 1.001f 
-                                }
-                            )
-                            .pointerInput(Unit) {
-                                detectTapGestures(
-                                    onDoubleTap = { tapOffset ->
-                                        val currentState = imageStates[page].value
-                                        val container = currentState.containerSize
-                                        
-                                        if (currentState.scale > 1.001f) {
-                                            imageStates[page].value = ImageState(containerSize = container)
-                                        } else if (container.width > 0 && container.height > 0) {
-                                            val targetScale = 2.5f
-                                            
-                                            val centeredTap = Offset(
-                                                x = tapOffset.x - container.width / 2f,
-                                                y = tapOffset.y - container.height / 2f
-                                            )
-                                            
-                                            var newX = -centeredTap.x * (targetScale - 1f)
-                                            var newY = -centeredTap.y * (targetScale - 1f)
-                                            
-                                            val maxOffsetX = maxOf(0f, (container.width * targetScale - container.width) / 2)
-                                            val maxOffsetY = maxOf(0f, (container.height * targetScale - container.height) / 2)
-                                            
-                                            newX = newX.coerceIn(-maxOffsetX, maxOffsetX)
-                                            newY = newY.coerceIn(-maxOffsetY, maxOffsetY)
-                                            
-                                            imageStates[page].value = ImageState(
-                                                scale = targetScale,
-                                                offset = Offset(newX, newY),
-                                                containerSize = container
-                                            )
-                                        }
-                                    },
-                                    onTap = { onDismiss() },
-                                    onLongPress = { showMenu = true }
-                                )
-                            },
-                        contentScale = ContentScale.Fit,
-                        onLoading = {
-                            loadStates[page].intValue = 1
-                        },
-                        onError = {
-                            loadStates[page].intValue = 2
-                        },
-                        onSuccess = {
-                            loadStates[page].intValue = 3
-                        }
-                    )
-
-                    if (loadStates[page].intValue == 1) {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            CircularProgressIndicator(modifier = Modifier.size(48.dp))
-                        }
-                    } else if (loadStates[page].intValue == 2) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(16.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center
-                        ) {
-                            Icon(
-                                Icons.Rounded.Error,
-                                contentDescription = null,
-                                tint = Color.White.copy(alpha = 0.6f),
-                                modifier = Modifier.size(48.dp)
-                            )
-                            Text(
-                                "加载失败",
-                                color = Color.White.copy(alpha = 0.6f),
-                                modifier = Modifier.padding(top = 8.dp)
-                            )
-                            IconButton(
-                                onClick = {
-                                    loadStates[page].intValue = 1
-                                    retryCount++
-                                }
-                            ) {
-                                Icon(
-                                    Icons.Rounded.Refresh,
-                                    contentDescription = "重试",
-                                    tint = Color.White
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = 20.dp)
-            ) {
-                Surface(
-                    modifier = Modifier.align(Alignment.Center),
-                    color = Color.Black.copy(alpha = 0.6f),
-                    shape = RoundedCornerShape(50.dp)
-                ) {
-                    Text(
-                        text = "${pagerState.currentPage + 1} / ${images.size}",
-                        color = Color.White,
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                        textAlign = TextAlign.Center
-                    )
-                }
-            }
-
-            DropdownMenu(
-                expanded = showMenu,
-                onDismissRequest = { showMenu = false }
-            ) {
-                DropdownMenuItem(
-                    text = { Text("保存图片") },
-                    onClick = {
-                        showMenu = false
-                        scope.launch {
-                            saveCurrentImage(context, images[pagerState.currentPage])
-                        }
-                    },
-                    leadingIcon = {
-                        Icon(Icons.Rounded.Download, null, Modifier.size(18.dp))
-                    }
-                )
-                DropdownMenuItem(
-                    text = { Text("复制链接") },
-                    onClick = {
-                        showMenu = false
-                        clipboard.nativeClipboard.setPrimaryClip(
-                            ClipData.newPlainText("Image URL", images[pagerState.currentPage])
-                        )
-                        Toast.makeText(context, "链接已复制", Toast.LENGTH_SHORT).show()
-                    },
-                    leadingIcon = {
-                        Icon(Icons.Rounded.Share, null, Modifier.size(18.dp))
-                    }
-                )
-            }
-        }
-    }
+    override fun getType(): MediaType = MediaType.IMAGE
 }
 
-private suspend fun saveCurrentImage(context: android.content.Context, imageUrl: String) {
-    try {
-        withContext(Dispatchers.Main) {
-            Toast.makeText(context, "开始保存...", Toast.LENGTH_SHORT).show()
-        }
-        
-        val imageLoader = ImageLoader.Builder(context).build()
-        val request = ImageRequest.Builder(context)
-            .data(imageUrl)
-            .bitmapConfig(Bitmap.Config.ARGB_8888)
-            .build()
-        
-        val result = imageLoader.execute(request)
-        
-        if (result is SuccessResult) {
-            val bitmap = result.drawable.toBitmap()
+fun imageMessagePreviewItem(
+    url: String,
+    messageId: String? = null,
+    imageId: Long? = null
+): OpenImageItem = OpenImageItem(
+    originalUrl = url,
+    thumbnailUrl = imageThumbnailUrl(url),
+    messageId = messageId,
+    imageId = imageId
+)
 
-            val directory = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
-            if (!directory.exists()) {
-                directory.mkdirs()
-            }
-            
-            val fileName = "IMG_${System.currentTimeMillis()}.jpg"
-            val file = File(directory, fileName)
+fun fullImagePreviewItem(url: String): OpenImageItem = OpenImageItem(originalUrl = url)
 
-            withContext(Dispatchers.IO) {
-                FileOutputStream(file).use { out ->
-                    bitmap.compress(Bitmap.CompressFormat.JPEG, 90, out)
-                    out.flush()
-                }
-                
-                MediaScannerConnection.scanFile(
-                    context,
-                    arrayOf(file.absolutePath),
-                    arrayOf("image/jpeg"),
-                    null
-                )
-            }
-            
-            withContext(Dispatchers.Main) {
-                Toast.makeText(context, "已保存到相册", Toast.LENGTH_SHORT).show()
-            }
-        } else {
-            withContext(Dispatchers.Main) {
-                Toast.makeText(context, "保存失败：无法下载图片", Toast.LENGTH_SHORT).show()
-            }
+data class ImageViewerPagination(
+    val chatId: String,
+    val chatType: Int
+)
+
+fun showImageViewer(
+    context: Context,
+    images: List<OpenImageItem>,
+    initialIndex: Int = 0,
+    pagination: ImageViewerPagination? = null
+): Boolean {
+    val activity = context.findActivity() ?: return false
+    if (images.isEmpty()) return false
+
+    val selectedIndex = initialIndex.coerceIn(images.indices)
+    val viewerOptions = Bundle().apply {
+        putStringArrayList(
+            MurexideOpenImageActivity.EXTRA_IMAGE_URLS,
+            ArrayList(images.map(OpenImageItem::originalUrl))
+        )
+        putStringArrayList(
+            MurexideOpenImageActivity.EXTRA_IMAGE_MESSAGE_IDS,
+            ArrayList(images.map { it.messageId.orEmpty() })
+        )
+        putLongArray(
+            MurexideOpenImageActivity.EXTRA_IMAGE_IDS,
+            images.map { it.imageId ?: 0L }.toLongArray()
+        )
+        pagination?.let { options ->
+            putString(MurexideOpenImageActivity.EXTRA_CHAT_ID, options.chatId)
+            putInt(MurexideOpenImageActivity.EXTRA_CHAT_TYPE, options.chatType)
         }
-    } catch (e: Exception) {
-        withContext(Dispatchers.Main) {
-            Toast.makeText(context, "保存失败: ${e.message}", Toast.LENGTH_LONG).show()
-        }
-        e.printStackTrace()
     }
+    val viewer = OpenImage.with(activity)
+        .setImageUrlList(images)
+        // Keep the first frame as a thumbnail, then let OpenImage load the
+        // original image.  Keep one page on either side warm while swiping.
+        .setBothLoadCover(true)
+        .setPreloadCount(false, 1)
+        .setOpenImageStyle(R.style.Theme_Murexide_OpenImage)
+        .setOpenImageActivityCls(
+            MurexideOpenImageActivity::class.java,
+            MurexideOpenImageActivity.EXTRA_VIEWER_OPTIONS,
+            viewerOptions
+        )
+        .setShowDownload()
+        .setShowClose()
+        .setNoneClickView()
+        .setClickPosition(selectedIndex)
+        .setOnItemLongClickListener { _, image, _ ->
+            val clipboard = activity.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+            clipboard.setPrimaryClip(ClipData.newPlainText("Image URL", image.imageUrl))
+            Toast.makeText(activity, "链接已复制", Toast.LENGTH_SHORT).show()
+        }
+
+    viewer.show()
+    return true
+}
+
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
 }

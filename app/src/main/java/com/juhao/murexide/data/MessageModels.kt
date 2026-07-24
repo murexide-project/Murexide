@@ -33,6 +33,8 @@ data class MessageItem(
     val quoteImageUrl: String? = null,
     val stickerUrl: String? = null,
     val imageUrl: String? = null,
+    val imageWidth: Long? = null,
+    val imageHeight: Long? = null,
     val audioUrl: String? = null,
     val audioTime: Int? = null,
     val videoUrl: String? = null,

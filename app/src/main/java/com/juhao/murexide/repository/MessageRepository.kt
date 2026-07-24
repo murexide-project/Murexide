@@ -4,6 +4,8 @@ import com.juhao.murexide.data.*
 import com.juhao.murexide.network.NetworkClient
 import com.juhao.murexide.proto.list_message
 import com.juhao.murexide.proto.list_message_send
+import com.juhao.murexide.proto.pic_list_message_by_mid_seq
+import com.juhao.murexide.proto.pic_list_message_by_mid_seq_send
 import com.juhao.murexide.proto.send_message_send
 import com.juhao.murexide.proto.send_message
 import com.juhao.murexide.proto.edit_message_send
@@ -71,7 +73,9 @@ class MessageRepository {
                                     quoteMsgText = msg.content?.quote_msg_text?.takeIf { it.isNotEmpty() },
                                     quoteImageUrl = msg.content?.quote_image_url?.takeIf { it.isNotEmpty() },
                                     stickerUrl = msg.content?.sticker_url?.takeIf { it.isNotEmpty() },
-                                    imageUrl = msg.content?.image_url?.takeIf { it.isNotEmpty() }, 
+                                    imageUrl = msg.content?.image_url?.takeIf { it.isNotEmpty() },
+                                    imageWidth = msg.content?.width?.takeIf { it > 0 },
+                                    imageHeight = msg.content?.height?.takeIf { it > 0 },
                                     audioTime = if ((msg.content?.audio_time ?: 0) > 0) msg.content?.audio_time else null,
                                     videoUrl = msg.content?.video_url?.takeIf { it.isNotEmpty() },
                                     fileUrl = msg.content?.file_url?.takeIf { it.isNotEmpty() },
@@ -100,6 +104,54 @@ class MessageRepository {
                         }
                     } else {
                         Result.failure(Exception("HTTP error: ${response.code}"))
+                    }
+                }
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+        }
+    }
+
+    suspend fun getImageMessageList(
+        token: String,
+        chatId: String,
+        chatType: Int,
+        imageId: Long,
+        earlierQuantities: Int,
+        latestQuantities: Int
+    ): Result<List<ConversationImage>> {
+        return withContext(Dispatchers.IO) {
+            try {
+                if (imageId == 0L) {
+                    return@withContext Result.failure(
+                        IllegalArgumentException("图片消息缺少有效的 image_id")
+                    )
+                }
+                val requestBody = createImageMessageListRequestBody(
+                    imageId = imageId,
+                    chatId = chatId,
+                    chatType = chatType,
+                    earlierQuantities = earlierQuantities,
+                    latestQuantities = latestQuantities
+                )
+                val httpRequest = Request.Builder()
+                    .url("$baseUrl/v1/msg/pic-list-message-by-mid-seq")
+                    .post(requestBody)
+                    .header("token", token)
+                    .build()
+
+                client.newCall(httpRequest).execute().use { response ->
+                    if (!response.isSuccessful) {
+                        return@use Result.failure<List<ConversationImage>>(
+                            Exception("HTTP error: ${response.code}")
+                        )
+                    }
+
+                    val result = pic_list_message_by_mid_seq.ADAPTER.decode(response.body.bytes())
+                    if (result.status?.code == 1) {
+                        Result.success(result.toConversationImages())
+                    } else {
+                        Result.failure(Exception(result.status?.msg ?: "获取图片列表失败"))
                     }
                 }
             } catch (e: Exception) {
@@ -319,4 +371,39 @@ class MessageRepository {
             }
         }
     }
+}
+
+internal fun createImageMessageListRequestBody(
+    imageId: Long,
+    chatId: String,
+    chatType: Int,
+    earlierQuantities: Int,
+    latestQuantities: Int
+) = pic_list_message_by_mid_seq_send(
+    image_id = imageId,
+    chat_type = chatType.toLong(),
+    chat_id = chatId,
+    earlier_quantities = earlierQuantities.coerceAtLeast(0).toLong(),
+    latest_quantities = latestQuantities.coerceAtLeast(0).toLong()
+).encode().toRequestBody("application/octet-stream".toMediaType())
+
+internal fun pic_list_message_by_mid_seq.toConversationImages(): List<ConversationImage> {
+    return msg.asSequence()
+        .filter { message ->
+            message.content_type == MessageItem.CONTENT_TYPE_IMAGE &&
+                message.msg_delete_time == 0L &&
+                message.msg_seq != 0L
+        }
+        .mapNotNull { message ->
+            val url = message.content?.image_url?.takeIf { it.isNotBlank() }
+                ?: return@mapNotNull null
+            ConversationImage(
+                messageId = message.msg_id,
+                url = url,
+                sequence = message.msg_seq,
+                timestamp = message.send_time
+            )
+        }
+        .sortedWith(compareBy<ConversationImage> { it.timestamp }.thenBy { it.sequence })
+        .toList()
 }

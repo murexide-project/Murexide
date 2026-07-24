@@ -32,8 +32,6 @@ fun Avatar(
         UiState.squareAvatar.value = settingsStorage.getSquareAvatar()
     }
     
-    var viewerVisible by remember { mutableStateOf(false) }
-
     val imageRequest = remember(url) {
         ImageRequest.Builder(context)
             .data(url)
@@ -61,19 +59,15 @@ fun Avatar(
                 }
             )
             .then(
-                if (canView) 
-                    Modifier.clickable { viewerVisible = true }
+                if (canView)
+                    Modifier.clickable {
+                        showImageViewer(
+                            context = context,
+                            images = listOf(fullImagePreviewItem(url))
+                        )
+                    }
                 else Modifier
             ),
         contentScale = ContentScale.Crop
     )
-    
-    if (viewerVisible) {
-        MultiImageViewer(
-            images = listOf(url),
-            initialPage = 0,
-            isVisible = true,
-            onDismiss = { viewerVisible = false }
-        )
-    }
 }

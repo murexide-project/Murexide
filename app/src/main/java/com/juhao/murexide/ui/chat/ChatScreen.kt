@@ -50,7 +50,10 @@ import androidx.compose.ui.unit.sp
 import com.juhao.murexide.ui.components.Avatar
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import com.juhao.murexide.ui.components.MultiImageViewer
+import com.juhao.murexide.ui.components.fullImagePreviewItem
+import com.juhao.murexide.ui.components.imageMessagePreviewItem
+import com.juhao.murexide.ui.components.ImageViewerPagination
+import com.juhao.murexide.ui.components.showImageViewer
 import com.juhao.murexide.ui.chat.components.MessageBubble
 import com.juhao.murexide.ui.chat.components.BoardPanel
 import com.juhao.murexide.ui.chat.components.MessageInput
@@ -62,6 +65,7 @@ import com.juhao.murexide.ui.chat.components.ScreenshotBottomSheet
 import com.juhao.murexide.ui.chat.components.GroupMemberSheet
 import com.juhao.murexide.datastore.SettingsStorage
 import com.juhao.murexide.data.MessageItem
+import com.juhao.murexide.data.resolveStickerMessageUrl
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -224,10 +228,6 @@ fun ChatScreen(
     val showMsgTagsSetting by settingsStorage.showMsgTagsFlow.collectAsState(initial = false)
     val backgroundOpacity by settingsStorage.backgroundOpacityFlow.collectAsState(initial = 0.5f)
     
-    var viewerImages by remember { mutableStateOf<List<String>>(emptyList()) }
-    var viewerInitialPage by remember { mutableIntStateOf(0) }
-    var viewerVisible by remember { mutableStateOf(false) }
-
     val hazeState = remember { HazeState() }
 
     val imagePickerLauncher = rememberLauncherForActivityResult(
@@ -771,9 +771,10 @@ fun ChatScreen(
                                 BoardPanel(
                                     boards = uiState.boardPanel.boards,
                                     onImageClick = { url ->
-                                        viewerImages = listOf(url)
-                                        viewerInitialPage = 0
-                                        viewerVisible = true
+                                        showImageViewer(
+                                            context = context,
+                                            images = listOf(fullImagePreviewItem(url))
+                                        )
                                     }
                                 )
                             }
@@ -1232,18 +1233,42 @@ fun ChatScreen(
                             },
                             onImageClick = { msg ->
                                 if (!selectionMode) {
-                                    msg.imageUrl?.let { url ->
-                                        val allImages = uiState.messages
-                                            .filter { !it.isRecalled }
-                                            .mapNotNull { it.imageUrl }
-                                            .filter { it.isNotEmpty() }
-                                            .reversed()
-                            
-                                        if (allImages.isNotEmpty()) {
-                                            val index = allImages.indexOf(url)
-                                            viewerImages = allImages
-                                            viewerInitialPage = if (index >= 0) index else 0
-                                            viewerVisible = true
+                                    when (msg.contentType) {
+                                        MessageItem.CONTENT_TYPE_IMAGE -> {
+                                            buildChatImageGallery(
+                                                messages = uiState.messages,
+                                                selectedMessageId = msg.msgId
+                                            )?.let { gallery ->
+                                                showImageViewer(
+                                                    context = context,
+                                                    images = gallery.entries.map { entry ->
+                                                        imageMessagePreviewItem(
+                                                            url = entry.url,
+                                                            messageId = entry.messageId,
+                                                            imageId = entry.imageId
+                                                        )
+                                                    },
+                                                    initialIndex = gallery.initialIndex,
+                                                    pagination = ImageViewerPagination(
+                                                        chatId = chatId,
+                                                        chatType = chatType
+                                                    )
+                                                )
+                                            }
+                                        }
+                                        MessageItem.CONTENT_TYPE_STICKER -> {
+                                            // Stickers can still be viewed at full size, but
+                                            // never become pages in the photo gallery.
+                                            resolveStickerMessageUrl(
+                                                imageUrl = msg.imageUrl,
+                                                stickerUrl = msg.stickerUrl
+                                            )
+                                                ?.let { url ->
+                                                    showImageViewer(
+                                                        context = context,
+                                                        images = listOf(fullImagePreviewItem(url))
+                                                    )
+                                                }
                                         }
                                     }
                                 } else {
@@ -1251,9 +1276,10 @@ fun ChatScreen(
                                 }
                             },
                             onMarkdownImageClick = { url ->
-                                viewerImages = listOf(url)
-                                viewerInitialPage = 0
-                                viewerVisible = true
+                                showImageViewer(
+                                    context = context,
+                                    images = listOf(fullImagePreviewItem(url))
+                                )
                             },
                             onAvatarClick = {
                                 ConversationDetailActivity.start(
@@ -1366,15 +1392,6 @@ fun ChatScreen(
                 }
             }
         }
-    }
-
-    if (viewerVisible) {
-        MultiImageViewer(
-            images = viewerImages,
-            initialPage = viewerInitialPage,
-            isVisible = true,
-            onDismiss = { viewerVisible = false }
-        )
     }
 
     if (uiState.mentionPicker.isVisible) {

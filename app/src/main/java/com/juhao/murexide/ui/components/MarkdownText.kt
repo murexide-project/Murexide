@@ -69,7 +69,6 @@ fun MarkdownText(
     persistRenderState: Boolean = true
 ) {
     val context = LocalContext.current
-    var previewImageUrl by remember { mutableStateOf<String?>(null) }
     val latexEnabled = remember { Build.VERSION.SDK_INT >= Build.VERSION_CODES.M }
     val displayMarkdown = if (persistRenderState) {
         markdown
@@ -161,9 +160,10 @@ fun MarkdownText(
                         alt = segment.alt,
                         imageReferer = imageReferer,
                         onClick = { url ->
-                            onImageClick?.invoke(url) ?: run {
-                                previewImageUrl = url
-                            }
+                            onImageClick?.invoke(url) ?: showImageViewer(
+                                context = context,
+                                images = listOf(fullImagePreviewItem(url))
+                            )
                         }
                     )
                 }
@@ -192,14 +192,6 @@ fun MarkdownText(
         }
     }
 
-    previewImageUrl?.let { imageUrl ->
-        MultiImageViewer(
-            images = listOf(imageUrl),
-            initialPage = 0,
-            isVisible = true,
-            onDismiss = { previewImageUrl = null }
-        )
-    }
 }
 
 @Composable

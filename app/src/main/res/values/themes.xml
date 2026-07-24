@@ -11,4 +11,12 @@
         <item name="android:navigationBarColor">?attr/colorSurface</item>
         <item name="android:windowLightStatusBar">?attr/isLightTheme</item>
     </style>
+
+    <!-- Keep the image canvas full-bleed and let the viewer activity manage
+         transient immersive system bars. -->
+    <style name="Theme.Murexide.OpenImage" parent="Theme.OpenImageTheme">
+        <item name="openImage.indicator.type">none</item>
+        <item name="openImage.statusBar.fontStyle">full_screen</item>
+        <item name="openImage.background">@android:color/black</item>
+    </style>
 </resources>

@@ -125,6 +125,22 @@ message list_message_by_mid_seq {
     int32 total = 3; // 消息数
 }
 
+// 按图片消息数值游标（MessageItem.msgSeq）获取会话内前后的图片
+message pic_list_message_by_mid_seq_send {
+    uint64 image_id = 3;
+    int64 chat_type = 4;
+    string chat_id = 5;
+    uint64 earlier_quantities = 6;
+    uint64 latest_quantities = 7;
+}
+
+// 图片列表沿用消息列表通用响应结构
+message pic_list_message_by_mid_seq {
+    Status status = 1;
+    repeated Msg msg = 2;
+    int32 total = 3;
+}
+
 // 发送消息
 message send_message_send {
     string msg_id = 2; // 消息ID

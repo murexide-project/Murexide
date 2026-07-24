@@ -19,13 +19,18 @@ import coil.decode.GifDecoder
 import coil.decode.ImageDecoderDecoder
 import coil.request.ImageRequest
 import coil.request.SuccessResult
+import com.flyjingfish.openimagelib.OpenImageConfig
 import com.juhao.murexide.datastore.AccountStorage
 import com.juhao.murexide.datastore.SettingsStorage
+import com.juhao.murexide.network.NetworkClient
 import com.juhao.murexide.network.WebSocketManager
 import com.juhao.murexide.repository.AuthRepository
 import com.juhao.murexide.ui.theme.UiCache
+import com.juhao.murexide.ui.components.MurexideBigImageHelper
+import com.juhao.murexide.ui.components.MurexideDownloadMediaHelper
 import com.juhao.murexide.utils.AppForegroundState
 import com.juhao.murexide.utils.NotificationHelper
+import com.juhao.murexide.utils.isYunhuImageUrl
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -39,6 +44,10 @@ class MyApplication : Application(), ImageLoaderFactory {
 
     override fun onCreate() {
         super.onCreate()
+        OpenImageConfig.getInstance().apply {
+            bigImageHelper = MurexideBigImageHelper()
+            downloadMediaHelper = MurexideDownloadMediaHelper()
+        }
         NotificationHelper.createNotificationChannel(this)
         AppForegroundState.init(this)
         initWebSocket()
@@ -188,6 +197,21 @@ class MyApplication : Application(), ImageLoaderFactory {
 
     override fun newImageLoader(): ImageLoader {
         return ImageLoader.Builder(this)
+            .okHttpClient {
+                NetworkClient.okHttpClient.newBuilder()
+                    .addInterceptor { chain ->
+                        val request = chain.request()
+                        val imageRequest = if (isYunhuImageUrl(request.url.toString())) {
+                            request.newBuilder()
+                                .header("Referer", "https://myapp.jwznb.com")
+                                .build()
+                        } else {
+                            request
+                        }
+                        chain.proceed(imageRequest)
+                    }
+                    .build()
+            }
             .components {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                     add(ImageDecoderDecoder.Factory())
