@@ -75,6 +75,7 @@ import com.juhao.murexide.ui.chat.ChatScreen
 import com.juhao.murexide.ui.chat.ChatViewModel
 import com.juhao.murexide.ui.components.UnreadCountBadge
 import com.juhao.murexide.ui.components.AccountQuickSwitchMenu
+import com.juhao.murexide.ui.components.AccountQuickSwitchGlassMenu
 import com.juhao.murexide.ui.community.CommunityScreen
 import com.juhao.murexide.ui.settings.SettingsActivity
 import com.juhao.murexide.utils.getAppVersionInfo
@@ -455,6 +456,7 @@ fun MainScreen(account: UserAccount) {
 
     val useNavigationRail = bigScreenEnabled && isBigScreen
     val hideMobileNavigation = currentRoute == "contacts" && isContactNewMessagesVisible
+    val navigationBarInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
     if (showDevTip) {
         AlertDialog(
@@ -516,7 +518,7 @@ fun MainScreen(account: UserAccount) {
                                             tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
                                         AccountQuickSwitchMenu(
-                                            expanded = showAccountMenu,
+                                            expanded = showAccountMenu && !liquidGlassEnabled,
                                             accounts = loggedInAccounts,
                                             currentAccountId = account.id,
                                             onDismissRequest = { showAccountMenu = false }
@@ -600,7 +602,7 @@ fun MainScreen(account: UserAccount) {
                                     }
                                     if (!overlayPass) {
                                         AccountQuickSwitchMenu(
-                                            expanded = showAccountMenu,
+                                            expanded = showAccountMenu && !liquidGlassEnabled,
                                             accounts = loggedInAccounts,
                                             currentAccountId = account.id,
                                             onDismissRequest = { showAccountMenu = false }
@@ -836,6 +838,21 @@ fun MainScreen(account: UserAccount) {
                     }
                 }
             }
+        }
+        if (liquidGlassEnabled && liquidBackdrop != null) {
+            AccountQuickSwitchGlassMenu(
+                expanded = showAccountMenu,
+                accounts = loggedInAccounts,
+                currentAccountId = account.id,
+                backdrop = liquidBackdrop,
+                onDismissRequest = { showAccountMenu = false },
+                cardAlignment = if (useNavigationRail) Alignment.BottomStart else Alignment.BottomEnd,
+                cardPadding = if (useNavigationRail) {
+                    PaddingValues(start = 8.dp, bottom = navigationBarInset + 12.dp)
+                } else {
+                    PaddingValues(end = 20.dp, bottom = navigationBarInset + 82.dp)
+                }
+            )
         }
     }
 }
