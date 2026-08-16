@@ -5,15 +5,15 @@ import org.junit.Test
 
 class UnreadCountTest {
     @Test
-    fun `total includes muted conversations and excludes active conversation`() {
+    fun `total excludes muted conversations and active conversation`() {
         val conversations = listOf(
             conversation(id = "user", type = 1, unread = 2),
             conversation(id = "group", type = 2, unread = 4, muted = 1),
             conversation(id = "bot", type = 3, unread = 1)
         )
 
-        assertEquals(7, conversations.unreadTotal())
-        assertEquals(5, conversations.unreadTotal(ConversationKey("user", 1)))
+        assertEquals(3, conversations.unreadTotal())
+        assertEquals(1, conversations.unreadTotal(ConversationKey("user", 1)))
         assertEquals(3, conversations.unreadTotal(ConversationKey("group", 2)))
     }
 
