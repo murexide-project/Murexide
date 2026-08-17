@@ -106,16 +106,6 @@ internal fun List<ConversationItem>.withLatestMessage(
     return conversations
 }
 
-internal fun List<ConversationItem>.withLatestMessages(
-    messagesByConversation: Map<Pair<Int, String>, MessageItem?>,
-    incrementUnread: Boolean = true
-): List<ConversationItem> = map { conversation ->
-    val latest = messagesByConversation[conversation.chatType to conversation.chatId]
-        ?: return@map conversation
-    listOf(conversation).withLatestMessage(latest, incrementUnread)?.singleOrNull()
-        ?: conversation
-}
-
 internal fun List<ConversationItem>.withEditedLatestMessage(
     message: MessageItem
 ): List<ConversationItem> {
@@ -198,93 +188,6 @@ internal fun List<ConversationItem>.withLatestMessageIdentity(
                 ?: conversation.latestContentType
         )
     }
-}
-
-internal fun mergeRefreshedConversations(
-    refreshed: List<ConversationItem>,
-    current: List<ConversationItem>,
-    protectedKeys: Set<Pair<Int, String>>
-): List<ConversationItem> {
-    if (current.isEmpty() || refreshed.isEmpty()) return refreshed
-
-    val currentByKey = current.associateBy { it.chatType to it.chatId }
-    val strictlyNewerKeys = mutableSetOf<Pair<Int, String>>()
-    val merged = refreshed.map { fresh ->
-        val key = fresh.chatType to fresh.chatId
-        val realtime = currentByKey[key] ?: return@map fresh
-        val unreadMessage = maxOf(fresh.unreadMessage, realtime.unreadMessage)
-        val at = maxOf(fresh.at, realtime.at)
-        if (key !in protectedKeys) {
-            return@map fresh.copy(unreadMessage = unreadMessage, at = at)
-        }
-        val realtimeIsNewer = realtime.isStrictlyNewerThan(fresh)
-        val sameKnownMessage = realtime.latestMessageId != null &&
-            realtime.latestMessageId == fresh.latestMessageId
-        val refreshedHasNoIdentityForSameSend = fresh.latestMessageId == null &&
-            realtime.latestMessageId != null &&
-            realtime.latestMessageTimestamp >= fresh.latestMessageTimestamp
-
-        if (!realtimeIsNewer && !sameKnownMessage && !refreshedHasNoIdentityForSameSend) {
-            fresh.copy(unreadMessage = unreadMessage, at = at)
-        } else {
-            if (realtimeIsNewer) strictlyNewerKeys += key
-            fresh.copy(
-                chatContent = realtime.chatContent,
-                timestampMs = realtime.timestampMs,
-                sendTimestamp = realtime.sendTimestamp,
-                unreadMessage = unreadMessage,
-                at = at,
-                latestMessageId = realtime.latestMessageId,
-                latestMessageSeq = realtime.latestMessageSeq,
-                latestContentType = realtime.latestContentType
-            )
-        }
-    }
-    if (strictlyNewerKeys.isEmpty()) return merged
-
-    val mergedByKey = merged.associateBy { it.chatType to it.chatId }
-    val realtimePrefix = current.mapNotNull { item ->
-        val key = item.chatType to item.chatId
-        if (key in strictlyNewerKeys) mergedByKey[key] else null
-    }
-    return realtimePrefix + merged.filterNot {
-        (it.chatType to it.chatId) in strictlyNewerKeys
-    }
-}
-
-internal fun mergeCachedConversationSnapshot(
-    refreshed: List<ConversationItem>,
-    cached: List<ConversationItem>,
-    locallyRead: Set<ConversationKey> = emptySet()
-): List<ConversationItem> {
-    val refreshedByKey = refreshed.associateBy { it.chatType to it.chatId }
-    val protectedKeys = cached.mapNotNull { current ->
-        val server = refreshedByKey[current.chatType to current.chatId]
-            ?: return@mapNotNull null
-        (current.chatType to current.chatId).takeIf {
-            current.isStrictlyNewerThan(server)
-        }
-    }.toSet()
-    val merged = mergeRefreshedConversations(
-        refreshed = refreshed,
-        current = cached,
-        protectedKeys = protectedKeys
-    )
-    if (locallyRead.isEmpty()) return merged
-    return merged.map { conversation ->
-        if (ConversationKey(conversation.chatId, conversation.chatType) in locallyRead) {
-            conversation.copy(unreadMessage = 0, at = 0)
-        } else {
-            conversation
-        }
-    }
-}
-
-private fun ConversationItem.isStrictlyNewerThan(other: ConversationItem): Boolean {
-    if (latestMessageSeq > 0L && other.latestMessageSeq > 0L) {
-        return latestMessageSeq > other.latestMessageSeq
-    }
-    return latestMessageTimestamp > other.latestMessageTimestamp
 }
 
 private fun List<ConversationItem>.findConversationIndex(message: MessageItem): Int {

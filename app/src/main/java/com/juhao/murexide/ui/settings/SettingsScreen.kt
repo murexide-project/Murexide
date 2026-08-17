@@ -34,7 +34,6 @@ import com.juhao.murexide.ui.about.AboutActivity
 import com.juhao.murexide.ui.settings.appearance.AppearanceActivity
 import com.juhao.murexide.ui.settings.switchAccount.SwitchAccountActivity
 import com.juhao.murexide.utils.hasLegacyWritePermission
-import com.juhao.murexide.utils.requiresLegacyWritePermission
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

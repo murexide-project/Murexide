@@ -17,10 +17,6 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
 
-/**
- * Process-wide cache boundary. Account credentials remain in encrypted DataStore; this object
- * only receives the authenticated account id and persists non-binary application data in Room.
- */
 object LocalCache {
     const val KIND_CONTACTS = "contacts"
     const val KIND_REQUESTS = "requests"
@@ -191,10 +187,17 @@ object LocalCache {
                 message.senderId
             ) ?: return@withTransaction
             val current = currentEntity.toModel()
+            val isStrictlyNewer = message.isStrictlyNewerThan(current)
             val changed = listOf(current).withLatestMessage(message, incrementUnread)?.singleOrNull()
                 ?: return@withTransaction
+
             val entity = changed.toEntity(accountId, currentEntity.listPosition)
-            dao.upsertConversations(listOf(entity))
+
+            if (isStrictlyNewer) {
+                dao.moveConversationToFront(entity)
+            } else {
+                dao.upsertConversations(listOf(entity))
+            }
         }
     }
 
@@ -370,4 +373,13 @@ object LocalCache {
                 .orEmpty()
         )
     }.getOrNull()
+
+    private fun MessageItem.isStrictlyNewerThan(conversation: ConversationItem): Boolean {
+        if (msgId.isNotBlank() && msgId == conversation.latestMessageId) return false
+        if (msgSeq > 0L && conversation.latestMessageSeq > 0L && msgSeq != conversation.latestMessageSeq) {
+            return msgSeq > conversation.latestMessageSeq
+        }
+        val latestTimestamp = conversation.latestMessageTimestamp
+        return timestamp > 0L && (latestTimestamp <= 0L || timestamp > latestTimestamp)
+    }
 }

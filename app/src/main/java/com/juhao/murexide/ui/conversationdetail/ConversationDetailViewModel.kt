@@ -76,9 +76,7 @@ class ConversationDetailViewModel(
             } else {
                 _uiState.update { it.copy(isLoading = true, error = null) }
             }
-            if (accountId != null &&
-                LocalCache.isPayloadFresh(accountId, LocalCache.KIND_DETAIL, "$chatType:$chatId")
-            ) return@launch
+            if (accountId == null) return@launch
 
             repository.getDetail(token, chatId, chatType)
                 .onSuccess { detail ->
@@ -91,7 +89,7 @@ class ConversationDetailViewModel(
                     }
                 }
                 .onFailure { error ->
-                    _uiState.update { it.copy(isLoading = false, error = error.message ?: "加载失败") }
+                    _uiState.update { it.copy(error = error.message) }
                 }
         }
     }
@@ -210,7 +208,6 @@ class ConversationDetailViewModel(
         }
     }
 
-    /** Loads history pages until the active media tab receives a new image or video, or history ends. */
     fun loadMoreHistory() {
         val initial = _uiState.value
         if (chatType !in 1..3 || initial.isLoadingHistory || !initial.hasMoreHistory) return
@@ -219,7 +216,7 @@ class ConversationDetailViewModel(
         _uiState.update { it.copy(isLoadingHistory = true) }
         viewModelScope.launch {
             var anchor = initial.historyAnchorMessageId
-            var hasMore = initial.hasMoreHistory
+            var hasMore = true
             var media = initial.mediaMessages
             val existingCount = media.size
 

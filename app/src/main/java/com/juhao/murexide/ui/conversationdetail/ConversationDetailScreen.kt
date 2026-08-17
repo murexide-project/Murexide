@@ -36,6 +36,7 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.Button
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
@@ -59,6 +60,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -290,6 +292,9 @@ fun ConversationDetailScreen(
                         members = state.members,
                         bots = state.groupBots,
                         media = state.mediaMessages,
+                        onAdd = viewModel::addChat,
+                        isAdded = state.isAdded,
+                        isAdding = state.isAdding,
                         isLoadingMembers = state.isLoadingMembers,
                         isLoadingMoreMembers = state.isLoadingMoreMembers,
                         hasMoreMembers = state.hasMoreMembers,
@@ -422,6 +427,9 @@ private fun GroupConversationDetail(
     members: List<GroupMember>,
     bots: List<BotItem>,
     media: List<MessageItem>,
+    onAdd: () -> Unit,
+    isAdded: Boolean?,
+    isAdding: Boolean,
     isLoadingMembers: Boolean,
     isLoadingMoreMembers: Boolean,
     hasMoreMembers: Boolean,
@@ -459,6 +467,7 @@ private fun GroupConversationDetail(
         hasMoreHistory,
         isLoadingHistory
     ) {
+        if (isAdded != true) return@LaunchedEffect
         snapshotFlow {
             val layoutInfo = listState.layoutInfo
             val lastVisibleItem = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1
@@ -497,147 +506,157 @@ private fun GroupConversationDetail(
                 onMessage = onMessage,
                 onMute = onMute,
                 onLeave = onLeave,
+                isAdded = isAdded,
+                isAdding = isAdding,
                 isChangingMute = isChangingMute,
                 isLeaving = isLeaving,
                 introductionExpanded = introductionExpanded,
+                onAdd = onAdd,
                 onIntroductionClick = {
                     introductionExpanded = true
                 }
             )
         }
-        item(key = "tabs") {
-            DetailCardSegment(cardColor = cardColor, isTop = true) {
-                val labels = listOf("成员", "机器人", "媒体", "群云盘")
-                CapsuleTabBar(
-                    tabs = labels,
-                    selectedTabIndex = selectedTab,
-                    onTabSelected = onTabSelected,
-                    modifier = Modifier.padding(12.dp)
-                )
+        if (isAdded == true) {
+            item(key = "tabs") {
+                DetailCardSegment(cardColor = cardColor, isTop = true) {
+                    val labels = listOf("成员", "机器人", "媒体", "群云盘")
+                    CapsuleTabBar(
+                        tabs = labels,
+                        selectedTabIndex = selectedTab,
+                        onTabSelected = onTabSelected,
+                        modifier = Modifier.padding(12.dp)
+                    )
+                }
             }
-        }
-        when (selectedTab) {
-            0 -> when {
-                isLoadingMembers && members.isEmpty() -> item(key = "members-loading") {
-                    DetailCardSegment(
-                        cardColor,
-                        isBottom = true,
-                        minHeight = 180.dp
-                    ) { LoadingContent() }
-                }
-
-                members.isEmpty() -> item(key = "members-empty") {
-                    DetailCardSegment(
-                        cardColor,
-                        isBottom = true,
-                        minHeight = 180.dp
-                    ) { EmptyContent("暂无可展示的成员") }
-                }
-
-                else -> {
-                    items(members, key = GroupMember::userId) { member ->
-                        val isLast = member == members.last() && !hasMoreMembers
-                        DetailCardSegment(cardColor, isBottom = isLast) {
-                            MemberRow(
-                                member = member,
-                                canManage = canManageMembers && member.permissionLevel != 100,
-                                canSetAdmin = isGroupOwner && member.permissionLevel != 100,
-                                onClick = { onOpenMember(member) },
-                                onKick = { onKickMember(member) },
-                                onGag = { onGagMember(member) },
-                                onAdminToggle = { onAdminToggle(member) }
-                            )
-                        }
+            when (selectedTab) {
+                0 -> when {
+                    isLoadingMembers && members.isEmpty() -> item(key = "members-loading") {
+                        DetailCardSegment(
+                            cardColor,
+                            isBottom = true,
+                            minHeight = 180.dp
+                        ) { LoadingContent() }
                     }
-                    if (hasMoreMembers) item(key = "members-load-more") {
-                        DetailCardSegment(cardColor, isBottom = true) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(12.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                if (isLoadingMoreMembers) {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier.size(24.dp),
-                                        strokeWidth = 2.dp
-                                    )
+
+                    members.isEmpty() -> item(key = "members-empty") {
+                        DetailCardSegment(
+                            cardColor,
+                            isBottom = true,
+                            minHeight = 180.dp
+                        ) { EmptyContent("暂无可展示的成员") }
+                    }
+
+                    else -> {
+                        items(members, key = GroupMember::userId) { member ->
+                            val isLast = member == members.last() && !hasMoreMembers
+                            DetailCardSegment(cardColor, isBottom = isLast) {
+                                MemberRow(
+                                    member = member,
+                                    canManage = canManageMembers && member.permissionLevel != 100,
+                                    canSetAdmin = isGroupOwner && member.permissionLevel != 100,
+                                    onClick = { onOpenMember(member) },
+                                    onKick = { onKickMember(member) },
+                                    onGag = { onGagMember(member) },
+                                    onAdminToggle = { onAdminToggle(member) }
+                                )
+                            }
+                        }
+                        if (hasMoreMembers) item(key = "members-load-more") {
+                            DetailCardSegment(cardColor, isBottom = true) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(12.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    if (isLoadingMoreMembers) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(24.dp),
+                                            strokeWidth = 2.dp
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
                 }
-            }
 
-            1 -> when {
-                isLoadingBots && bots.isEmpty() -> item(key = "bots-loading") {
-                    DetailCardSegment(
-                        cardColor,
-                        isBottom = true,
-                        minHeight = 180.dp
-                    ) { LoadingContent() }
-                }
-
-                bots.isEmpty() && hasLoadedBots -> item(key = "bots-empty") {
-                    DetailCardSegment(
-                        cardColor,
-                        isBottom = true,
-                        minHeight = 180.dp
-                    ) { EmptyContent("暂无机器人") }
-                }
-
-                else -> {
-                    items(bots, key = BotItem::id) { bot ->
-                        val isLast = bot == bots.last()
-                        DetailCardSegment(cardColor, isBottom = isLast) {
-                            BotRow(bot, onClick = { onOpenBot(bot) })
-                        }
-                    }
-                }
-            }
-
-            2 -> when {
-                isLoadingHistory && media.isEmpty() -> item(key = "media-loading") {
-                    DetailCardSegment(
-                        cardColor,
-                        isBottom = true,
-                        minHeight = 180.dp
-                    ) { LoadingContent() }
-                }
-
-                media.isEmpty() && !hasMoreHistory -> item(key = "media-empty") {
-                    DetailCardSegment(
-                        cardColor,
-                        isBottom = true,
-                        minHeight = 180.dp
-                    ) { EmptyContent("暂无媒体") }
-                }
-
-                else -> {
-                    items(
-                        mediaRows,
-                        key = { row -> row.joinToString(separator = ":") { it.msgId } }) { row ->
+                1 -> when {
+                    isLoadingBots && bots.isEmpty() -> item(key = "bots-loading") {
                         DetailCardSegment(
                             cardColor,
-                            isBottom = row == mediaRows.last() && !hasMoreHistory
-                        ) {
-                            MediaRow(row, media, detail, hasBottomSpacing = row != mediaRows.last())
-                        }
+                            isBottom = true,
+                            minHeight = 180.dp
+                        ) { LoadingContent() }
                     }
-                    if (hasMoreHistory) item(key = "media-load-more") {
-                        DetailCardSegment(cardColor, isBottom = true) {
-                            AutoLoadingRow(isLoadingHistory)
+
+                    bots.isEmpty() && hasLoadedBots -> item(key = "bots-empty") {
+                        DetailCardSegment(
+                            cardColor,
+                            isBottom = true,
+                            minHeight = 180.dp
+                        ) { EmptyContent("暂无机器人") }
+                    }
+
+                    else -> {
+                        items(bots, key = BotItem::id) { bot ->
+                            val isLast = bot == bots.last()
+                            DetailCardSegment(cardColor, isBottom = isLast) {
+                                BotRow(bot, onClick = { onOpenBot(bot) })
+                            }
                         }
                     }
                 }
-            }
 
-            else -> item(key = "cloud-drive") {
-                DetailCardSegment(
-                    cardColor,
-                    isBottom = true,
-                    minHeight = 180.dp
-                ) { EmptyContent("群云盘功能即将推出") }
+                2 -> when {
+                    isLoadingHistory && media.isEmpty() -> item(key = "media-loading") {
+                        DetailCardSegment(
+                            cardColor,
+                            isBottom = true,
+                            minHeight = 180.dp
+                        ) { LoadingContent() }
+                    }
+
+                    media.isEmpty() && !hasMoreHistory -> item(key = "media-empty") {
+                        DetailCardSegment(
+                            cardColor,
+                            isBottom = true,
+                            minHeight = 180.dp
+                        ) { EmptyContent("暂无媒体") }
+                    }
+
+                    else -> {
+                        items(
+                            mediaRows,
+                            key = { row -> row.joinToString(separator = ":") { it.msgId } }) { row ->
+                            DetailCardSegment(
+                                cardColor,
+                                isBottom = row == mediaRows.last() && !hasMoreHistory
+                            ) {
+                                MediaRow(
+                                    row,
+                                    media,
+                                    detail,
+                                    hasBottomSpacing = row != mediaRows.last()
+                                )
+                            }
+                        }
+                        if (hasMoreHistory) item(key = "media-load-more") {
+                            DetailCardSegment(cardColor, isBottom = true) {
+                                AutoLoadingRow(isLoadingHistory)
+                            }
+                        }
+                    }
+                }
+
+                else -> item(key = "cloud-drive") {
+                    DetailCardSegment(
+                        cardColor,
+                        isBottom = true,
+                        minHeight = 180.dp
+                    ) { EmptyContent("群云盘功能即将推出") }
+                }
             }
         }
     }
@@ -1159,6 +1178,9 @@ private fun GroupHeader(
     onMessage: () -> Unit,
     onMute: () -> Unit,
     onLeave: () -> Unit,
+    onAdd: () -> Unit,
+    isAdded: Boolean?,
+    isAdding: Boolean,
     isChangingMute: Boolean,
     isLeaving: Boolean,
     introductionExpanded: Boolean,
@@ -1187,22 +1209,32 @@ private fun GroupHeader(
                 .padding(horizontal = 12.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            TelegramAction(Modifier.weight(1f), AppIcons.ChatBubbleOutline, "消息", onMessage)
-            TelegramAction(
-                Modifier.weight(1f),
-                if (detail.doNotDisturb) AppIcons.NotificationsOff else AppIcons.Notifications,
-                if (detail.doNotDisturb) "取消静音" else "静音",
-                onMute,
-                isChangingMute
-            )
-            TelegramAction(
-                Modifier.weight(1f),
-                AppIcons.Logout,
-                "退出",
-                onLeave,
-                isLeaving,
-                isDanger = true
-            )
+            if (isAdded == true) {
+                TelegramAction(Modifier.weight(1f), AppIcons.ChatBubbleOutline, "消息", onMessage)
+                TelegramAction(
+                    Modifier.weight(1f),
+                    if (detail.doNotDisturb) AppIcons.NotificationsOff else AppIcons.Notifications,
+                    if (detail.doNotDisturb) "取消静音" else "静音",
+                    onMute,
+                    isChangingMute
+                )
+                TelegramAction(
+                    Modifier.weight(1f),
+                    AppIcons.Logout,
+                    "退出",
+                    onLeave,
+                    isLeaving,
+                    isDanger = true
+                )
+            } else {
+                TelegramAction(
+                    modifier = Modifier.fillMaxWidth(),
+                    icon = AppIcons.PersonAdd,
+                    label = "加入群聊",
+                    onClick = onAdd,
+                    loading = isAdding
+                )
+            }
         }
         Spacer(Modifier.height(8.dp))
         GroupIdentityInfo(detail)
@@ -1340,13 +1372,15 @@ private fun IntroductionContent(
         Box(
             modifier = Modifier.animateContentSize()
         ) {
-            Text(
-                text = introduction,
-                style = MaterialTheme.typography.bodyMedium,
-                maxLines = if (expanded) Int.MAX_VALUE else 4,
-                overflow = TextOverflow.Clip,
-                onTextLayout = { hasOverflow = it.hasVisualOverflow }
-            )
+            SelectionContainer {
+                Text(
+                    text = introduction,
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = if (expanded) Int.MAX_VALUE else 4,
+                    overflow = TextOverflow.Clip,
+                    onTextLayout = { hasOverflow = it.hasVisualOverflow }
+                )
+            }
             if (!expanded && hasOverflow) {
                 Box(
                     modifier = Modifier
@@ -1597,7 +1631,7 @@ private fun MemberManagementDialogs(
         43200 to "12小时",
         -1 to "永久"
     )
-    var selectedGagIndex by remember(gagTarget?.userId) { mutableStateOf(0) }
+    var selectedGagIndex by remember(gagTarget?.userId) { mutableIntStateOf(0) }
     if (showKickConfirm) {
         AlertDialog(
             onDismissRequest = onDismiss,
