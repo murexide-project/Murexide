@@ -131,8 +131,6 @@ fun ConversationDetailScreen(
     val context = LocalContext.current
     val liquidGlassEnabled = LocalLiquidGlassEnabled.current
     val showGlassHighlight = liquidGlassHighlightEnabled()
-    // The theme owns a sibling backdrop source. Do not wrap this content in a
-    // second source: glass surfaces inside that source would record themselves.
     val liquidBackdrop = LocalLiquidGlassBackdrop.current
     val snackbars = remember { SnackbarHostState() }
     var showMore by remember { mutableStateOf(false) }

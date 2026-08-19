@@ -60,21 +60,23 @@ data class ContactRequestItem(
         get() = inviterId.isNotBlank()
 
     val usesGroupAgreeInvite: Boolean
-        get() = !isInvitation && (isGroupRelated || isBotRelated)
+        get() = isInvitation && (isGroupRelated || isBotRelated)
 
     val displayName: String
-        get() = requesterName.ifBlank {
+        get() = groupName.ifBlank {
             botName.ifBlank {
-                groupName.ifBlank {
+                requesterName.ifBlank {
                     receiverName.ifBlank { "未知联系人" }
                 }
             }
         }
 
     val displayAvatarUrl: String
-        get() = requesterAvatarUrl.ifBlank {
+        get() = groupAvatarUrl.ifBlank {
             botAvatarUrl.ifBlank {
-                groupAvatarUrl.ifBlank { receiverAvatarUrl }
+                requesterAvatarUrl.ifBlank {
+                    receiverAvatarUrl
+                }
             }
         }
 
@@ -86,7 +88,7 @@ data class ContactRequestItem(
         }
 
     val contextName: String?
-        get() = sequenceOf(groupName, botName, receiverName)
+        get() = sequenceOf(groupName, botName, requesterName)
             .firstOrNull { it.isNotBlank() && it != displayName }
 
     val resultLabel: String
