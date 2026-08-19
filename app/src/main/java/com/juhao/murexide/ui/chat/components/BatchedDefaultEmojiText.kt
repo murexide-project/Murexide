@@ -5,19 +5,26 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.appendInlineContent
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.PlaceholderVerticalAlign
+import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.withLink
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
@@ -39,10 +46,12 @@ internal fun BatchedDefaultEmojiText(
     bodyStyle: TextStyle,
     timestampStyle: TextStyle,
     modifier: Modifier = Modifier,
-    enableSelection: Boolean = false
+    enableSelection: Boolean = false,
+    linkColor: Color = MaterialTheme.colorScheme.primary
 ) {
     val context = LocalContext.current
     val density = LocalDensity.current
+
     val matches = remember(text, emojis) {
         DefaultEmojiParser.findMatches(text, emojis)
     }
@@ -55,18 +64,18 @@ internal fun BatchedDefaultEmojiText(
         bitmaps.mapValues { (_, bitmap) -> bitmap.asImageBitmap() }
     }
 
-    val annotatedString = remember(text, timestampText, matches, timestampStyle) {
+    val annotatedString = remember(text, timestampText, matches, timestampStyle, linkColor) {
         buildAnnotatedString {
             var lastIndex = 0
             matches.forEachIndexed { index, match ->
                 if (match.start > lastIndex) {
-                    append(text.substring(lastIndex, match.start))
+                    appendWithLinks(text.substring(lastIndex, match.start), linkColor)
                 }
                 appendInlineContent("emoji_$index", match.emoji.assetPath)
                 lastIndex = match.endExclusive
             }
             if (lastIndex < text.length) {
-                append(text.substring(lastIndex))
+                appendWithLinks(text.substring(lastIndex), linkColor)
             }
             if (timestampText.isNotEmpty()) {
                 append(' ')
@@ -136,7 +145,49 @@ internal fun BatchedDefaultEmojiText(
             basicText()
         }
     } else {
-        basicText()
+        Box(modifier = modifier) {
+            basicText()
+        }
+    }
+}
+
+private val URL_PATTERN = Regex(
+    pattern = "(https?://[\\w\\-._~:/?#\\[\\]@!$&'()*+,;=%]+|www\\.[\\w\\-._~:/?#\\[\\]@!$&'()*+,;=%]+)",
+    option = RegexOption.IGNORE_CASE
+)
+
+private fun androidx.compose.ui.text.AnnotatedString.Builder.appendWithLinks(
+    text: String,
+    linkColor: Color
+) {
+    var lastIndex = 0
+    URL_PATTERN.findAll(text).forEach { match ->
+        if (match.range.first > lastIndex) {
+            append(text.substring(lastIndex, match.range.first))
+        }
+
+        val url = match.value
+        val fullUrl = if (url.startsWith("www.")) "https://$url" else url
+
+        withLink(
+            LinkAnnotation.Url(
+                url = fullUrl,
+                styles = TextLinkStyles(
+                    style = SpanStyle(
+                        color = linkColor,
+                        textDecoration = TextDecoration.Underline
+                    )
+                )
+            )
+        ) {
+            append(url)
+        }
+
+        lastIndex = match.range.last + 1
+    }
+
+    if (lastIndex < text.length) {
+        append(text.substring(lastIndex))
     }
 }
 
