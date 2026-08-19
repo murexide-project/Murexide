@@ -104,6 +104,7 @@ fun MessageBubble(
     isDownloaded: Boolean = false,
     onDownloadClick: (MessageItem) -> Unit = {},
     onButtonClick: (MessageItem, MessageButton) -> Unit = { _, _ -> },
+    onEditIconClick: (String) -> Unit = {},
     hideSenderInfo: Boolean = false,
     hideMyInfo: Boolean = false,
     hideImages: Boolean = false,
@@ -1061,6 +1062,22 @@ fun MessageBubble(
                                 leadingIcon = {
                                     Icon(
                                         AppIcons.Edit,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            )
+                        }
+
+                        if (message.isEdited) {
+                            DropdownMenuItem(
+                                text = { Text("编辑历史") },
+                                onClick = {
+                                    onEditIconClick(message.msgId)
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        AppIcons.History,
                                         contentDescription = null,
                                         modifier = Modifier.size(18.dp)
                                     )

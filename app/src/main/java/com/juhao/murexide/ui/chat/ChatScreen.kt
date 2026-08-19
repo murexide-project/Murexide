@@ -98,6 +98,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.ui.Alignment
 import com.juhao.murexide.repository.ConversationDetailRepository
+import com.juhao.murexide.ui.chat.components.EditHistoryDialog
 import com.juhao.murexide.ui.conversationdetail.ConversationDetailActivity
 import com.juhao.murexide.ui.components.handleStaticHtmlLink
 import com.juhao.murexide.ui.theme.UiState
@@ -391,6 +392,18 @@ fun ChatScreen(
     var isMeasuringIme by remember { mutableStateOf(false) }
     var isReturningToKeyboard by remember { mutableStateOf(false) }
     var inputPanelHeightPx by remember { mutableIntStateOf(0) }
+
+    var currentMsgHistoryToShow by remember { mutableStateOf<String?>(null) }
+    currentMsgHistoryToShow?.let {
+        EditHistoryDialog(
+            token = viewModel.token,
+            msgId = it,
+            onDismiss = {
+                currentMsgHistoryToShow = null
+            }
+        )
+    }
+
     val inputPanelHeight = if (inputPanelHeightPx > 0) {
         with(density) { inputPanelHeightPx.toDp() }
     } else {
@@ -1861,6 +1874,9 @@ fun ChatScreen(
                                 } else {
                                     viewModel.toggleMessageSelection(msg)
                                 }
+                            },
+                            onEditIconClick = { msgId ->
+                                currentMsgHistoryToShow = msgId
                             },
                             isHighlighted = highlightedMessageId == message.msgId,
                         )

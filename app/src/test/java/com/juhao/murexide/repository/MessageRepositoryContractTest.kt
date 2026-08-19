@@ -71,35 +71,6 @@ class MessageRepositoryContractTest {
     }
 
     @Test
-    fun `incremental message request clamps negative pagination inputs`() = runBlocking {
-        var captured: Request? = null
-        val repository = MessageRepository(
-            client = clientReturning(
-                list_message(status = Status(code = 1)).encode(),
-                onRequest = { captured = it }
-            ),
-            baseUrl = "https://example.test"
-        )
-
-        val result = repository.getMessagesByUpdate(
-            token = "token-value",
-            chatId = "chat-1",
-            chatType = 1,
-            updateTime = -1L,
-            msgCount = 0
-        )
-
-        assertTrue(result.isSuccess)
-        assertEquals("https://example.test/v1/msg/list-message-by-update", captured?.url?.toString())
-        assertEquals("token-value", captured?.header("token"))
-        val request = list_message_by_update_send.ADAPTER.decode(captured!!.bodyBytes())
-        assertEquals(0L, request.update_time)
-        assertEquals(1L, request.msg_count)
-        assertEquals(1L, request.chat_type)
-        assertEquals("chat-1", request.chat_id)
-    }
-
-    @Test
     fun `send message encodes content and returns generated message id`() = runBlocking {
         var captured: Request? = null
         val repository = MessageRepository(

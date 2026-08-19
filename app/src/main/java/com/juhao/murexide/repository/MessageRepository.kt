@@ -5,10 +5,7 @@ import com.juhao.murexide.data.local.LocalCache
 import com.juhao.murexide.network.NetworkClient
 import com.juhao.murexide.proto.Msg
 import com.juhao.murexide.proto.list_message
-import com.juhao.murexide.proto.list_message_by_update_send
 import com.juhao.murexide.proto.list_message_send
-import com.juhao.murexide.proto.pic_list_message_by_mid_seq
-import com.juhao.murexide.proto.pic_list_message_by_mid_seq_send
 import com.juhao.murexide.proto.send_message_send
 import com.juhao.murexide.proto.send_message
 import com.juhao.murexide.proto.edit_message_send
@@ -21,11 +18,51 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.util.UUID
+
+@Serializable
+data class EditHistoryResponse(
+    val code: Int,
+    val msg: String,
+    val data: EditHistoryData
+)
+
+@Serializable
+data class EditHistoryData(
+    val total: Int,
+    val list: List<EditHistoryItem>
+)
+
+@Serializable
+data class EditHistoryItem(
+    val id: Int,
+    val msgId: String,
+    val contentType: Int,
+    val contentOld: String,
+    val createTime: Long,
+    val msgTime: Long
+) {
+    fun getOldText(): String {
+        return try {
+            val json = Json { ignoreUnknownKeys = true }
+            val content = json.decodeFromString<EditContentOld>(contentOld)
+            content.text
+        } catch (_: Exception) {
+            contentOld
+        }
+    }
+}
+
+@Serializable
+data class EditContentOld(
+    val text: String = ""
+)
 
 @Serializable
 data class ForwardReceiveRequest(
@@ -68,18 +105,6 @@ internal fun createRecallMessageRequest(
     msg_id = listOf(msgId),
     chat_id = chatId,
     chat_type = chatType.toLong()
-)
-
-internal fun createListMessageByUpdateRequest(
-    updateTime: Long,
-    chatId: String,
-    chatType: Int,
-    msgCount: Int
-) = list_message_by_update_send(
-    update_time = updateTime.coerceAtLeast(0),
-    chat_type = chatType.toLong(),
-    chat_id = chatId,
-    msg_count = msgCount.coerceAtLeast(1).toLong()
 )
 
 internal fun createSendMessageRequest(
@@ -139,7 +164,6 @@ class MessageRepository(
     private val client: OkHttpClient = NetworkClient.okHttpClient,
     private val baseUrl: String = NetworkClient.BASE_URL
 ) {
-
     suspend fun getMessageList(
         token: String,
         chatId: String,
@@ -187,24 +211,23 @@ class MessageRepository(
         }
     }
 
-    suspend fun getMessagesByUpdate(
+    suspend fun getMessageEditHistory(
         token: String,
-        chatId: String,
-        chatType: Int,
-        updateTime: Long,
-        msgCount: Int = 100
-    ): Result<List<MessageItem>> {
+        msgId: String,
+        page: Int = 1,
+        size: Int = 20
+    ): Result<List<EditHistoryItem>> {
         return withContext(Dispatchers.IO) {
             try {
-                val requestBody = createListMessageByUpdateRequest(
-                    updateTime = updateTime,
-                    chatId = chatId,
-                    chatType = chatType,
-                    msgCount = msgCount
-                ).encode().toRequestBody("application/octet-stream".toMediaType())
+                val params = buildJsonObject {
+                    put("msgId", msgId)
+                    put("size", size)
+                    put("page", page)
+                }
+                val requestBody = forwardJson.encodeToString(params).toRequestBody("application/octet-stream".toMediaType())
 
                 val httpRequest = Request.Builder()
-                    .url("$baseUrl/v1/msg/list-message-by-update")
+                    .url("$baseUrl/v1/msg/list-message-edit-record")
                     .post(requestBody)
                     .header("token", token)
                     .build()
@@ -216,20 +239,10 @@ class MessageRepository(
                         )
                     }
 
-                    val messageList = list_message.ADAPTER.decode(response.body.bytes())
-                    if (messageList.status?.code != 1) {
-                        return@use Result.failure(
-                            Exception(messageList.status?.msg ?: "增量同步消息失败")
-                        )
-                    }
+                    val responseBody = response.body.string()
+                    val editList = forwardJson.decodeFromString<EditHistoryResponse>(responseBody)
 
-                    val messages = messageList.msg.map { msg ->
-                        msg.toMessageItem(chatId = chatId, chatType = chatType)
-                    }
-                    LocalCache.currentAccountId()?.let { accountId ->
-                        LocalCache.cacheMessages(accountId, messages)
-                    }
-                    Result.success(messages)
+                    Result.success(editList.data.list)
                 }
             } catch (e: Exception) {
                 Result.failure(e)
@@ -517,39 +530,4 @@ internal fun Msg.toMessageItem(chatId: String, chatType: Int): MessageItem {
         } ?: emptyList(),
         updateTimestamp = maxOf(send_time, edit_time, msg_delete_time)
     )
-}
-
-internal fun createImageMessageListRequestBody(
-    imageId: Long,
-    chatId: String,
-    chatType: Int,
-    earlierQuantities: Int,
-    latestQuantities: Int
-) = pic_list_message_by_mid_seq_send(
-    image_id = imageId,
-    chat_type = chatType.toLong(),
-    chat_id = chatId,
-    earlier_quantities = earlierQuantities.coerceAtLeast(0).toLong(),
-    latest_quantities = latestQuantities.coerceAtLeast(0).toLong()
-).encode().toRequestBody("application/octet-stream".toMediaType())
-
-internal fun pic_list_message_by_mid_seq.toConversationImages(): List<ConversationImage> {
-    return msg.asSequence()
-        .filter { message ->
-            message.content_type == MessageItem.CONTENT_TYPE_IMAGE &&
-                message.msg_delete_time == 0L &&
-                message.msg_seq != 0L
-        }
-        .mapNotNull { message ->
-            val url = message.content?.image_url?.takeIf { it.isNotBlank() }
-                ?: return@mapNotNull null
-            ConversationImage(
-                messageId = message.msg_id,
-                url = url,
-                sequence = message.msg_seq,
-                timestamp = message.send_time
-            )
-        }
-        .sortedWith(compareBy<ConversationImage> { it.timestamp }.thenBy { it.sequence })
-        .toList()
 }

@@ -8,23 +8,6 @@ import org.junit.Test
 
 class MessageRepositoryUpdateTest {
     @Test
-    fun `incremental request uses the visible message update cursor`() {
-        val encoded = createListMessageByUpdateRequest(
-            updateTime = 12_345L,
-            chatId = "chat-id",
-            chatType = 2,
-            msgCount = 100
-        ).encode()
-
-        val request = list_message_by_update_send.ADAPTER.decode(encoded)
-
-        assertEquals(12_345L, request.update_time)
-        assertEquals("chat-id", request.chat_id)
-        assertEquals(2L, request.chat_type)
-        assertEquals(100L, request.msg_count)
-    }
-
-    @Test
     fun `message update cursor includes edits and recalls`() {
         val edited = Msg(
             msg_id = "edited",
