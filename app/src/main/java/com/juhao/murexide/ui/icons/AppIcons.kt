@@ -70,6 +70,7 @@ object AppIcons {
     val Inbox get() = MaterialSymbols.Rounded.Inbox
     val Info get() = MaterialSymbols.Rounded.Info
     val InsertDriveFile get() = MaterialSymbols.Rounded.Draft
+    val Keep get() = MaterialSymbols.Rounded.Keep
     val Key get() = MaterialSymbols.Rounded.Key
     val Keyboard get() = MaterialSymbols.Rounded.Keyboard
     val KeyboardArrowDown get() = MaterialSymbols.Rounded.Keyboard_arrow_down

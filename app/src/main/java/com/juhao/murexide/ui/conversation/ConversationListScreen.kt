@@ -10,8 +10,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -73,7 +72,29 @@ fun ConversationListScreen(
     val isWsConnected by viewModel.isWsConnected.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
     
+    val themeColor by UiState.themeColor
+    val listContainerColor = if (themeColor == "WHITE") {
+        MaterialTheme.colorScheme.surfaceContainer
+    } else {
+        MaterialTheme.colorScheme.surface
+    }
+    
+    val listState = rememberLazyListState()
     val stickyIds by viewModel.stickyIds.collectAsState()
+    
+    LaunchedEffect(uiState) {
+        if (uiState is ConversationUiState.Success) {
+            val conversations = (uiState as ConversationUiState.Success).conversations
+            if (conversations.isNotEmpty()) {
+                val firstVisibleIndex = listState.firstVisibleItemIndex
+                val firstVisibleOffset = listState.firstVisibleItemScrollOffset
+                
+                if (firstVisibleIndex <= 1 && firstVisibleOffset < 200) {
+                    listState.animateScrollToItem(0)
+                }
+            }
+        }
+    }
 
     DisposableEffect(viewModel) {
         viewModel.setForegroundSyncEnabled(true)
@@ -177,7 +198,7 @@ fun ConversationListScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.surface)
+                .background(listContainerColor)
                 .hazeSource(hazeState)
         ) {
             PullToRefreshBox(
@@ -196,6 +217,7 @@ fun ConversationListScreen(
                     
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
+                        state = listState,
                         contentPadding = PaddingValues(bottom = 100.dp)
                     ) {
                         if (allConversations.isEmpty()) {
@@ -258,7 +280,8 @@ fun ConversationItem(
     isSticky: Boolean = false,
     onClick: () -> Unit
 ) {
-    val listItemColor = if (isSticky) {
+    val themeColor by UiState.themeColor
+    val listItemColor = if ((isSticky && themeColor != "WHITE") || (!isSticky && themeColor == "WHITE")) {
         MaterialTheme.colorScheme.surfaceContainer
     } else {
         MaterialTheme.colorScheme.surface
@@ -297,6 +320,16 @@ fun ConversationItem(
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f)
                 )
+                
+                if (isSticky) {
+                    Spacer(modifier = Modifier.width(8.dp))
+                    
+                    Icon(
+                        imageVector = AppIcons.Keep,
+                        contentDescription = null,
+                        modifier = Modifier.size(14.dp)
+                    )
+                }
 
                 Spacer(modifier = Modifier.width(8.dp))
 

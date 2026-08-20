@@ -220,10 +220,7 @@ private fun ContactDirectoryScreen(
             Column {
                 TopAppBar(
                     title = {
-                        Text(
-                            text = "通讯录",
-                            fontWeight = FontWeight.SemiBold
-                        )
+                        Text("通讯录")
                     },
                     actions = {
                         if (uiState.isLoading) {
@@ -692,7 +689,7 @@ private fun NewMessagesScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text("新消息", fontWeight = FontWeight.SemiBold) },
+                title = { Text("新消息") },
                 navigationIcon = {
                     StyledIconButton(onClick = onBack) {
                         AutoMirroredIcon(AppIcons.ArrowBack, contentDescription = "返回通讯录")
