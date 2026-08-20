@@ -67,12 +67,6 @@ fun ConversationListScreen(
     )
 ) {
     val context = LocalContext.current
-    val themeColor by UiState.themeColor
-    val listContainerColor = if (themeColor == "WHITE") {
-        MaterialTheme.colorScheme.surfaceContainerHighest
-    } else {
-        MaterialTheme.colorScheme.surface
-    }
     val hazeState = remember { HazeState() }
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
     val uiState by viewModel.uiState.collectAsState()
@@ -183,7 +177,7 @@ fun ConversationListScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(listContainerColor)
+                .background(MaterialTheme.colorScheme.surface)
                 .hazeSource(hazeState)
         ) {
             PullToRefreshBox(
@@ -265,7 +259,7 @@ fun ConversationItem(
     onClick: () -> Unit
 ) {
     val listItemColor = if (isSticky) {
-        MaterialTheme.colorScheme.surfaceContainerHighest
+        MaterialTheme.colorScheme.surfaceContainer
     } else {
         MaterialTheme.colorScheme.surface
     }
