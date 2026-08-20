@@ -297,7 +297,7 @@ fun ConversationItem(
                     listItemColor
             )
             .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Avatar(
@@ -321,16 +321,6 @@ fun ConversationItem(
                     modifier = Modifier.weight(1f)
                 )
                 
-                if (isSticky) {
-                    Spacer(modifier = Modifier.width(8.dp))
-                    
-                    Icon(
-                        imageVector = AppIcons.Keep,
-                        contentDescription = null,
-                        modifier = Modifier.size(14.dp)
-                    )
-                }
-
                 Spacer(modifier = Modifier.width(8.dp))
 
                 Text(

@@ -157,11 +157,16 @@ fun MessageBubble(
                 set(Calendar.SECOND, 0)
                 set(Calendar.MILLISECOND, 0)
             }
-        
+            
+            val dateCalendar = Calendar.getInstance().apply {
+                time = date
+            }
+
             when {
                 date.after(todayCalendar.time) -> SimpleDateFormat("HH:mm", Locale.getDefault()).format(date)
                 date.after(Date(todayCalendar.timeInMillis - 86400000)) -> "昨天 " + SimpleDateFormat("HH:mm", Locale.getDefault()).format(date)
-                else -> SimpleDateFormat("MM-dd HH:mm", Locale.getDefault()).format(date)
+                dateCalendar.get(Calendar.YEAR) == todayCalendar.get(Calendar.YEAR) -> SimpleDateFormat("M/d HH:mm", Locale.getDefault()).format(date)
+                else -> SimpleDateFormat("yyyy/M/d HH:mm", Locale.getDefault()).format(date)
             }
         } catch (_: Exception) {
             ""
