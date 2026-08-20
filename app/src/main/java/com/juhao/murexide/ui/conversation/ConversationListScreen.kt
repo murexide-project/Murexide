@@ -82,19 +82,6 @@ fun ConversationListScreen(
 
     var showCreateMenu by remember { mutableStateOf(false) }
     var searchButtonCenter by remember { mutableStateOf<IntOffset?>(null) }
-    
-    val allConversations by remember(uiState, stickyIds) {
-        derivedStateOf {
-            if (uiState is ConversationUiState.Success) {
-                val (sticky, normal) = uiState.conversations.partition { 
-                    stickyIds.contains(it.chatId) 
-                }
-                sticky + normal
-            } else {
-                emptyList()
-            }
-        }
-    }
 
     Scaffold(
         modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -202,6 +189,11 @@ fun ConversationListScreen(
             ) {
                 val state = uiState
                 if (state is ConversationUiState.Success) {
+                    val (stickyConvs, normalConvs) = state.conversations.partition { 
+                        stickyIds.contains(it.chatId) 
+                    }
+                    val allConversations = stickyConvs + normalConvs
+                    
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(bottom = 100.dp)
