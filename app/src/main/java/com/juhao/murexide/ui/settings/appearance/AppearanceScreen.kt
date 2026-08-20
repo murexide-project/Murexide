@@ -54,7 +54,6 @@ fun AppearanceScreen(
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
     val squareAvatar by UiState.squareAvatar
-    var showSticky by remember { mutableStateOf(true) }
     
     var bubbleCornerRadius by remember { mutableFloatStateOf(16f) }
     val showMyBubbleAvatar by settingsStorage.showMyBubbleAvatarFlow.collectAsState(initial = true)
@@ -65,7 +64,6 @@ fun AppearanceScreen(
     var backgroundOpacity by remember { mutableFloatStateOf(0.5f) }
 
     LaunchedEffect(Unit) {
-        showSticky = settingsStorage.getShowSticky()
         bubbleCornerRadius = settingsStorage.getBubbleCornerRadius()
         bubbleOpacity = settingsStorage.getBubbleOpacity()
         backgroundOpacity = settingsStorage.getBackgroundOpacity()
@@ -538,18 +536,6 @@ fun AppearanceScreen(
             }
 
             SettingsGroup(title = "会话") {
-                SettingsSwitchItem(
-                    icon = AppIcons.ChatBubbleOutline,
-                    title = "显示置顶会话",
-                    subtitle = "在主页显示置顶会话",
-                    checked = showSticky,
-                    onCheckedChange = { checked ->
-                        showSticky = checked
-                        scope.launch {
-                            settingsStorage.setShowSticky(checked)
-                        }
-                    }
-                )
                 SettingsSwitchItem(
                     icon = AppIcons.People,
                     title = "圆角正方形头像",

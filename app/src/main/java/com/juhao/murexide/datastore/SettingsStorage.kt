@@ -57,7 +57,6 @@ class SettingsStorage(private val context: Context) {
         private val SQUARE_AVATAR_KEY = booleanPreferencesKey("square_avatar")
         private val AVATAR_FOLLOW_KEY = booleanPreferencesKey("avatar_follow")
         private val BIG_SCREEN_KEY = booleanPreferencesKey("big_screen")
-        private val SHOW_STICKY_KEY = booleanPreferencesKey("show_sticky")
         private val UPDATE_CHANNEL_KEY = stringPreferencesKey("update_channel")
         
         private val MSG_SHOW_TAGS_KEY = booleanPreferencesKey("msg_show_tags")
@@ -165,21 +164,6 @@ class SettingsStorage(private val context: Context) {
 
     suspend fun getBigScreen(): Boolean {
         return bigScreenFlow.first()
-    }
-    
-    // 显示置顶会话
-    val showStickyFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
-        preferences[SHOW_STICKY_KEY] ?: true
-    }
-
-    suspend fun setShowSticky(enabled: Boolean) {
-        context.dataStore.edit { preferences ->
-            preferences[SHOW_STICKY_KEY] = enabled
-        }
-    }
-
-    suspend fun getShowSticky(): Boolean {
-        return showStickyFlow.first()
     }
     
     // 更新频道

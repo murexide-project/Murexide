@@ -18,6 +18,7 @@ import com.juhao.murexide.data.withStreamedLatestMessage
 import com.juhao.murexide.data.local.LocalCache
 import com.juhao.murexide.network.WebSocketManager
 import com.juhao.murexide.repository.ConversationRepository
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
