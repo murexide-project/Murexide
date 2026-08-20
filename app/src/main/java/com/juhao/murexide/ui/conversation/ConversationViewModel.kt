@@ -52,8 +52,10 @@ class ConversationViewModel(
 
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> = _isRefreshing
+    
+    private val _stickyIds = MutableStateFlow<Set<String>>(emptySet())
+    val stickyIds: StateFlow<Set<String>> = _stickyIds.asStateFlow()
 
-    private var stickyConversations: List<StickyItem> = emptyList()
     private var loadJob: Job? = null
     private var loadGeneration = 0
     private val resolvingLatestMutations = mutableSetOf<String>()
@@ -70,14 +72,17 @@ class ConversationViewModel(
         viewModelScope.launch {
             LocalCache.observeConversations(accountId).collect { cached ->
                 if (cached.isNotEmpty() || _uiState.value is ConversationUiState.Success) {
-                    _uiState.value = ConversationUiState.Success(cached, stickyConversations)
+                    val sticky = UiCache.stickyConversations.value ?: emptyList()
+                    _uiState.value = ConversationUiState.Success(cached, sticky)
                     syncConversationCache()
                 }
             }
         }
         viewModelScope.launch {
             LocalCache.observeSticky(accountId).collect { cached ->
-                stickyConversations = cached
+                val ids = cached.map { it.chatId }.toSet()
+                _stickyIds.value = ids
+                
                 _uiState.update { state ->
                     if (state is ConversationUiState.Success) state.copy(stickyConversations = cached) else state
                 }
@@ -317,7 +322,8 @@ class ConversationViewModel(
                 if (generation != loadGeneration) return@onSuccess
                 _isRefreshing.value = false
                 if (_uiState.value is ConversationUiState.Loading) {
-                    _uiState.value = ConversationUiState.Success(emptyList(), stickyConversations)
+                    val sticky = UiCache.stickyConversations.value ?: emptyList()
+                    _uiState.value = ConversationUiState.Success(emptyList(), sticky)
                     syncConversationCache()
                 }
             }.onFailure { error ->
@@ -336,7 +342,9 @@ class ConversationViewModel(
         viewModelScope.launch {
             repository.getStickyList(token, accountId)
                 .onSuccess { stickyList ->
-                    stickyConversations = stickyList
+                    val ids = stickyList.map { it.chatId }.toSet()
+                    _stickyIds.value = ids
+                    
                     _uiState.update { state ->
                         if (state is ConversationUiState.Success) {
                             state.copy(stickyConversations = stickyList)

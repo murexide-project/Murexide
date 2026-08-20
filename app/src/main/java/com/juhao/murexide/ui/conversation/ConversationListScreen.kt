@@ -31,14 +31,11 @@ import androidx.compose.ui.unit.dp
 import com.juhao.murexide.R
 import com.juhao.murexide.data.ConversationItem
 import com.juhao.murexide.data.StickyItem
-import com.juhao.murexide.datastore.SettingsStorage
 import com.juhao.murexide.ui.components.*
 import com.juhao.murexide.ui.theme.UiState
 import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.math.roundToInt
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -81,20 +78,16 @@ fun ConversationListScreen(
     val uiState by viewModel.uiState.collectAsState()
     val isWsConnected by viewModel.isWsConnected.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
+    
+    val stickyIds by viewModel.stickyIds.collectAsState()
 
     DisposableEffect(viewModel) {
         viewModel.setForegroundSyncEnabled(true)
         onDispose { viewModel.setForegroundSyncEnabled(false) }
     }
 
-    val settingsStorage = remember { SettingsStorage(context) }
-    var showSticky by remember { mutableStateOf(false) }
     var showCreateMenu by remember { mutableStateOf(false) }
     var searchButtonCenter by remember { mutableStateOf<IntOffset?>(null) }
-
-    LaunchedEffect(Unit) {
-        showSticky = settingsStorage.getShowSticky()
-    }
 
     Scaffold(
         modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -202,31 +195,16 @@ fun ConversationListScreen(
             ) {
                 val state = uiState
                 if (state is ConversationUiState.Success) {
+                    val (stickyConvs, normalConvs) = state.conversations.partition { 
+                        stickyIds.contains(it.chatId) 
+                    }
+                    val allConversations = stickyConvs + normalConvs
+                    
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(bottom = 100.dp)
                     ) {
-                        if (showSticky && state.stickyConversations.isNotEmpty()) {
-                            item {
-                                StickyConversationSection(
-                                    stickyItems = state.stickyConversations,
-                                    onStickyClick = { sticky ->
-                                        onConversationClick(
-                                            ConversationItem(
-                                                chatId = sticky.chatId,
-                                                chatType = sticky.chatType,
-                                                name = sticky.chatName,
-                                                chatContent = "",
-                                                timestampMs = 0,
-                                                avatarUrl = sticky.avatarUrl
-                                            )
-                                        )
-                                    }
-                                )
-                            }
-                        }
-
-                        if (state.conversations.isEmpty() && state.stickyConversations.isEmpty()) {
+                        if (allConversations.isEmpty()) {
                             item {
                                 Box(
                                     modifier = Modifier
@@ -238,7 +216,7 @@ fun ConversationListScreen(
                             }
                         } else {
                             items(
-                                items = state.conversations,
+                                items = allConversations,
                                 key = { item -> "${item.chatType}:${item.chatId}" }
                             ) { conversation ->
                                 ConversationItem(
@@ -246,6 +224,7 @@ fun ConversationListScreen(
                                     isSelected = currentConversation?.chatId == conversation.chatId &&
                                             currentConversation.chatType == conversation.chatType &&
                                             bigScreenMode,
+                                    isSticky = stickyIds.contains(conversation.chatId),
                                     onClick = {
                                         viewModel.clearUnread(
                                             conversation.chatId,
@@ -279,70 +258,13 @@ fun ConversationListScreen(
 }
 
 @Composable
-fun StickyConversationSection(
-    stickyItems: List<StickyItem>,
-    onStickyClick: (StickyItem) -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = 8.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            stickyItems.forEach { item ->
-                StickyItemView(
-                    item = item,
-                    onClick = { onStickyClick(item) }
-                )
-            }
-        }
-        HorizontalDivider(
-            modifier = Modifier.padding(top = 12.dp),
-            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-        )
-    }
-}
-
-@Composable
-fun StickyItemView(
-    item: StickyItem,
-    onClick: () -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .width(64.dp)
-            .clickable(onClick = onClick),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Avatar(
-            url = item.avatarUrl,
-            size = 42.dp
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            text = item.chatName,
-            style = MaterialTheme.typography.labelSmall,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            textAlign = TextAlign.Center
-        )
-    }
-}
-
-@Composable
 fun ConversationItem(
     conversation: ConversationItem,
     isSelected: Boolean = false,
+    isSticky: Boolean = false,
     onClick: () -> Unit
 ) {
-    val themeColor by UiState.themeColor
-    val listItemColor = if (themeColor == "WHITE") {
+    val listItemColor = if (isSticky) {
         MaterialTheme.colorScheme.surfaceContainerHighest
     } else {
         MaterialTheme.colorScheme.surface
