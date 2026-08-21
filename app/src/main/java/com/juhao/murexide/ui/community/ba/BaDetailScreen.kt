@@ -60,7 +60,7 @@ fun BaDetailScreen(
             if (baId != null) {
                 ExtendedFloatingActionButton(
                     onClick = {
-                        CreatePostActivity.start(context, baId, uiState.ba?.name ?: "")
+                        CreatePostActivity.startCreate(context, baId, uiState.ba?.name ?: "")
                     },
                     icon = { Icon(AppIcons.Edit, contentDescription = null) },
                     text = { Text("发帖") }

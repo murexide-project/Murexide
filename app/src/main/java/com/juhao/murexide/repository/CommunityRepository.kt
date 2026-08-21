@@ -208,7 +208,7 @@ class CommunityRepository(
         contentType: Int,
         groupId: String = "",
         draftId: Int = 0
-    ): Result<Int> {
+    ): Result<Boolean> {
         return withContext(Dispatchers.IO) {
             try {
                 val params = buildJsonObject {
@@ -231,9 +231,83 @@ class CommunityRepository(
                     if (response.isSuccessful) {
                         val result = json.decodeFromString<CreatePostResponse>(response.body.string())
                         if (result.code == 1) {
-                            Result.success(result.data?.audioUrl ?: 0)
+                            Result.success(true)
                         } else {
                             Result.failure(Exception(result.msg.ifEmpty { "发布失败" }))
+                        }
+                    } else {
+                        Result.failure(Exception("HTTP error: ${response.code}"))
+                    }
+                }
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+        }
+    }
+
+    suspend fun editPost(
+        postId: Int,
+        title: String,
+        content: String,
+        contentType: Int
+    ): Result<Boolean> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val params = buildJsonObject {
+                    put("postId", postId)
+                    put("title", title)
+                    put("content", content)
+                    put("contentType", contentType)
+                }
+                val requestBody = json.encodeToString(params).toRequestBody("application/json".toMediaType())
+
+                val httpRequest = Request.Builder()
+                    .url("$baseUrl/v1/community/posts/edit")
+                    .post(requestBody)
+                    .header("token", token)
+                    .build()
+
+                client.newCall(httpRequest).execute().use { response ->
+                    if (response.isSuccessful) {
+                        val result = json.decodeFromString<EditPostResponse>(response.body.string())
+                        if (result.code == 1) {
+                            Result.success(true)
+                        } else {
+                            Result.failure(Exception(result.msg.ifEmpty { "编辑失败" }))
+                        }
+                    } else {
+                        Result.failure(Exception("HTTP error: ${response.code}"))
+                    }
+                }
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+        }
+    }
+
+    suspend fun deletePost(
+        postId: Int
+    ): Result<Boolean> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val params = buildJsonObject {
+                    put("postId", postId)
+                }
+                val requestBody = json.encodeToString(params).toRequestBody("application/json".toMediaType())
+
+                val httpRequest = Request.Builder()
+                    .url("$baseUrl/v1/community/posts/delete")
+                    .post(requestBody)
+                    .header("token", token)
+                    .build()
+
+                client.newCall(httpRequest).execute().use { response ->
+                    if (response.isSuccessful) {
+                        val result = json.decodeFromString<EditPostResponse>(response.body.string())
+                        if (result.code == 1) {
+                            Result.success(true)
+                        } else {
+                            Result.failure(Exception(result.msg.ifEmpty { "删除失败" }))
                         }
                     } else {
                         Result.failure(Exception("HTTP error: ${response.code}"))

@@ -59,7 +59,8 @@ class PostDetailViewModel(
                     _uiState.update {
                         it.copy(
                             post = data.post,
-                            isLoadingDetail = false
+                            isLoadingDetail = false,
+                            isManageEnabled = data.post.senderId == accountStorage.getCurrentUserId()
                         )
                     }
                     isDetailLoading = false
@@ -155,6 +156,16 @@ class PostDetailViewModel(
             }
         }
     }
+
+    fun deletePost() {
+        val repo = repository ?: return
+
+        viewModelScope.launch {
+            repo.deletePost(postId).onSuccess {
+                _uiState.update { it.copy(isDeleted = true) }
+            }
+        }
+    }
 }
 
 data class PostDetailUiState(
@@ -165,5 +176,7 @@ data class PostDetailUiState(
     val hasMoreComments: Boolean = true,
     val isLoadingDetail: Boolean = true,
     val isLoadingComments: Boolean = false,
+    val isManageEnabled: Boolean = false,
+    val isDeleted: Boolean = false,
     val error: String? = null
 )

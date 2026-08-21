@@ -26,6 +26,7 @@ import com.juhao.murexide.data.PostDetail
 import com.juhao.murexide.data.GroupInfo
 import com.juhao.murexide.ui.chat.ChatActivity
 import com.juhao.murexide.ui.community.InteractionButton
+import com.juhao.murexide.ui.community.ba.CreatePostActivity
 import com.juhao.murexide.ui.components.Avatar
 import com.juhao.murexide.ui.components.MarkdownText
 import dev.chrisbanes.haze.HazeState
@@ -41,7 +42,10 @@ fun PostDetailScreen(
     viewModel: PostDetailViewModel
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
     val listState = rememberLazyListState()
+
+    var showMenu by remember { mutableStateOf(false) }
 
     val shouldLoadMore by remember {
         derivedStateOf {
@@ -53,6 +57,12 @@ fun PostDetailScreen(
     LaunchedEffect(shouldLoadMore) {
         if (shouldLoadMore && uiState.hasMoreComments && !uiState.isLoadingComments) {
             viewModel.loadMoreComments()
+        }
+    }
+
+    LaunchedEffect(uiState.isDeleted) {
+        if (uiState.isDeleted) {
+            onBackClick()
         }
     }
     
@@ -115,6 +125,51 @@ fun PostDetailScreen(
                         IconButton(onClick = onBackClick) {
                             AutoMirroredIcon(AppIcons.ArrowBack, contentDescription = "返回")
                         }
+                    },
+                    actions = {
+                        Box {
+                            DropdownMenu(
+                                expanded = showMenu,
+                                onDismissRequest = { showMenu = false }
+                            ) {
+                                if (uiState.isManageEnabled) {
+                                    DropdownMenuItem(
+                                        text = { Text("编辑文章") },
+                                        onClick = {
+                                            CreatePostActivity.startEdit(
+                                                context = context,
+                                                content = uiState.post?.content ?: "",
+                                                contentType = uiState.post?.contentType ?: 1,
+                                                postId = uiState.post?.id ?: return@DropdownMenuItem,
+                                                title = uiState.post?.title ?: ""
+                                            )
+                                        },
+                                        leadingIcon = {
+                                            Icon(
+                                                AppIcons.Edit,
+                                                contentDescription = null
+                                            )
+                                        }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("删除文章", color = MaterialTheme.colorScheme.error) },
+                                        onClick = {
+                                            viewModel.deletePost()
+                                        },
+                                        leadingIcon = {
+                                            Icon(
+                                                AppIcons.Delete,
+                                                tint = MaterialTheme.colorScheme.error,
+                                                contentDescription = null
+                                            )
+                                        }
+                                    )
+                                }
+                            }
+                            IconButton(onClick = { showMenu = true }) {
+                                AutoMirroredIcon(AppIcons.MoreVert, contentDescription = "更多")
+                            }
+                        }
                     }
                 )
             }
@@ -122,12 +177,16 @@ fun PostDetailScreen(
     ) { innerPadding ->
         val post = uiState.post
         Box(
-            modifier = Modifier.fillMaxSize().hazeSource(hazeState)
+            modifier = Modifier
+                .fillMaxSize()
+                .hazeSource(hazeState)
         ) {
             when {
                 uiState.isLoadingDetail && post == null -> {
                     Box(
-                        modifier = Modifier.fillMaxSize().padding(innerPadding),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(innerPadding),
                         contentAlignment = Alignment.Center
                     ) {
                         CircularProgressIndicator()
@@ -136,7 +195,9 @@ fun PostDetailScreen(
     
                 post == null -> {
                     Box(
-                        modifier = Modifier.fillMaxSize().padding(innerPadding),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(innerPadding),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
@@ -174,7 +235,9 @@ fun PostDetailScreen(
                         if (uiState.comments.isEmpty() && !uiState.isLoadingComments) {
                             item {
                                 Box(
-                                    modifier = Modifier.fillMaxWidth().padding(32.dp),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(32.dp),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Text("暂无评论", color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -189,7 +252,9 @@ fun PostDetailScreen(
                         if (uiState.isLoadingComments) {
                             item {
                                 Box(
-                                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     CircularProgressIndicator(
@@ -208,7 +273,9 @@ fun PostDetailScreen(
 
 @Composable
 private fun PostHeader(post: PostDetail, viewModel: PostDetailViewModel) {
-    Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+    Column(modifier = Modifier
+        .fillMaxWidth()
+        .padding(16.dp)) {
         Text(post.title, fontWeight = FontWeight.Bold, fontSize = 20.sp)
 
         Spacer(Modifier.height(12.dp))

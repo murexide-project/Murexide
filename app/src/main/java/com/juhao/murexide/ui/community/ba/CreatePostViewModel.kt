@@ -44,6 +44,14 @@ class CreatePostViewModel(
         _uiState.update { it.copy(contentType = contentType) }
     }
 
+    fun onEditModeChange(value: Boolean) {
+        _uiState.update { it.copy(isEditMode = value) }
+    }
+
+    fun onPostIdChange(postId: Int) {
+        _uiState.update { it.copy(postId = postId) }
+    }
+
     fun publish() {
         val repo = repository ?: return
         val state = _uiState.value
@@ -59,18 +67,39 @@ class CreatePostViewModel(
 
         viewModelScope.launch {
             _uiState.update { it.copy(isPublishing = true, error = null) }
-            repo.createPost(
-                baId = baId,
-                title = state.title.trim(),
-                content = state.content.trim(),
-                contentType = state.contentType
-            )
-                .onSuccess { postId ->
-                    _uiState.update { it.copy(isPublishing = false, publishedPostId = postId, published = true) }
+            if (!state.isEditMode) {
+                repo.createPost(
+                    baId = baId,
+                    title = state.title.trim(),
+                    content = state.content.trim(),
+                    contentType = state.contentType
+                ).onSuccess {
+                    _uiState.update { it.copy(isPublishing = false, published = true) }
+                }.onFailure { e ->
+                    _uiState.update {
+                        it.copy(
+                            isPublishing = false,
+                            error = e.message ?: "发布失败"
+                        )
+                    }
                 }
-                .onFailure { e ->
-                    _uiState.update { it.copy(isPublishing = false, error = e.message ?: "发布失败") }
+            } else {
+                repo.editPost(
+                    title = state.title,
+                    content = state.content,
+                    contentType = state.contentType,
+                    postId = state.postId
+                ).onSuccess {
+                    _uiState.update { it.copy(isPublishing = false, published = true) }
+                }.onFailure { e ->
+                    _uiState.update {
+                        it.copy(
+                            isPublishing = false,
+                            error = e.message ?: "编辑失败"
+                        )
+                    }
                 }
+            }
         }
     }
 
@@ -84,7 +113,8 @@ data class CreatePostUiState(
     val content: String = "",
     val contentType: Int = 1,
     val isPublishing: Boolean = false,
+    val isEditMode: Boolean = false,
+    val postId: Int = 0,
     val published: Boolean = false,
-    val publishedPostId: Int = 0,
     val error: String? = null
 )

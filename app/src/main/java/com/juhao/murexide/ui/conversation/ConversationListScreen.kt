@@ -3,6 +3,7 @@ package com.juhao.murexide.ui.conversation
 import com.juhao.murexide.ui.icons.AppIcons
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
@@ -16,20 +17,17 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.juhao.murexide.R
 import com.juhao.murexide.data.ConversationItem
-import com.juhao.murexide.data.StickyItem
 import com.juhao.murexide.ui.components.*
 import com.juhao.murexide.ui.theme.UiState
 import java.text.SimpleDateFormat
@@ -65,7 +63,6 @@ fun ConversationListScreen(
         }
     )
 ) {
-    val context = LocalContext.current
     val hazeState = remember { HazeState() }
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
     val uiState by viewModel.uiState.collectAsState()
@@ -213,34 +210,95 @@ fun ConversationListScreen(
                     val (stickyConvs, normalConvs) = state.conversations.partition { 
                         stickyIds.contains(it.chatId) 
                     }
-                    val allConversations = stickyConvs + normalConvs
-                    
+
+                    val allowCollapseSticky = stickyConvs.size >= 5
+                    var isStickyCollapsed by remember { mutableStateOf(false) }
+
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
                         state = listState,
                         contentPadding = PaddingValues(bottom = 100.dp)
                     ) {
-                        if (allConversations.isEmpty()) {
+                        val totalItems = stickyConvs.size + normalConvs.size
+
+                        if (totalItems == 0) {
                             item {
                                 Box(
-                                    modifier = Modifier
-                                        .fillParentMaxSize(),
+                                    modifier = Modifier.fillParentMaxSize(),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Text("暂无会话")
                                 }
                             }
                         } else {
+                            if (allowCollapseSticky) {
+                                stickyHeader(key = "collapseStickyButton") {
+                                    val bkgolor = if (themeColor != "WHITE") {
+                                        MaterialTheme.colorScheme.surfaceContainer
+                                    } else {
+                                        MaterialTheme.colorScheme.surface
+                                    }
+                                    ListItem(
+                                        onClick = { isStickyCollapsed = !isStickyCollapsed },
+                                        leadingContent = {
+                                            Icon(
+                                                imageVector = if (isStickyCollapsed) AppIcons.KeyboardArrowDown else AppIcons.KeyboardArrowUp,
+                                                contentDescription = null
+                                            )
+                                        },
+                                        colors = ListItemDefaults.colors(
+                                            containerColor = bkgolor
+                                        )
+                                    ) {
+                                        Text(
+                                            if (isStickyCollapsed) "展开置顶会话" else "折叠置顶会话",
+                                            style = MaterialTheme.typography.bodyMedium
+                                        )
+                                    }
+                                }
+                            }
+
                             items(
-                                items = allConversations,
-                                key = { item -> "${item.chatType}:${item.chatId}" }
+                                items = stickyConvs,
+                                key = { item -> "sticky_${item.chatType}:${item.chatId}" }
+                            ) { conversation ->
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .animateContentSize()
+                                ) {
+                                    if (isStickyCollapsed) return@Box
+                                    ConversationItem(
+                                        conversation = conversation,
+                                        isSelected = currentConversation?.chatId == conversation.chatId &&
+                                                currentConversation.chatType == conversation.chatType &&
+                                                bigScreenMode,
+                                        isSticky = true,
+                                        onClick = {
+                                            viewModel.clearUnread(
+                                                conversation.chatId,
+                                                conversation.chatType
+                                            )
+                                            onConversationClick(conversation)
+                                        }
+                                    )
+                                }
+                            }
+
+                            stickyHeader(key = "divider") {
+                                HorizontalDivider()
+                            }
+
+                            items(
+                                items = normalConvs,
+                                key = { item -> "normal_${item.chatType}:${item.chatId}" }
                             ) { conversation ->
                                 ConversationItem(
                                     conversation = conversation,
                                     isSelected = currentConversation?.chatId == conversation.chatId &&
                                             currentConversation.chatType == conversation.chatType &&
                                             bigScreenMode,
-                                    isSticky = stickyIds.contains(conversation.chatId),
+                                    isSticky = false,
                                     onClick = {
                                         viewModel.clearUnread(
                                             conversation.chatId,

@@ -19,14 +19,30 @@ import com.juhao.murexide.ui.components.StyledIconButton
 fun CreatePostScreen(
     baName: String,
     onClose: () -> Unit,
-    onPublished: (Int) -> Unit,
-    viewModel: CreatePostViewModel
+    onPublished: () -> Unit,
+    viewModel: CreatePostViewModel,
+    postId: Int? = null,
+    title: String,
+    content: String,
+    contentType: Int
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
+    val isEditMode = postId != null
+
+    LaunchedEffect(Unit) {
+        viewModel.onTitleChange(title)
+        viewModel.onContentChange(content)
+        viewModel.onContentTypeChange(contentType)
+        viewModel.onEditModeChange(isEditMode)
+        if (isEditMode) {
+            viewModel.onPostIdChange(postId)
+        }
+    }
+
     LaunchedEffect(uiState.published) {
-        if (uiState.published) onPublished(uiState.publishedPostId)
+        if (uiState.published) onPublished()
     }
 
     LaunchedEffect(uiState.error) {
@@ -40,7 +56,15 @@ fun CreatePostScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text(if (baName.isNotEmpty()) "发布到 $baName" else "发布文章") },
+                title = {
+                    Text(
+                        when {
+                            isEditMode -> "编辑文章"
+                            baName.isNotEmpty() -> "发布到 $baName"
+                            else -> "发布文章"
+                        }
+                    )
+                },
                 navigationIcon = {
                     StyledIconButton(onClick = onClose) {
                         Icon(AppIcons.Close, contentDescription = "关闭")
@@ -57,7 +81,7 @@ fun CreatePostScreen(
                                 strokeWidth = 2.dp
                             )
                         } else {
-                            Icon(AppIcons.Check, contentDescription = "发布")
+                            Icon(AppIcons.Check, contentDescription = "确定")
                         }
                     }
                 }

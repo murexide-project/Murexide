@@ -73,7 +73,7 @@ class ConversationViewModel(
         viewModelScope.launch {
             LocalCache.observeConversations(accountId).collect { cached ->
                 if (cached.isNotEmpty() || _uiState.value is ConversationUiState.Success) {
-                    val sticky = UiCache.stickyConversations.value ?: emptyList()
+                    val sticky = UiCache.stickyConversations.value
                     _uiState.value = ConversationUiState.Success(cached, sticky)
                     syncConversationCache()
                 }
@@ -323,7 +323,7 @@ class ConversationViewModel(
                 if (generation != loadGeneration) return@onSuccess
                 _isRefreshing.value = false
                 if (_uiState.value is ConversationUiState.Loading) {
-                    val sticky = UiCache.stickyConversations.value ?: emptyList()
+                    val sticky = UiCache.stickyConversations.value
                     _uiState.value = ConversationUiState.Success(emptyList(), sticky)
                     syncConversationCache()
                 }
