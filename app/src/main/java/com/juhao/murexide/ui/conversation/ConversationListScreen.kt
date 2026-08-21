@@ -251,7 +251,7 @@ fun ConversationListScreen(
                                         )
                                     ) {
                                         Text(
-                                            if (isStickyCollapsed) "展开置顶会话" else "折叠置顶会话",
+                                            if (isStickyCollapsed) "${stickyConvs.size}个置顶会话" else "折叠置顶会话",
                                             style = MaterialTheme.typography.bodyMedium
                                         )
                                     }

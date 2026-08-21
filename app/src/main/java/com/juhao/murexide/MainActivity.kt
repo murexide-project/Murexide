@@ -437,7 +437,6 @@ fun MainScreen(account: UserAccount) {
 
     var isContactNewMessagesVisible by remember { mutableStateOf(false) }
 
-    var showDevTip by remember { mutableStateOf(context.getAppVersionInfo().commitHash == "dev") }
     var showAccountMenu by remember { mutableStateOf(false) }
     val accountStorage = remember(context.applicationContext) {
         AccountStorage.getInstance(context.applicationContext)
@@ -457,20 +456,6 @@ fun MainScreen(account: UserAccount) {
     val useNavigationRail = bigScreenEnabled && isBigScreen
     val hideMobileNavigation = currentRoute == "contacts" && isContactNewMessagesVisible
     val navigationBarInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-
-    if (showDevTip) {
-        AlertDialog(
-            onDismissRequest = { showDevTip = false },
-            icon = { Icon(AppIcons.Info, contentDescription = null) },
-            title = { Text("正在使用开发版本") },
-            text = { Text("你正在使用内部开发版本，可能出现问题。如果发现问题，可在交流群反馈。此弹窗会在每次应用启动时弹出。此版本仅为测试使用，不能作为日用版本，请及时更新至正式版或快照版。开发版本的检查更新不可用。") },
-            confirmButton = {
-                TextButton(onClick = { showDevTip = false }) {
-                    Text("了解")
-                }
-            }
-        )
-    }
 
     NavigationSuiteScaffold(
         layoutType = if (useNavigationRail) {
