@@ -32,6 +32,14 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
           
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK components
+        run: |
+          yes | sdkmanager --licenses > /dev/null || true
+          sdkmanager "ndk;29.0.14033849"
+          
       - name: Cache Gradle packages
         uses: actions/cache@v4
         with:
@@ -41,10 +49,6 @@ jobs:
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties', 'ci-version.gradle') }}
           restore-keys: |
             ${{ runner.os }}-gradle-
-            
-      - name: Accept Android SDK licenses
-        run: |
-          yes | sdkmanager --licenses
 
       - name: Decode Keystore
         run: |
