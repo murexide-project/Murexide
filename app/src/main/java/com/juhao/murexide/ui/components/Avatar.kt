@@ -20,7 +20,8 @@ fun Avatar(
     modifier: Modifier = Modifier,
     url: String,
     size: Dp = 48.dp,
-    canView: Boolean = false
+    canView: Boolean = false,
+    alwaysCircle: Boolean = false,
 ) {
     val context = LocalContext.current
     val squareAvatar by UiState.squareAvatar
@@ -45,7 +46,7 @@ fun Avatar(
         modifier = modifier
             .size(size)
             .clip(
-                if (squareAvatar) {
+                if (squareAvatar && !alwaysCircle) {
                     RoundedCornerShape(size / 4)
                 } else {
                     CircleShape

@@ -1034,6 +1034,7 @@ fun ChatScreen(
                                     ) {
                                         Avatar(
                                             url = chatAvatar,
+                                            alwaysCircle = true,
                                             size = 40.dp
                                         )
                                         Spacer(modifier = Modifier.width(8.dp))

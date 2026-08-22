@@ -358,28 +358,23 @@ fun ConversationItem(
     } else {
         MaterialTheme.colorScheme.surface
     }
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(
-                if (isSelected)
-                    MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
-                else
-                    listItemColor
+    
+    ListItem(
+        onClick = onClick,
+        leadingContent = {
+            Avatar(
+                url = conversation.avatarUrl,
+                size = 48.dp
             )
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Avatar(
-            url = conversation.avatarUrl,
-            size = 48.dp
+        },
+        colors = ListItemDefaults.colors(
+            containerColor = if (isSelected)
+                MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+            else
+                listItemColor
         )
-
-        Spacer(modifier = Modifier.width(12.dp))
-
-        Column(modifier = Modifier.weight(1f)) {
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,

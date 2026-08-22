@@ -540,8 +540,8 @@ fun AppearanceScreen(
             SettingsGroup(title = "界面") {
                 SettingsSwitchItem(
                     icon = AppIcons.People,
-                    title = "圆角正方形头像",
-                    subtitle = "将好友和群组头像显示为圆角正方形",
+                    title = "圆角矩形头像",
+                    subtitle = "将好友和群组头像显示为圆角矩形",
                     checked = squareAvatar,
                     onCheckedChange = { checked ->
                         UiState.squareAvatar.value = checked
