@@ -67,6 +67,31 @@ fun PostDetailScreen(
     }
     
     val hazeState = remember { HazeState() }
+    
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("确认删除") },
+            text = { Text("确定要删除此文章吗？此操作不可撤销。") },
+            confirmButton = {
+                TextButton(
+                    onClick = { viewModel.deletePost() },
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text("删除")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text("取消")
+                }
+            }
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -154,7 +179,7 @@ fun PostDetailScreen(
                                     DropdownMenuItem(
                                         text = { Text("删除文章", color = MaterialTheme.colorScheme.error) },
                                         onClick = {
-                                            viewModel.deletePost()
+                                            showDeleteDialog = true
                                         },
                                         leadingIcon = {
                                             Icon(

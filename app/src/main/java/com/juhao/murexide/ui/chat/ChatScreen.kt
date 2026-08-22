@@ -1274,18 +1274,12 @@ fun ChatScreen(
                 Box(
                     modifier = Modifier
                         .matchParentSize()
-                        .then(
-                            if (liquidGlassEnabled) {
-                                Modifier.background(MaterialTheme.colorScheme.surface)
-                            } else {
-                                Modifier.hazeEffect(
-                                    state = hazeState,
-                                    style = HazeMaterials.regular().copy(
-                                        noiseFactor = 0f
-                                    ),
-                                    block = null
-                                )
-                            }
+                        .hazeEffect(
+                            state = hazeState,
+                            style = HazeMaterials.regular().copy(
+                                noiseFactor = 0f
+                            ),
+                            block = null
                         )
                 )
 
@@ -1618,7 +1612,7 @@ fun ChatScreen(
                 .fillMaxSize()
                 .then(
                     if (liquidBackdrop != null) {
-                        Modifier.layerBackdrop(liquidBackdrop)
+                        Modifier.layerBackdrop(liquidBackdrop).hazeSource(hazeState)
                     } else {
                         Modifier.hazeSource(hazeState)
                     }

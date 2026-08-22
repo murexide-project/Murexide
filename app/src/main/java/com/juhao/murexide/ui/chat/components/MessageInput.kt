@@ -62,7 +62,7 @@ import com.juhao.murexide.data.MentionToken
 import kotlin.math.roundToInt
 
 private val SendButtonSize = 44.dp
-private val SendFormatOptionWidth = 96.dp
+private val SendFormatOptionWidth = 48.dp
 private val SendFormatPickerHeight = 48.dp
 private val SendFormatPickerGap = 8.dp
 
@@ -73,6 +73,7 @@ private data class SendFormatOption(
 
 private val SendFormatOptions = listOf(
     SendFormatOption(type = null, label = "取消"),
+    SendFormatOption(type = "text", label = "文本"),
     SendFormatOption(type = "html", label = "HTML"),
     SendFormatOption(type = "markdown", label = "Markdown")
 )
@@ -387,34 +388,26 @@ private fun FormatSendButton(
                                     ),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    when (option.type) {
-                                        "html" -> Icon(
-                                            imageVector = AppIcons.Code,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                        "markdown" -> Icon(
-                                            painter = painterResource(R.drawable.markdown),
-                                            contentDescription = null,
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                        else -> Icon(
-                                            imageVector = AppIcons.Close,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                    }
-                                    Text(
-                                        text = option.label,
-                                        modifier = Modifier.padding(start = 4.dp),
-                                        style = MaterialTheme.typography.labelMedium,
-                                        color = if (selected) {
-                                            MaterialTheme.colorScheme.onPrimaryContainer
-                                        } else {
-                                            MaterialTheme.colorScheme.onSurfaceVariant
-                                        },
-                                        maxLines = 1
+                                when (option.type) {
+                                    "text" -> Icon(
+                                        imageVector = AppIcons.TextFields,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    "html" -> Icon(
+                                        imageVector = AppIcons.Code,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    "markdown" -> Icon(
+                                        painter = painterResource(R.drawable.markdown),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    else -> Icon(
+                                        imageVector = AppIcons.Close,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(16.dp)
                                     )
                                 }
                             }

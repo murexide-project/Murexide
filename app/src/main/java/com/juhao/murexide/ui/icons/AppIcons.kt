@@ -115,6 +115,7 @@ object AppIcons {
     val SwitchAccount get() = MaterialSymbols.Rounded.Switch_account
     val TableChart get() = MaterialSymbols.Rounded.Table_chart
     val Tag get() = MaterialSymbols.Rounded.Tag
+    val TextFields get() = MaterialSymbols.Rounded.Text_fields
     val Undo get() = MaterialSymbols.Rounded.Undo
     val Update get() = MaterialSymbols.Rounded.Update
     val Verified get() = MaterialSymbols.Rounded.Verified
