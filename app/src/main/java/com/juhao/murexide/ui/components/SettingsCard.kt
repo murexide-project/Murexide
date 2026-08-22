@@ -16,9 +16,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.shape.RoundedCornerShape
-import com.juhao.murexide.ui.theme.LocalLiquidGlassEnabled
-import com.juhao.murexide.ui.theme.LiquidGlassSurface
-import com.juhao.murexide.ui.theme.resolvedLiquidGlassContentColor
 
 /**
  * 设置组容器 (Card 样式)
@@ -64,35 +61,40 @@ fun SettingsItem(
     isDestructive: Boolean = false,
     onClick: () -> Unit = {}
 ) {
-    CustomItemCell(
-        modifier = Modifier,
+    ListItem(
         onClick = onClick,
-        isEnabled = isEnabled
-    ) {
-        val contentColor = resolvedLiquidGlassContentColor(MaterialTheme.colorScheme.onSurface)
-        val secondaryContentColor =
-            resolvedLiquidGlassContentColor(MaterialTheme.colorScheme.onSurfaceVariant)
-        val mutedContentColor = resolvedLiquidGlassContentColor(
-            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-        )
-        if (icon != null) {
-            Icon(
-                imageVector = icon,
+        enabled = isEnabled,
+        leadingContent = {
+            if (icon != null) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = if (isDestructive) MaterialTheme.colorScheme.error
+                    else MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+        },
+        trailingContent = {
+            AutoMirroredIcon(
+                AppIcons.NavigateNext,
                 contentDescription = null,
-                tint = if (isDestructive) MaterialTheme.colorScheme.error
-                else secondaryContentColor,
-                modifier = Modifier.size(24.dp)
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(20.dp)
             )
-            
-            Spacer(modifier = Modifier.width(16.dp))
-        }
-
-        Column(modifier = Modifier.weight(1f)) {
+        },
+        colors = ListItemDefaults.colors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.64f),
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(vertical = 4.dp)
+        ) {
             Text(
                 text = title,
                 style = MaterialTheme.typography.bodyLarge,
                 color = if (isDestructive) MaterialTheme.colorScheme.error
-                else contentColor,
+                else MaterialTheme.colorScheme.onSurface,
                 fontWeight = FontWeight.Normal
             )
             if (subtitle != null) {
@@ -100,19 +102,12 @@ fun SettingsItem(
                 Text(
                     text = subtitle,
                     style = MaterialTheme.typography.bodySmall,
-                    color = secondaryContentColor,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
             }
         }
-
-        AutoMirroredIcon(
-            AppIcons.NavigateNext,
-            contentDescription = null,
-            tint = mutedContentColor,
-            modifier = Modifier.size(20.dp)
-        )
     }
 }
 
@@ -129,55 +124,57 @@ fun SettingsItemCell(
     isEnabled: Boolean = true,
     isDestructive: Boolean = false
 ) {
-    CustomItemCell(
-        modifier = Modifier,
+    ListItem(
         onClick = onClick,
-        isEnabled = isEnabled
+        enabled = isEnabled,
+        leadingContent = {
+            if (icon != null) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = if (isDestructive) MaterialTheme.colorScheme.error
+                    else MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+        },
+        trailingContent = {
+            if (endIcon != null) {
+                Spacer(modifier = Modifier.width(16.dp))
+                
+                Icon(
+                    imageVector = endIcon,
+                    contentDescription = null,
+                    modifier = Modifier.size(22.dp),
+                    tint = if (isDestructive) MaterialTheme.colorScheme.error
+                    else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        },
+        colors = ListItemDefaults.colors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.64f),
+        )
     ) {
-        val contentColor = resolvedLiquidGlassContentColor(MaterialTheme.colorScheme.onSurface)
-        val secondaryContentColor =
-            resolvedLiquidGlassContentColor(MaterialTheme.colorScheme.onSurfaceVariant)
-        if (icon != null) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = if (isDestructive) MaterialTheme.colorScheme.error
-                else secondaryContentColor,
-                modifier = Modifier.size(24.dp)
-            )
-            
-            Spacer(modifier = Modifier.width(16.dp))
-        }
-
-        Column(modifier = Modifier.weight(1f)) {
+        Column(
+            modifier = Modifier.padding(vertical = 4.dp)
+        ) {
             Text(
                 text = title,
                 style = MaterialTheme.typography.bodyLarge,
                 color = if (isDestructive) MaterialTheme.colorScheme.error
-                else contentColor
+                else MaterialTheme.colorScheme.onSurface,
+                fontWeight = FontWeight.Normal
             )
             if (subtitle != null) {
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = subtitle,
                     style = MaterialTheme.typography.bodySmall,
-                    color = secondaryContentColor,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
             }
-        }
-
-        if (endIcon != null) {
-            Spacer(modifier = Modifier.width(16.dp))
-            
-            Icon(
-                imageVector = endIcon,
-                contentDescription = null,
-                modifier = Modifier.size(22.dp),
-                tint = if (isDestructive) MaterialTheme.colorScheme.error
-                else secondaryContentColor
-            )
         }
     }
 }
@@ -192,52 +189,55 @@ fun SettingsSwitchItem(
     subtitle: String? = null,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
-    isError: Boolean = false,
+    isDestructive: Boolean = false,
     isEnabled: Boolean = true
 ) {
-    CustomItemCell(
-        modifier = Modifier,
+    ListItem(
         onClick = { onCheckedChange(!checked) },
-        isEnabled = isEnabled
-    ) {
-        val contentColor = resolvedLiquidGlassContentColor(MaterialTheme.colorScheme.onSurface)
-        val secondaryContentColor =
-            resolvedLiquidGlassContentColor(MaterialTheme.colorScheme.onSurfaceVariant)
-        if (icon != null) {
-            Icon(
-                imageVector = icon,
-                contentDescription = title,
-                modifier = Modifier.size(24.dp),
-                tint = if (isError) MaterialTheme.colorScheme.error
-                else secondaryContentColor
+        enabled = isEnabled,
+        leadingContent = {
+            if (icon != null) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = if (isDestructive) MaterialTheme.colorScheme.error
+                    else MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+        },
+        trailingContent = {
+            StyledSwitch(
+                checked = checked,
+                onCheckedChange = null,
+                enabled = isEnabled
             )
-        
-            Spacer(modifier = Modifier.width(16.dp))
-        }
-
-        Column(modifier = Modifier.weight(1f)) {
+        },
+        colors = ListItemDefaults.colors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.64f),
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(vertical = 4.dp)
+        ) {
             Text(
                 text = title,
                 style = MaterialTheme.typography.bodyLarge,
-                color = contentColor
+                color = if (isDestructive) MaterialTheme.colorScheme.error
+                else MaterialTheme.colorScheme.onSurface,
+                fontWeight = FontWeight.Normal
             )
             if (subtitle != null) {
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = subtitle,
                     style = MaterialTheme.typography.bodySmall,
-                    color = secondaryContentColor
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
         }
-
-        Spacer(modifier = Modifier.width(8.dp))
-
-        StyledSwitch(
-            checked = checked,
-            onCheckedChange = null,
-            enabled = isEnabled
-        )
     }
 }
 
@@ -255,71 +255,74 @@ fun SettingsDropdownItem(
     onOptionSelected: (String) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
-
-    CustomItemCell(
-        modifier = Modifier,
-        onClick = { expanded = true },
-        isEnabled = isEnabled
-    ) {
-        val contentColor = resolvedLiquidGlassContentColor(MaterialTheme.colorScheme.onSurface)
-        val secondaryContentColor =
-            resolvedLiquidGlassContentColor(MaterialTheme.colorScheme.onSurfaceVariant)
-        val mutedContentColor = resolvedLiquidGlassContentColor(
-            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-        )
-        if (icon != null) {
-            Icon(
-                imageVector = icon,
-                contentDescription = title,
-                modifier = Modifier.size(24.dp),
-                tint = secondaryContentColor
-            )
     
-            Spacer(modifier = Modifier.width(16.dp))
-        }
-
-        Column(modifier = Modifier.weight(1f)) {
+    ListItem(
+        onClick = { expanded = true },
+        enabled = isEnabled,
+        leadingContent = {
+            if (icon != null) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+        },
+        trailingContent = {
+            Box {
+                Icon(
+                    imageVector = AppIcons.KeyboardArrowDown,
+                    contentDescription = "选择",
+                    modifier = Modifier.size(20.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                
+                DropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false }
+                ) {
+                    options.forEach { (value, displayText) ->
+                        DropdownMenuItem(
+                            text = { Text(displayText) },
+                            onClick = {
+                                onOptionSelected(value)
+                                expanded = false
+                            },
+                            trailingIcon = {
+                                if (selectedValue == value) {
+                                    Icon(
+                                        AppIcons.Check,
+                                        contentDescription = "已选中"
+                                    )
+                                }
+                            }
+                        )
+                    }
+                }
+            }
+        },
+        colors = ListItemDefaults.colors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.64f),
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(vertical = 4.dp)
+        ) {
             Text(
                 text = title,
                 style = MaterialTheme.typography.bodyLarge,
-                color = contentColor
+                color = MaterialTheme.colorScheme.onSurface,
+                fontWeight = FontWeight.Normal
             )
             if (subtitle != null) {
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = subtitle,
                     style = MaterialTheme.typography.bodySmall,
-                    color = secondaryContentColor
-                )
-            }
-        }
-
-        Icon(
-            imageVector = AppIcons.KeyboardArrowDown,
-            contentDescription = "选择",
-            modifier = Modifier.size(20.dp),
-            tint = mutedContentColor
-        )
-
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false }
-        ) {
-            options.forEach { (value, displayText) ->
-                DropdownMenuItem(
-                    text = { Text(displayText) },
-                    onClick = {
-                        onOptionSelected(value)
-                        expanded = false
-                    },
-                    trailingIcon = {
-                        if (selectedValue == value) {
-                            Icon(
-                                AppIcons.Check,
-                                contentDescription = "已选中"
-                            )
-                        }
-                    }
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
         }
@@ -335,18 +338,15 @@ fun CustomItemCell(
     content: @Composable RowScope.() -> Unit
 ) {
     val alpha = if (isEnabled) 1f else 0.38f
-    val liquidGlassEnabled = LocalLiquidGlassEnabled.current
 
-    LiquidGlassSurface(
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
             .alpha(alpha),
         shape = RoundedCornerShape(4.dp),
         color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(
-            alpha = if (liquidGlassEnabled) 0.64f else 1f
-        ),
-        lensHeight = 3.dp,
-        lensAmount = 8.dp
+            alpha = 0.64f
+        )
     ) {
         Row(
             modifier = modifier

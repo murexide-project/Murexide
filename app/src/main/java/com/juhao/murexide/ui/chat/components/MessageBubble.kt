@@ -318,7 +318,7 @@ fun MessageBubble(
                                     resolveSenderDisplayName(message.senderName, isMine)
                                 }
                                 
-                                if (!hideCard && (message.isRecalled || (!isMine && isLastFromSender))) {
+                                if (!hideCard && !isMine && isLastFromSender) {
                                     Row(
                                         modifier = Modifier.padding(bottom = 4.dp),
                                         verticalAlignment = Alignment.CenterVertically

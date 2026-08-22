@@ -2014,16 +2014,12 @@ fun computeDisplayItems(
         val newer = messages.getOrNull(index - 1)
         val older = messages.getOrNull(index + 1)
 
-        val isFirstFromSender = message.isRecalled
-                || newer == null
+        val isFirstFromSender = newer == null
                 || newer.contentType == MessageItem.CONTENT_TYPE_TIP
-                || newer.isRecalled
                 || newer.senderId != message.senderId
 
-        val isLastFromSender = message.isRecalled
-                || older == null
+        val isLastFromSender = older == null
                 || older.contentType == MessageItem.CONTENT_TYPE_TIP
-                || older.isRecalled
                 || older.senderId != message.senderId
 
         val roleLabel: String? = when {

@@ -17,6 +17,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
@@ -27,12 +28,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.juhao.murexide.R
+import com.juhao.murexide.datastore.SettingsStorage
 import com.juhao.murexide.data.ConversationItem
 import com.juhao.murexide.ui.components.*
 import com.juhao.murexide.ui.theme.UiState
 import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.math.roundToInt
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.shape.CircleShape
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -63,6 +66,7 @@ fun ConversationListScreen(
         }
     )
 ) {
+    val context = LocalContext.current
     val hazeState = remember { HazeState() }
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
     val uiState by viewModel.uiState.collectAsState()
@@ -100,6 +104,11 @@ fun ConversationListScreen(
 
     var showCreateMenu by remember { mutableStateOf(false) }
     var searchButtonCenter by remember { mutableStateOf<IntOffset?>(null) }
+    
+    val scope = rememberCoroutineScope()
+    
+    val settingsStorage = remember { SettingsStorage(context) }
+    val isStickyExpanded by settingsStorage.showStickyFlow.collectAsState(initial = true)
 
     Scaffold(
         modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -212,7 +221,7 @@ fun ConversationListScreen(
                     }
 
                     val allowCollapseSticky = stickyConvs.size >= 5
-                    var isStickyCollapsed by remember { mutableStateOf(false) }
+                    val isStickyCollapsed = !isStickyExpanded && allowCollapseSticky
 
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
@@ -239,7 +248,11 @@ fun ConversationListScreen(
                                         MaterialTheme.colorScheme.surface
                                     }
                                     ListItem(
-                                        onClick = { isStickyCollapsed = !isStickyCollapsed },
+                                        onClick = { 
+                                            scope.launch {
+                                                settingsStorage.setShowSticky(!isStickyExpanded)
+                                            }
+                                        },
                                         leadingContent = {
                                             Icon(
                                                 imageVector = if (isStickyCollapsed) AppIcons.KeyboardArrowDown else AppIcons.KeyboardArrowUp,

@@ -9,7 +9,7 @@ plugins {
 android {
     namespace = "com.juhao.murexide"
 
-    ndkVersion = "28.2.13676358"
+    ndkVersion = "29.0.14033849"
 
     compileSdk {
         version = release(37)
@@ -56,7 +56,7 @@ android {
     externalNativeBuild {
         cmake {
             path = file("src/main/cpp/CMakeLists.txt")
-            version = "3.22.1"
+            version = "3.31.6"
         }
     }
     androidResources {

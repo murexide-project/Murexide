@@ -59,6 +59,8 @@ class SettingsStorage(private val context: Context) {
         private val BIG_SCREEN_KEY = booleanPreferencesKey("big_screen")
         private val UPDATE_CHANNEL_KEY = stringPreferencesKey("update_channel")
         
+        private val SHOW_STICKY_KEY = booleanPreferencesKey("show_sticky")
+        
         private val MSG_SHOW_TAGS_KEY = booleanPreferencesKey("msg_show_tags")
         private val BUBBLE_CORNER_RADIUS_KEY = floatPreferencesKey("bubble_corner_radius")
         private val BUBBLE_OPACITY_KEY = floatPreferencesKey("bubble_opacity")
@@ -179,6 +181,17 @@ class SettingsStorage(private val context: Context) {
 
     suspend fun getUpdateChannel(): String {
         return updateChannelFlow.first()
+    }
+    
+    // 展开置顶
+    val showStickyFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[SHOW_STICKY_KEY] ?: true
+    }
+
+    suspend fun setShowSticky(value: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[SHOW_STICKY_KEY] = value
+        }
     }
     
     // 显示标签

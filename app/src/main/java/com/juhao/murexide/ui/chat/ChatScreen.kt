@@ -945,7 +945,7 @@ fun ChatScreen(
                                                 contentColor = MaterialTheme.colorScheme.onSurfaceVariant
                                             ) {
                                                 Text(
-                                                    "$backUnreadCount",
+                                                    text = if (backUnreadCount > 99) "99+" else backUnreadCount.toString(),
                                                     style = MaterialTheme.typography.labelSmall
                                                 )
                                             }
@@ -1046,7 +1046,6 @@ fun ChatScreen(
                                                 overflow = TextOverflow.Ellipsis
                                             )
                                             if (chatType == 2 && uiState.memberCount != null) {
-                                                Spacer(modifier = Modifier.height(1.dp))
                                                 Text(
                                                     text = "${uiState.memberCount} 位成员",
                                                     style = MaterialTheme.typography.bodySmall,
@@ -1055,7 +1054,6 @@ fun ChatScreen(
                                                 )
                                             }
                                             if (chatType == 3 && uiState.usageCount != null) {
-                                                Spacer(modifier = Modifier.height(1.dp))
                                                 Text(
                                                     text = "${uiState.usageCount} 人使用",
                                                     style = MaterialTheme.typography.bodySmall,
@@ -1064,7 +1062,6 @@ fun ChatScreen(
                                                 )
                                             }
                                             if (chatType == 1 && uiState.continuousOnlineDay != null) {
-                                                Spacer(modifier = Modifier.height(1.dp))
                                                 Text(
                                                     text = "连续在线 ${uiState.continuousOnlineDay} 天",
                                                     style = MaterialTheme.typography.bodySmall,
