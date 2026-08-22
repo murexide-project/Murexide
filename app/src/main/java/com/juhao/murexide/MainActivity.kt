@@ -424,6 +424,7 @@ fun MainScreen(account: UserAccount) {
 
     val settingsStorage = remember { SettingsStorage(context) }
     val bigScreenEnabled by settingsStorage.bigScreenFlow.collectAsState(initial = true)
+    val floatBottomBarEnabled by settingsStorage.isFloatBottomBarEnabledFlow.collectAsState(initial = true)
 
     val isBigScreen = LocalConfiguration.current.screenWidthDp >= 600
 
@@ -460,6 +461,8 @@ fun MainScreen(account: UserAccount) {
     NavigationSuiteScaffold(
         layoutType = if (useNavigationRail) {
             NavigationSuiteType.NavigationRail
+        } else if (!floatBottomBarEnabled) {
+            NavigationSuiteType.NavigationBar
         } else {
             NavigationSuiteType.None
         },
@@ -480,50 +483,38 @@ fun MainScreen(account: UserAccount) {
             NavigationSuiteDefaults.colors()
         },
         navigationSuiteItems = {
-            if (useNavigationRail || !liquidGlassEnabled) {
-                navItems.forEach { item ->
-                    val selected = currentRoute == item.route
-                    item(
-                        icon = {
-                            when (item.route) {
-                                "mine" -> {
-                                    Box(
-                                        modifier = Modifier.combinedClickable(
-                                            interactionSource = remember { MutableInteractionSource() },
-                                            indication = null,
-                                            onClick = { navigateTo(item.route) },
-                                            onLongClick = { showAccountMenu = true }
-                                        )
-                                    ) {
-                                        AnimatedNavigationSymbol(
-                                            outlineIcon = item.outlineIcon,
-                                            filledIcon = item.filledIcon,
-                                            selected = selected,
-                                            contentDescription = item.title,
-                                            tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                        )
-                                        AccountQuickSwitchMenu(
-                                            expanded = showAccountMenu && !liquidGlassEnabled,
-                                            accounts = loggedInAccounts,
-                                            currentAccountId = account.id,
-                                            onDismissRequest = { showAccountMenu = false }
-                                        )
-                                    }
+            navItems.forEach { item ->
+                val selected = currentRoute == item.route
+                item(
+                    icon = {
+                        when (item.route) {
+                            "mine" -> {
+                                Box(
+                                    modifier = Modifier.combinedClickable(
+                                        interactionSource = remember { MutableInteractionSource() },
+                                        indication = null,
+                                        onClick = { navigateTo(item.route) },
+                                        onLongClick = { showAccountMenu = true }
+                                    )
+                                ) {
+                                    AnimatedNavigationSymbol(
+                                        outlineIcon = item.outlineIcon,
+                                        filledIcon = item.filledIcon,
+                                        selected = selected,
+                                        contentDescription = item.title,
+                                        tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                    AccountQuickSwitchMenu(
+                                        expanded = showAccountMenu && !liquidGlassEnabled,
+                                        accounts = loggedInAccounts,
+                                        currentAccountId = account.id,
+                                        onDismissRequest = { showAccountMenu = false }
+                                    )
                                 }
+                            }
 
-                                "conversations" -> {
-                                    BadgedBox(badge = { UnreadCountBadge(unreadCount) }) {
-                                        AnimatedNavigationSymbol(
-                                            outlineIcon = item.outlineIcon,
-                                            filledIcon = item.filledIcon,
-                                            selected = selected,
-                                            contentDescription = item.title,
-                                            tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                        )
-                                    }
-                                }
-
-                                else -> {
+                            "conversations" -> {
+                                BadgedBox(badge = { UnreadCountBadge(unreadCount) }) {
                                     AnimatedNavigationSymbol(
                                         outlineIcon = item.outlineIcon,
                                         filledIcon = item.filledIcon,
@@ -533,12 +524,22 @@ fun MainScreen(account: UserAccount) {
                                     )
                                 }
                             }
-                        },
-                        label = { HomeNavigationLabel(item, selected) },
-                        selected = selected,
-                        onClick = { navigateTo(item.route) }
-                    )
-                }
+
+                            else -> {
+                                AnimatedNavigationSymbol(
+                                    outlineIcon = item.outlineIcon,
+                                    filledIcon = item.filledIcon,
+                                    selected = selected,
+                                    contentDescription = item.title,
+                                    tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                    },
+                    label = { HomeNavigationLabel(item, selected) },
+                    selected = selected,
+                    onClick = { navigateTo(item.route) }
+                )
             }
         }
     ) {
@@ -546,7 +547,7 @@ fun MainScreen(account: UserAccount) {
             containerColor = Color.Transparent,
             contentWindowInsets = WindowInsets(0),
             bottomBar = {
-                if (!useNavigationRail && !hideMobileNavigation) {
+                if (!useNavigationRail && !hideMobileNavigation && floatBottomBarEnabled) {
                     if (liquidGlassEnabled && liquidBackdrop != null) {
                         LiquidBottomTabs(
                             selectedTabIndex = navItems.indexOfFirst { it.route == currentRoute }
@@ -682,6 +683,7 @@ fun MainScreen(account: UserAccount) {
                                     .fillMaxHeight(),
                                 token = token,
                                 accountId = account.id,
+                                innerPadding = innerPadding,
                                 bigScreenMode = isBigScreen && bigScreenEnabled,
                                 currentConversation = if (isBigScreen && bigScreenEnabled) currentConversation else null,
                                 onConversationClick = { conversation ->
@@ -768,6 +770,7 @@ fun MainScreen(account: UserAccount) {
                     composable("contacts") {
                         ContactListScreen(
                             token = token,
+                            innerPadding = innerPadding,
                             onNewMessagesVisibilityChanged = { isVisible ->
                                 isContactNewMessagesVisible = isVisible
                             },
@@ -785,7 +788,8 @@ fun MainScreen(account: UserAccount) {
 
                     composable("community") {
                         CommunityScreen(
-                            token = token
+                            token = token,
+                            innerPadding = innerPadding
                         )
                     }
 
@@ -816,6 +820,7 @@ fun MainScreen(account: UserAccount) {
                     composable("mine") {
                         MineScreen(
                             token = token,
+                            innerPadding = innerPadding,
                             onSettingsClick = {
                                 context.startActivity(Intent(context, SettingsActivity::class.java))
                             }

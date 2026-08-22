@@ -34,6 +34,7 @@ import java.text.NumberFormat
 @Composable
 fun MineScreen(
     token: String,
+    innerPadding: PaddingValues,
     onSettingsClick: () -> Unit,
     viewModel: MineViewModel = viewModel(
         factory = object : androidx.lifecycle.ViewModelProvider.Factory {
@@ -112,6 +113,7 @@ fun MineScreen(
 
             is MineUiState.Success -> {
                 MineContent(
+                    innerPadding = innerPadding,
                     userInfo = state.userInfo,
                     onlineDay = state.onlineDay,
                     continuousOnlineDay = state.continuousOnlineDay,
@@ -176,6 +178,7 @@ fun UploadProgressDialog(progress: Float) {
 
 @Composable
 private fun MineContent(
+    innerPadding: PaddingValues,
     userInfo: UserInfo,
     onlineDay: Int?,
     continuousOnlineDay: Int?,
@@ -258,7 +261,7 @@ private fun MineContent(
             )
         }
 
-        Spacer(modifier = Modifier.height(100.dp))
+        Spacer(modifier = Modifier.height(innerPadding.calculateBottomPadding()))
     }
 }
 

@@ -88,21 +88,12 @@ fun AboutScreen(
                 SettingsItem(
                     icon = AppIcons.Person,
                     title = "贡献者",
-                    subtitle = "JuHao",
+                    subtitle = "查看对此项目做出贡献的用户",
                     onClick = {
-                        context.startActivity(Intent(Intent.ACTION_VIEW, "https://github.com/JuHao".toUri()))
+                        context.startActivity(Intent(Intent.ACTION_VIEW, "https://github.com/murexide-project/Murexide/graphs/contributors".toUri()))
                     }
                 )
 
-                SettingsItem(
-                    icon = AppIcons.Person,
-                    title = "贡献者",
-                    subtitle = "GinHsYr",
-                    onClick = {
-                        context.startActivity(Intent(Intent.ACTION_VIEW, "https://github.com/GinHsYr".toUri()))
-                    }
-                )
-                
                 SettingsItem(
                     icon = AppIcons.Code,
                     title = "编程语言",

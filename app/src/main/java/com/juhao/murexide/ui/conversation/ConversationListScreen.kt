@@ -51,6 +51,7 @@ fun ConversationListScreen(
     modifier: Modifier = Modifier,
     token: String,
     accountId: String,
+    innerPadding: PaddingValues,
     bigScreenMode: Boolean,
     onConversationClick: (ConversationItem) -> Unit,
     onSearchClick: (IntOffset) -> Unit = {},
@@ -226,7 +227,7 @@ fun ConversationListScreen(
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
                         state = listState,
-                        contentPadding = PaddingValues(bottom = 100.dp)
+                        contentPadding = PaddingValues(bottom = innerPadding.calculateBottomPadding())
                     ) {
                         val totalItems = stickyConvs.size + normalConvs.size
 

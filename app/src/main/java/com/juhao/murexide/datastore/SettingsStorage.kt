@@ -59,6 +59,7 @@ class SettingsStorage(private val context: Context) {
         private val BIG_SCREEN_KEY = booleanPreferencesKey("big_screen")
         private val UPDATE_CHANNEL_KEY = stringPreferencesKey("update_channel")
         
+        private val FLOAT_BOTTOM_BAR_KEY = booleanPreferencesKey("float_bottom_bar")
         private val SHOW_STICKY_KEY = booleanPreferencesKey("show_sticky")
         
         private val MSG_SHOW_TAGS_KEY = booleanPreferencesKey("msg_show_tags")
@@ -191,6 +192,17 @@ class SettingsStorage(private val context: Context) {
     suspend fun setShowSticky(value: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[SHOW_STICKY_KEY] = value
+        }
+    }
+    
+    // 悬浮底栏
+    val isFloatBottomBarEnabledFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[FLOAT_BOTTOM_BAR_KEY] ?: true
+    }
+
+    suspend fun setFloatBottomBar(value: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[FLOAT_BOTTOM_BAR_KEY] = value
         }
     }
     

@@ -34,6 +34,7 @@ import com.juhao.murexide.ui.components.SettingsItem
 @Composable
 fun CommunityScreen(
     token: String,
+    innerPadding: PaddingValues,
     modifier: Modifier = Modifier
 ) {
     val viewModel: CommunityViewModel = viewModel(
@@ -78,15 +79,16 @@ fun CommunityScreen(
                 }
             }
         }
-    ) { innerPadding ->
+    ) { contentPadding ->
         Box(
             modifier = modifier
                 .fillMaxSize()
-                .padding(innerPadding)
+                .padding(contentPadding)
         ) {
             when (uiState.currentTab) {
                 CommunityTab.RECOMMEND -> PostsList(
                     posts = uiState.posts,
+                    innerPadding = innerPadding,
                     isLoading = uiState.isLoadingPosts,
                     isRefreshing = uiState.isRefreshingPosts,
                     isLoadingMore = uiState.isLoadingMore,
@@ -98,6 +100,7 @@ fun CommunityScreen(
                 )
 
                 CommunityTab.ALL_BA -> AllBaContent(
+                    innerPadding = innerPadding,
                     currentSide = uiState.currentBaSide,
                     onSideSelected = viewModel::selectBaSide,
                     baList = uiState.allBaList,
@@ -106,6 +109,7 @@ fun CommunityScreen(
                 )
 
                 CommunityTab.MANAGE -> ManageContent(
+                    innerPadding = innerPadding,
                     baList = uiState.manageBaList,
                     isLoading = uiState.isLoadingManageBa,
                     onMyPostsClick = { MyPostsActivity.start(context) },
@@ -118,6 +122,7 @@ fun CommunityScreen(
 
 @Composable
 fun AllBaContent(
+    innerPadding: PaddingValues,
     currentSide: BaSide,
     onSideSelected: (BaSide) -> Unit,
     baList: List<BaItem>,
@@ -160,6 +165,7 @@ fun AllBaContent(
 
         Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
             BaList(
+                innerPadding = innerPadding,
                 baList = baList,
                 isLoading = isLoading,
                 emptyText = if (currentSide == BaSide.USER) "暂无用户自建分区" else "暂无分区",
@@ -171,6 +177,7 @@ fun AllBaContent(
 
 @Composable
 fun ManageContent(
+    innerPadding: PaddingValues,
     baList: List<BaItem>,
     isLoading: Boolean,
     onMyPostsClick: () -> Unit,
@@ -178,7 +185,7 @@ fun ManageContent(
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(top = 8.dp, bottom = 100.dp)
+        contentPadding = PaddingValues(top = 8.dp, bottom = innerPadding.calculateBottomPadding())
     ) {
         item {
             SettingsGroup {
@@ -235,6 +242,7 @@ fun ManageContent(
 
 @Composable
 fun BaList(
+    innerPadding: PaddingValues,
     baList: List<BaItem>,
     isLoading: Boolean,
     emptyText: String,
@@ -249,7 +257,7 @@ fun BaList(
             Text(emptyText, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     } else {
-        LazyColumn(contentPadding = PaddingValues(bottom = 100.dp)) {
+        LazyColumn(contentPadding = PaddingValues(bottom = innerPadding.calculateBottomPadding())) {
             items(baList) { ba ->
                 BaRow(ba = ba, onClick = { onBaClick(ba) })
             }
@@ -290,6 +298,7 @@ fun BaRow(ba: BaItem, onClick: () -> Unit) {
 @Composable
 fun PostsList(
     posts: List<PostItem>,
+    innerPadding: PaddingValues,
     isLoading: Boolean,
     isRefreshing: Boolean,
     isLoadingMore: Boolean,
@@ -341,7 +350,7 @@ fun PostsList(
             LazyColumn(
                 state = listState,
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(bottom = 100.dp)
+                contentPadding = PaddingValues(bottom = innerPadding.calculateBottomPadding())
             ) {
                 items(posts) { post ->
                     PostCard(

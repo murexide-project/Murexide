@@ -62,6 +62,8 @@ fun AppearanceScreen(
     var liquidGlassBlur by remember { mutableFloatStateOf(1f) }
     var bubbleOpacity by remember { mutableFloatStateOf(0.9f) }
     var backgroundOpacity by remember { mutableFloatStateOf(0.5f) }
+    
+    val floatBottomBarEnabled by settingsStorage.isFloatBottomBarEnabledFlow.collectAsState(initial = true)
 
     LaunchedEffect(Unit) {
         bubbleCornerRadius = settingsStorage.getBubbleCornerRadius()
@@ -535,7 +537,7 @@ fun AppearanceScreen(
                 )
             }
 
-            SettingsGroup(title = "会话") {
+            SettingsGroup(title = "界面") {
                 SettingsSwitchItem(
                     icon = AppIcons.People,
                     title = "圆角正方形头像",
@@ -545,6 +547,17 @@ fun AppearanceScreen(
                         UiState.squareAvatar.value = checked
                         scope.launch {
                             settingsStorage.setSquareAvatar(checked)
+                        }
+                    }
+                )
+                SettingsSwitchItem(
+                    icon = AppIcons.Settings,
+                    title = "主页悬浮底栏",
+                    subtitle = "开启悬浮底栏可同时显示玻璃效果",
+                    checked = floatBottomBarEnabled,
+                    onCheckedChange = { checked ->
+                        scope.launch {
+                            settingsStorage.setFloatBottomBar(checked)
                         }
                     }
                 )

@@ -110,6 +110,7 @@ private val ContactIndexCellSize = 14.dp
 @Composable
 fun ContactListScreen(
     token: String,
+    innerPadding: PaddingValues,
     onContactClick: (ContactItem) -> Unit,
     onNewMessagesVisibilityChanged: (Boolean) -> Unit = {},
     viewModel: ContactViewModel = remember(token) { ContactViewModel(token) }
@@ -180,6 +181,7 @@ fun ContactListScreen(
         } else {
             ContactDirectoryScreen(
                 uiState = uiState,
+                innerPadding = innerPadding,
                 snackbarHostState = snackbarHostState,
                 onRefresh = viewModel::refreshAll,
                 onOpenNewMessages = {
@@ -198,6 +200,7 @@ fun ContactListScreen(
 @Composable
 private fun ContactDirectoryScreen(
     uiState: ContactUiState,
+    innerPadding: PaddingValues,
     snackbarHostState: SnackbarHostState,
     onRefresh: () -> Unit,
     onOpenNewMessages: () -> Unit,
@@ -263,6 +266,7 @@ private fun ContactDirectoryScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues),
+            innerPadding = innerPadding,
             groups = uiState.contactGroups,
             tab = currentTab,
             listState = listState,
@@ -281,6 +285,7 @@ private fun ContactDirectoryScreen(
 @Composable
 private fun ContactTabContent(
     modifier: Modifier,
+    innerPadding: PaddingValues,
     groups: List<ContactGroup>,
     tab: ContactTab,
     listState: LazyListState,
@@ -322,7 +327,7 @@ private fun ContactTabContent(
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             state = listState,
-            contentPadding = PaddingValues(bottom = 100.dp)
+            contentPadding = PaddingValues(bottom = innerPadding.calculateBottomPadding())
         ) {
             if (showNewMessageShortcut) {
                 item(key = "new_messages", contentType = "shortcut") {
