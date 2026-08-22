@@ -18,43 +18,14 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
-import androidx.compose.material3.Button
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.VerticalDivider
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -1510,16 +1481,47 @@ private fun MemberRow(
     onAdminToggle: () -> Unit
 ) {
     var expanded by remember(member.userId) { mutableStateOf(false) }
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 14.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
+    
+    ListItem(
+        onClick = onClick,
+        leadingContent = {
+            Avatar(url = member.avatarUrl, size = 46.dp)
+        },
+        trailingContent = {
+            if (canManage) {
+                Box {
+                    ExpressiveOverflowIconButton(
+                        expanded = expanded,
+                        onClick = { expanded = !expanded },
+                        contentDescription = "管理成员"
+                    )
+                    ExpressiveDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                        if (canSetAdmin) {
+                            DropdownMenuItem(
+                                text = { Text(if (member.permissionLevel == 2) "取消管理员" else "设置管理员") },
+                                onClick = { expanded = false; onAdminToggle() },
+                                leadingIcon = { Icon(AppIcons.AdminPanelSettings, null) }
+                            )
+                        }
+                        DropdownMenuItem(
+                            text = { Text(if (member.isGag) "取消禁言" else "禁言") },
+                            onClick = { expanded = false; onGag() },
+                            leadingIcon = { Icon(AppIcons.MicOff, null) }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("踢出群聊", color = MaterialTheme.colorScheme.error) },
+                            onClick = { expanded = false; onKick() },
+                            leadingIcon = { Icon(AppIcons.PersonRemove, null, tint = MaterialTheme.colorScheme.error) }
+                        )
+                    }
+                }
+            }
+        },
+        colors = ListItemDefaults.colors(
+            containerColor = Color.Transparent
+        )
     ) {
-        Avatar(url = member.avatarUrl, size = 46.dp)
-        Spacer(Modifier.width(10.dp))
-        Column(Modifier.weight(1f)) {
+        Column(Modifier.fillMaxWidth()) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -1547,49 +1549,21 @@ private fun MemberRow(
                 color = resolvedLiquidGlassContentColor(MaterialTheme.colorScheme.onSurfaceVariant)
             )
         }
-        if (canManage) {
-            Box {
-                ExpressiveOverflowIconButton(
-                    expanded = expanded,
-                    onClick = { expanded = !expanded },
-                    contentDescription = "管理成员"
-                )
-                ExpressiveDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                    if (canSetAdmin) {
-                        DropdownMenuItem(
-                            text = { Text(if (member.permissionLevel == 2) "取消管理员" else "设置管理员") },
-                            onClick = { expanded = false; onAdminToggle() },
-                            leadingIcon = { Icon(AppIcons.AdminPanelSettings, null) }
-                        )
-                    }
-                    DropdownMenuItem(
-                        text = { Text(if (member.isGag) "取消禁言" else "禁言") },
-                        onClick = { expanded = false; onGag() },
-                        leadingIcon = { Icon(AppIcons.MicOff, null) }
-                    )
-                    DropdownMenuItem(
-                        text = { Text("踢出群聊", color = MaterialTheme.colorScheme.error) },
-                        onClick = { expanded = false; onKick() },
-                        leadingIcon = { Icon(AppIcons.PersonRemove, null, tint = MaterialTheme.colorScheme.error) }
-                    )
-                }
-            }
-        }
     }
 }
 
 @Composable
 private fun BotRow(bot: BotItem, onClick: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 14.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
+    ListItem(
+        onClick = onClick,
+        leadingContent = {
+            Avatar(url = bot.avatarUrl, size = 46.dp)
+        },
+        colors = ListItemDefaults.colors(
+            containerColor = Color.Transparent
+        )
     ) {
-        Avatar(url = bot.avatarUrl, size = 46.dp, canView = true)
-        Spacer(Modifier.width(10.dp))
-        Column(Modifier.weight(1f)) {
+        Column(Modifier.fillMaxWidth()) {
             Text(
                 bot.name.ifBlank { "未知机器人" },
                 style = MaterialTheme.typography.titleMedium,

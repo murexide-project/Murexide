@@ -3,6 +3,7 @@ package com.juhao.murexide.ui.settings
 import com.juhao.murexide.ui.icons.AppIcons
 import com.juhao.murexide.ui.icons.AutoMirroredIcon
 
+import android.content.ClipData
 import android.Manifest
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -13,13 +14,16 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import com.juhao.murexide.utils.UpdateInfo
 import com.juhao.murexide.utils.checkForUpdateWithDetails
 import com.juhao.murexide.utils.getAppVersionInfo
 import com.juhao.murexide.ui.components.*
+import com.juhao.murexide.datastore.AccountStorage
 import com.juhao.murexide.datastore.SettingsStorage
 import kotlinx.coroutines.launch
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -53,6 +57,7 @@ fun SettingsScreen(
     var showUpdateDialog by remember { mutableStateOf(false) }
     var updateInfo by remember { mutableStateOf<UpdateInfo?>(null) }
     var showLogoutDialog by remember { mutableStateOf(false) }
+    var showGetTokenDialog by remember { mutableStateOf(false) }
 
     var avatarFollow by remember { mutableStateOf(false) }
     var bigScreen by remember { mutableStateOf(true) }
@@ -118,6 +123,40 @@ fun SettingsScreen(
         avatarFollow = settingsStorage.getAvatarFollow()
         bigScreen = settingsStorage.getBigScreen()
         updateChannel = settingsStorage.getUpdateChannel()
+    }
+    
+    val clipboardManager = LocalClipboard.current
+    val accountStorage = remember(context.applicationContext) {
+        AccountStorage.getInstance(context.applicationContext)
+    }
+    
+    if (showGetTokenDialog) {
+        AlertDialog(
+            onDismissRequest = { showLogoutDialog = false },
+            icon = {
+                AutoMirroredIcon(AppIcons.Info, contentDescription = null)
+            },
+            title = { Text("提取当前 Token") },
+            text = { Text("点击确定按钮复制 Token，请注意不要泄露你的 Token，泄露自行负责！", color = MaterialTheme.colorScheme.error) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showGetTokenDialog = false
+                        scope.launch {
+                            clipboardManager.setClipEntry(ClipEntry(ClipData.newPlainText("token", accountStorage.getCurrentToken() ?: "")))
+                        }
+                        Toast.makeText(context, "复制成功", Toast.LENGTH_SHORT).show()
+                    }
+                ) {
+                    Text("确定", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showGetTokenDialog = false }) {
+                    Text("取消")
+                }
+            }
+        )
     }
     
     if (showLogoutDialog) {
@@ -319,6 +358,14 @@ fun SettingsScreen(
                     onClick = {
                         val intent = Intent(context, SwitchAccountActivity::class.java)
                         context.startActivity(intent)
+                    }
+                )
+                SettingsItem(
+                    icon = AppIcons.Key,
+                    title = "提取当前 Token",
+                    isDestructive = true,
+                    onClick = {
+                        showGetTokenDialog = true
                     }
                 )
                 SettingsItem(

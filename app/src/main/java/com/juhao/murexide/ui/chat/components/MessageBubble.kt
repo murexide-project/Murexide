@@ -631,7 +631,7 @@ fun MessageBubble(
                                                                         .width(200.dp)
                                                                         .aspectRatio(imageRatio)
                                                                 } else {
-                                                                    Modifier.size(96.dp)
+                                                                    Modifier.widthIn(max = imageMaxWidth)
                                                                 }
                                                             )
                                                             .onGloballyPositioned { coordinates ->
@@ -660,11 +660,7 @@ fun MessageBubble(
                                                         AsyncImage(
                                                             model = imageRequest,
                                                             contentDescription = if (isVideoMessage) "视频缩略图" else null,
-                                                            contentScale = if (message.contentType == MessageItem.CONTENT_TYPE_STICKER) {
-                                                                ContentScale.Fit
-                                                            } else {
-                                                                ContentScale.Crop
-                                                            },
+                                                            contentScale = ContentScale.Crop,
                                                             modifier = Modifier.fillMaxSize(),
                                                             onLoading = { loadState = 0 },
                                                             onSuccess = { loadState = 1 },
