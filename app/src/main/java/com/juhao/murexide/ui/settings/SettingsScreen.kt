@@ -137,7 +137,7 @@ fun SettingsScreen(
                 AutoMirroredIcon(AppIcons.Info, contentDescription = null)
             },
             title = { Text("提取当前 Token") },
-            text = { Text("点击确定按钮复制 Token，请注意不要泄露你的 Token，泄露自行负责！", color = MaterialTheme.colorScheme.error) },
+            text = { Text("点击确定按钮复制 Token，请注意不要泄露你的 Token，泄露后果自负！", color = MaterialTheme.colorScheme.error) },
             confirmButton = {
                 TextButton(
                     onClick = {

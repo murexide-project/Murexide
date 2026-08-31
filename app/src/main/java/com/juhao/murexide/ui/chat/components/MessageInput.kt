@@ -427,7 +427,7 @@ private fun MoreActionsButton(
     var showMenu by remember { mutableStateOf(false) }
 
     Box {
-        FilledTonalIconButton(
+        IconButton(
             onClick = { showMenu = true },
             modifier = Modifier.size(44.dp)
         ) {

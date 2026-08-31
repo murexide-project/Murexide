@@ -987,10 +987,7 @@ fun MessageBubble(
                         expanded = showMenu,
                         onDismissRequest = { showMenuChanged(null) },
                         modifier = Modifier.align(if (isMine) Alignment.TopStart else Alignment.TopEnd),
-                        properties = PopupProperties(
-                            focusable = true,
-                            dismissOnClickOutside = true
-                        )
+                        shape = MenuDefaults.standaloneGroupShape
                     ) {
                         if (message.content.isNotBlank()) {
                             DropdownMenuItem(

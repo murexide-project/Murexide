@@ -65,7 +65,7 @@ fun Greeting(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             StyledTopBar(
-                title = { Text("切换账号") },
+                title = { Text(if (isChooseMode) "现有账号" else "切换账号") },
                 scrollBehavior = scrollBehavior,
                 navigationIcon = {
                     StyledIconButton(onClick = onBack) {
@@ -173,7 +173,7 @@ fun AccountRow(
                 }
             },
             trailingContent = {
-                if (!isCurrentAccount) {
+                if (!isCurrentAccount && !isChooseMode) {
                     Icon(
                         AppIcons.ChevronRight,
                         contentDescription = null,

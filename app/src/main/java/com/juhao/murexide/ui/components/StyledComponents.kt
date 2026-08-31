@@ -67,10 +67,7 @@ fun ExpressiveDropdownMenu(
         expanded = expanded,
         onDismissRequest = onDismissRequest,
         modifier = modifier,
-        shape = RoundedCornerShape(24.dp),
-        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-        tonalElevation = 3.dp,
-        shadowElevation = 6.dp,
+        shape = MenuDefaults.standaloneGroupShape,
         content = content
     )
 }
