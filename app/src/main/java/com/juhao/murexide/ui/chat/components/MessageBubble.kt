@@ -622,16 +622,14 @@ fun MessageBubble(
                                                     Box(
                                                         modifier = Modifier
                                                             .then(
-                                                                if (isImageMessage) {
-                                                                    Modifier
-                                                                        .widthIn(min = 100.dp, max = imageMaxWidth)
-                                                                        .aspectRatio(imageRatio)
-                                                                } else if (isVideoMessage) {
+                                                                if (isVideoMessage) {
                                                                     Modifier
                                                                         .width(200.dp)
                                                                         .aspectRatio(imageRatio)
                                                                 } else {
-                                                                    Modifier.widthIn(max = imageMaxWidth)
+                                                                    Modifier
+                                                                        .widthIn(min = 100.dp, max = imageMaxWidth)
+                                                                        .aspectRatio(imageRatio)
                                                                 }
                                                             )
                                                             .onGloballyPositioned { coordinates ->
