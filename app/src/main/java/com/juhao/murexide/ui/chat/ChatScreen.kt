@@ -844,8 +844,7 @@ fun ChatScreen(
                     return@collect
                 }
 
-                val isAtBottom = listState.layoutInfo.visibleItemsInfo
-                    .firstOrNull()?.index == 0
+                val isAtBottom = !listState.canScrollBackward
 
                 firstMessageId = msgId
 

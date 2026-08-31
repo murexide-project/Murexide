@@ -197,7 +197,7 @@ fun ConversationListScreen(
                         )
                 )
                 SearchBar(
-                    modifier = Modifier.statusBarsPadding().padding(12.dp),
+                    modifier = Modifier.statusBarsPadding().padding(12.dp).fillMaxWidth(),
                     state = searchBarState,
                     inputField = inputField
                 )
