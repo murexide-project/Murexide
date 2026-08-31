@@ -1,22 +1,22 @@
 package com.juhao.murexide.ui.conversation
 
 import com.juhao.murexide.ui.icons.AppIcons
+import com.juhao.murexide.ui.icons.AutoMirroredIcon
 
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
-import androidx.compose.animation.togetherWith
+import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
+import androidx.compose.foundation.text.input.rememberTextFieldState
+import androidx.compose.foundation.text.input.clearText
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import com.juhao.murexide.R
 import com.juhao.murexide.datastore.SettingsStorage
 import com.juhao.murexide.data.ConversationItem
+import com.juhao.murexide.data.HomeSearchResult
 import com.juhao.murexide.ui.components.*
 import com.juhao.murexide.ui.theme.UiState
 import java.text.SimpleDateFormat
@@ -39,6 +40,7 @@ import kotlinx.coroutines.launch
 import androidx.compose.foundation.shape.CircleShape
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import com.juhao.murexide.ui.conversationdetail.ConversationDetailActivity
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
@@ -54,7 +56,6 @@ fun ConversationListScreen(
     innerPadding: PaddingValues,
     bigScreenMode: Boolean,
     onConversationClick: (ConversationItem) -> Unit,
-    onSearchClick: (IntOffset) -> Unit = {},
     onCreateClick: (CreationKind) -> Unit = {},
     currentConversation: ConversationItem? = null,
     viewModel: ConversationViewModel = androidx.lifecycle.viewmodel.compose.viewModel(
@@ -65,7 +66,12 @@ fun ConversationListScreen(
                 return ConversationViewModel(token, accountId) as T
             }
         }
-    )
+    ),
+    searchViewModel: HomeSearchViewModel = androidx.lifecycle.viewmodel.compose.viewModel(factory = object : ViewModelProvider.Factory {
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>) =
+            HomeSearchViewModel(token) as T
+    })
 ) {
     val context = LocalContext.current
     val hazeState = remember { HazeState() }
@@ -110,6 +116,55 @@ fun ConversationListScreen(
     
     val settingsStorage = remember { SettingsStorage(context) }
     val isStickyExpanded by settingsStorage.showStickyFlow.collectAsState(initial = true)
+    
+    val searchState by searchViewModel.uiState.collectAsState()
+    val searchBarState = rememberSearchBarState()
+    val textFieldState = rememberTextFieldState()
+    val inputField =
+        @Composable {
+            SearchBarDefaults.InputField(
+                textFieldState = textFieldState,
+                searchBarState = searchBarState,
+                onSearch = {
+                    searchViewModel.updateQuery(it)
+                },
+                placeholder = {
+                    Text(modifier = Modifier.clearAndSetSemantics {}, text = "搜索会话")
+                },
+                leadingIcon = {
+                    if (searchBarState.targetValue != SearchBarValue.Collapsed) {
+                        IconButton(
+                            onClick = {
+                                scope.launch {
+                                    searchBarState.animateToCollapsed()
+                                }
+                            }
+                        ) {
+                            AutoMirroredIcon(AppIcons.ArrowBack, contentDescription = null)
+                        }
+                    } else {
+                        AutoMirroredIcon(AppIcons.Search, contentDescription = null)
+                    }
+                },
+                trailingIcon = {
+                    if (textFieldState.text.isNotBlank()) {
+                        IconButton(
+                            onClick = {
+                                textFieldState.clearText()
+                            }
+                        ) {
+                            Icon(AppIcons.Close, contentDescription = null)
+                        }
+                    }
+                }
+            )
+        }
+        
+    val isSearchBarVisible by remember {
+        derivedStateOf {
+            listState.firstVisibleItemIndex == 0
+        }
+    }
 
     Scaffold(
         modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -128,77 +183,138 @@ fun ConversationListScreen(
                             block = null,
                         )
                 )
-                TopAppBar(
-                    title = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                stringResource(R.string.app_name),
-                                maxLines = 1
-                            )
-                            if (!isWsConnected) {
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Surface(
-                                    modifier = Modifier
-                                        .size(8.dp)
-                                        .clip(CircleShape),
-                                    color = MaterialTheme.colorScheme.error
-                                ) {}
+                Column {
+                    TopAppBar(
+                        title = {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    stringResource(R.string.app_name),
+                                    maxLines = 1
+                                )
+                                if (!isWsConnected) {
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Surface(
+                                        modifier = Modifier
+                                            .size(8.dp)
+                                            .clip(CircleShape),
+                                        color = MaterialTheme.colorScheme.error
+                                    ) {}
+                                }
+                            }
+                        },
+                        scrollBehavior = scrollBehavior,
+                        colors = TopAppBarDefaults.topAppBarColors(
+                            containerColor = Color.Transparent,
+                            scrolledContainerColor = Color.Transparent,
+                        ),
+                        actions = {
+                            Crossfade(targetState = isSearchBarVisible) { hide ->
+                                if (hide) return@Crossfade
+                                IconButton(
+                                    onClick = { 
+                                        scope.launch {
+                                            searchBarState.animateToExpanded()
+                                        }
+                                    }
+                                ) {
+                                    Icon(AppIcons.Search, contentDescription = "搜索")
+                                }
+                            }
+                            Box {
+                                StyledIconButton(onClick = { showCreateMenu = true }) {
+                                    Icon(AppIcons.Add, contentDescription = "创建")
+                                }
+                                DropdownMenu(
+                                    expanded = showCreateMenu,
+                                    onDismissRequest = { showCreateMenu = false }) {
+                                    DropdownMenuItem(
+                                        text = { Text("创建群聊") },
+                                        onClick = {
+                                            showCreateMenu = false; onCreateClick(CreationKind.GROUP)
+                                        },
+                                        leadingIcon = {
+                                            Icon(
+                                                AppIcons.Group,
+                                                contentDescription = null
+                                            )
+                                        }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("创建机器人") },
+                                        onClick = {
+                                            showCreateMenu = false; onCreateClick(CreationKind.BOT)
+                                        },
+                                        leadingIcon = {
+                                            Icon(
+                                                AppIcons.SmartToy,
+                                                contentDescription = null
+                                            )
+                                        }
+                                    )
+                                }
                             }
                         }
-                    },
-                    scrollBehavior = scrollBehavior,
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = Color.Transparent,
-                        scrolledContainerColor = Color.Transparent,
-                    ),
-                    actions = {
-                        IconButton(
-                            onClick = { onSearchClick(searchButtonCenter ?: IntOffset.Zero) },
-                            modifier = Modifier.onGloballyPositioned { coordinates ->
-                                val position = coordinates.positionInWindow()
-                                searchButtonCenter = IntOffset(
-                                    x = (position.x + coordinates.size.width / 2f).roundToInt(),
-                                    y = (position.y + coordinates.size.height / 2f).roundToInt()
+                    )
+                    
+                    ExpandedFullScreenSearchBar(state = searchBarState, inputField = inputField) {
+                        when {
+                            searchState.isLoading && searchState.results.isEmpty() -> LoadingScreen(Modifier)
+                            searchState.error != null -> Column(
+                                modifier = Modifier.fillMaxSize(),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                Text(searchState.error!!)
+                                Spacer(Modifier.size(12.dp))
+                                TextButton(onClick = searchViewModel::retry) { Text("重试") }
+                            }
+                            searchState.results.isEmpty() -> Column(
+                                modifier = Modifier.fillMaxSize(),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                Icon(
+                                    AppIcons.Inbox,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(48.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Spacer(Modifier.height(12.dp))
+                                Text(
+                                    text = if (searchState.hasSearched) "未找到相关结果" else "暂无搜索内容",
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
-                        ) {
-                            Icon(AppIcons.Search, contentDescription = "搜索")
-                        }
-                        Box {
-                            StyledIconButton(onClick = { showCreateMenu = true }) {
-                                Icon(AppIcons.Add, contentDescription = "创建")
-                            }
-                            DropdownMenu(
-                                expanded = showCreateMenu,
-                                onDismissRequest = { showCreateMenu = false }) {
-                                DropdownMenuItem(
-                                    text = { Text("创建群聊") },
-                                    onClick = {
-                                        showCreateMenu = false; onCreateClick(CreationKind.GROUP)
-                                    },
-                                    leadingIcon = {
-                                        Icon(
-                                            AppIcons.Group,
-                                            contentDescription = null
-                                        )
+                            else -> LazyColumn(
+                                modifier = Modifier.fillMaxSize(),
+                            ) {
+                                listOf(1 to "用户", 2 to "群聊", 3 to "机器人").forEach { (type, title) ->
+                                    val items = searchState.resultsFor(type)
+                                    if (items.isNotEmpty()) {
+                                        item {
+                                            Text(
+                                                title,
+                                                style = MaterialTheme.typography.titleSmall,
+                                                modifier = Modifier.padding(16.dp, 14.dp, 16.dp, 6.dp)
+                                            )
+                                        }
+                                        items(items, key = { "${it.chatType}:${it.chatId}" }) { result ->
+                                            SearchRow(result, { result ->
+                                                ConversationDetailActivity.start(
+                                                    context,
+                                                    result.chatId,
+                                                    result.chatType,
+                                                    result.name,
+                                                    result.avatarUrl
+                                                )
+                                            })
+                                        }
                                     }
-                                )
-                                DropdownMenuItem(
-                                    text = { Text("创建机器人") },
-                                    onClick = {
-                                        showCreateMenu = false; onCreateClick(CreationKind.BOT)
-                                    },
-                                    leadingIcon = {
-                                        Icon(
-                                            AppIcons.SmartToy,
-                                            contentDescription = null
-                                        )
-                                    }
-                                )
+                                }
                             }
                         }
                     }
-                )
+                }
             }
         }
     ) { contentPadding ->
@@ -221,7 +337,7 @@ fun ConversationListScreen(
                         stickyIds.contains(it.chatId) 
                     }
 
-                    val allowCollapseSticky = stickyConvs.size >= 5
+                    val allowCollapseSticky = stickyConvs.size > 5
                     val isStickyCollapsed = !isStickyExpanded && allowCollapseSticky
 
                     LazyColumn(
@@ -241,6 +357,14 @@ fun ConversationListScreen(
                                 }
                             }
                         } else {
+                            item {
+                                SearchBar(
+                                    modifier = Modifier.padding(horizontal = 8.dp).padding(bottom = 8.dp),
+                                    state = searchBarState,
+                                    inputField = inputField
+                                )
+                            }
+
                             if (allowCollapseSticky) {
                                 stickyHeader(key = "collapseStickyButton") {
                                     val bkgolor = if (themeColor != "WHITE") {
@@ -433,6 +557,45 @@ fun ConversationItem(
                         unreadCount = conversation.unreadMessage
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun LoadingScreen(modifier: Modifier = Modifier) = Box(
+    modifier = modifier.fillMaxSize(),
+    contentAlignment = Alignment.Center
+) { CircularProgressIndicator() }
+
+@Composable
+private fun SearchRow(result: HomeSearchResult, onClick: (HomeSearchResult) -> Unit) {
+    ListItem(
+        onClick = { onClick(result) },
+        leadingContent = {
+            Avatar(url = result.avatarUrl, size = 44.dp)
+        },
+        trailingContent = {
+            Icon(
+                if (result.chatType == 2) AppIcons.Group else if (result.chatType == 3) AppIcons.SmartToy else AppIcons.Person,
+                modifier = Modifier.size(18.dp),
+                contentDescription = null
+            )
+        },
+        colors = ListItemDefaults.colors(
+            containerColor = Color.Transparent
+        )
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Text(result.name, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            if (result.introduction.isNotBlank()) {
+                Text(
+                    result.introduction,
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     }

@@ -61,6 +61,8 @@ fun AppearanceScreen(
     val liquidGlassEnabled by settingsStorage.liquidGlassEnabledFlow.collectAsState(initial = false)
     var liquidGlassBlur by remember { mutableFloatStateOf(1f) }
     var bubbleOpacity by remember { mutableFloatStateOf(0.9f) }
+    
+    val showBackground by settingsStorage.showBackgroundFlow.collectAsState(initial = true)
     var backgroundOpacity by remember { mutableFloatStateOf(0.5f) }
     
     val floatBottomBarEnabled by settingsStorage.isFloatBottomBarEnabledFlow.collectAsState(initial = true)
@@ -444,70 +446,84 @@ fun AppearanceScreen(
                     }
                 }
                 
-                CustomItemCell {
-                    Column(
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                SettingsSwitchItem(
+                    icon = AppIcons.Image,
+                    title = "显示会话背景",
+                    subtitle = "在会话页面显示设定的背景",
+                    checked = showBackground,
+                    onCheckedChange = { checked ->
+                        scope.launch {
+                            settingsStorage.setShowBackground(checked)
+                        }
+                    }
+                )
+                
+                if (showBackground) {
+                    CustomItemCell {
+                        Column(
+                            modifier = Modifier.fillMaxWidth()
                         ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    AppIcons.Image,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(20.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Text(
-                                    text = "背景不透明度",
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        AppIcons.Image,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(20.dp),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Text(
+                                        text = "背景不透明度",
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                }
+                                Surface(
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = MaterialTheme.colorScheme.secondaryContainer
+                                ) {
+                                    Text(
+                                        text = "${(backgroundOpacity * 100).toInt()}%",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                                        textAlign = TextAlign.Center
+                                    )
+                                }
                             }
-                            Surface(
-                                shape = RoundedCornerShape(6.dp),
-                                color = MaterialTheme.colorScheme.secondaryContainer
+                            
+                            Spacer(modifier = Modifier.height(4.dp))
+                            
+                            LiquidGlassSlider(
+                                value = backgroundOpacity,
+                                onValueChange = { backgroundOpacity = it },
+                                onValueChangeFinished = {
+                                    scope.launch {
+                                        settingsStorage.setBackgroundOpacity(backgroundOpacity)
+                                    }
+                                },
+                                valueRange = 0.2f..1f,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
                             ) {
                                 Text(
-                                    text = "${(backgroundOpacity * 100).toInt()}%",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.onSecondaryContainer,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                                    textAlign = TextAlign.Center
+                                    text = "20%",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = "100%",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
-                        }
-                        
-                        Spacer(modifier = Modifier.height(4.dp))
-                        
-                        LiquidGlassSlider(
-                            value = backgroundOpacity,
-                            onValueChange = { backgroundOpacity = it },
-                            onValueChangeFinished = {
-                                scope.launch {
-                                    settingsStorage.setBackgroundOpacity(backgroundOpacity)
-                                }
-                            },
-                            valueRange = 0.2f..1f,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                        
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(
-                                text = "20%",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Text(
-                                text = "100%",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
                         }
                     }
                 }

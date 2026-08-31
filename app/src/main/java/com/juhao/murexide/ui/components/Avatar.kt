@@ -26,6 +26,13 @@ fun Avatar(
     val context = LocalContext.current
     val squareAvatar by UiState.squareAvatar
     
+    val shape = remember(squareAvatar) {
+        if (squareAvatar && !alwaysCircle) {
+            RoundedCornerShape(size / 4)
+        } else {
+            CircleShape
+        }
+    }
     val imageRequest = remember(url) {
         ImageRequest.Builder(context)
             .data(url)
@@ -45,13 +52,7 @@ fun Avatar(
         contentDescription = null,
         modifier = modifier
             .size(size)
-            .clip(
-                if (squareAvatar && !alwaysCircle) {
-                    RoundedCornerShape(size / 4)
-                } else {
-                    CircleShape
-                }
-            )
+            .clip(shape)
             .then(
                 if (canView)
                     Modifier.clickable {

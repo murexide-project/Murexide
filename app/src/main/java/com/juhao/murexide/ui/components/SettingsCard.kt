@@ -3,6 +3,7 @@ package com.juhao.murexide.ui.components
 import com.juhao.murexide.ui.icons.AppIcons
 import com.juhao.murexide.ui.icons.AutoMirroredIcon
 
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
@@ -39,6 +40,7 @@ fun SettingsGroup(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .animateContentSize()
                 .then(
                     if (!disableCornerShape) Modifier.clip(RoundedCornerShape(24.dp))
                     else Modifier
@@ -280,23 +282,19 @@ fun SettingsDropdownItem(
                 
                 DropdownMenu(
                     expanded = expanded,
-                    onDismissRequest = { expanded = false }
+                    onDismissRequest = { expanded = false },
+                    containerColor = MenuDefaults.groupStandardContainerColor,
+                    shape = MenuDefaults.standaloneGroupShape
                 ) {
-                    options.forEach { (value, displayText) ->
-                        DropdownMenuItem(
+                    options.forEachIndexed { index, (value, displayText) ->
+                        SelectableDropdownMenuItem(
+                            shapes = MenuDefaults.itemShape(index, options.size),
                             text = { Text(displayText) },
                             onClick = {
                                 onOptionSelected(value)
                                 expanded = false
                             },
-                            trailingIcon = {
-                                if (selectedValue == value) {
-                                    Icon(
-                                        AppIcons.Check,
-                                        contentDescription = "已选中"
-                                    )
-                                }
-                            }
+                            selected = selectedValue == value
                         )
                     }
                 }

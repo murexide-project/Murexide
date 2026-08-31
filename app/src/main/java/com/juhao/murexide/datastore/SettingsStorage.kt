@@ -65,7 +65,10 @@ class SettingsStorage(private val context: Context) {
         private val MSG_SHOW_TAGS_KEY = booleanPreferencesKey("msg_show_tags")
         private val BUBBLE_CORNER_RADIUS_KEY = floatPreferencesKey("bubble_corner_radius")
         private val BUBBLE_OPACITY_KEY = floatPreferencesKey("bubble_opacity")
+        
+        private val SHOW_BACKGROUND_KEY = booleanPreferencesKey("show_background")
         private val BACKGROUND_OPACITY_KEY = floatPreferencesKey("background_opacity")
+        
         private val SHOW_MY_BUBBLE_AVATAR_KEY = booleanPreferencesKey("show_my_bubble_avatar")
         private val LIQUID_GLASS_ENABLED_KEY = booleanPreferencesKey("liquid_glass_enabled")
         private val LIQUID_GLASS_BLUR_KEY = floatPreferencesKey("liquid_glass_blur")
@@ -249,6 +252,21 @@ class SettingsStorage(private val context: Context) {
 
     suspend fun getBubbleOpacity(): Float {
         return bubbleOpacityFlow.first()
+    }
+    
+    // ====== 显示背景 ======
+    val showBackgroundFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[SHOW_BACKGROUND_KEY] ?: true
+    }
+
+    suspend fun setShowBackground(value: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[SHOW_BACKGROUND_KEY] = value
+        }
+    }
+
+    suspend fun getShowBackground(): Boolean {
+        return showBackgroundFlow.first()
     }
     
     // ====== 背景不透明度 ======

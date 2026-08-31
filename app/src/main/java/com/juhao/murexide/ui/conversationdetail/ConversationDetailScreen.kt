@@ -61,7 +61,6 @@ import com.juhao.murexide.data.MessageItem
 import com.juhao.murexide.ui.components.Avatar
 import com.juhao.murexide.ui.components.CapsuleTabBar
 import com.juhao.murexide.ui.components.ExpressiveDropdownMenu
-import com.juhao.murexide.ui.components.ExpressiveOverflowIconButton
 import com.juhao.murexide.ui.components.MediaViewerPagination
 import com.juhao.murexide.ui.components.imageMessagePreviewItem
 import com.juhao.murexide.ui.components.showImageViewer
@@ -74,10 +73,9 @@ import com.juhao.murexide.ui.theme.LiquidGlassSurface
 import com.juhao.murexide.ui.theme.LocalLiquidGlassBackdrop
 import com.juhao.murexide.ui.theme.LocalLiquidGlassEnabled
 import com.juhao.murexide.ui.theme.liquidGlass
-import com.juhao.murexide.ui.theme.liquidGlassHighlightEnabled
-import com.juhao.murexide.ui.theme.liquidGlassContentColor
 import com.juhao.murexide.ui.theme.resolvedLiquidGlassContentColor
 import com.juhao.murexide.ui.theme.liquidglass.LiquidGlassSlider
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import kotlinx.coroutines.launch
 
 @Composable
@@ -101,7 +99,6 @@ fun ConversationDetailScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val liquidGlassEnabled = LocalLiquidGlassEnabled.current
-    val showGlassHighlight = liquidGlassHighlightEnabled()
     val liquidBackdrop = LocalLiquidGlassBackdrop.current
     val snackbars = remember { SnackbarHostState() }
     var showMore by remember { mutableStateOf(false) }
@@ -115,6 +112,8 @@ fun ConversationDetailScreen(
                 groupListState.firstVisibleItemScrollOffset >= groupNameBottomOffset
         }
     }
+    
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
 
     LaunchedEffect(state.message) {
         state.message?.let { message ->
@@ -126,44 +125,11 @@ fun ConversationDetailScreen(
         if (state.hasLeft) onLeaveGroup()
     }
 
-    val topAppBarGlassColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.38f)
-    val topAppBarGlassContentColor = liquidGlassContentColor(
-        preferredColor = MaterialTheme.colorScheme.onSurface,
-        glassColor = topAppBarGlassColor,
-        backgroundColor = MaterialTheme.colorScheme.background,
-    )
-    val topAppBarGlassSecondaryContentColor = liquidGlassContentColor(
-        preferredColor = MaterialTheme.colorScheme.onSurfaceVariant,
-        glassColor = topAppBarGlassColor,
-        backgroundColor = MaterialTheme.colorScheme.background,
-    )
-
     Scaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         snackbarHost = { SnackbarHost(snackbars) },
         topBar = {
             TopAppBar(
-                modifier = if (liquidGlassEnabled) {
-                    Modifier.liquidGlass(
-                        enabled = true,
-                        backdrop = liquidBackdrop,
-                        shape = RectangleShape,
-                        surfaceColor = topAppBarGlassColor,
-                        blurRadius = 6.dp,
-                        showHighlight = showGlassHighlight
-                    )
-                } else {
-                    Modifier
-                },
-                colors = if (liquidGlassEnabled) {
-                    TopAppBarDefaults.topAppBarColors(
-                        containerColor = Color.Transparent,
-                        navigationIconContentColor = topAppBarGlassContentColor,
-                        titleContentColor = topAppBarGlassContentColor,
-                        actionIconContentColor = topAppBarGlassContentColor,
-                    )
-                } else {
-                    TopAppBarDefaults.topAppBarColors()
-                },
                 title = {
                     val group = state.detail?.takeIf { it.chatType == 2 }
                     if (group != null) {
@@ -191,11 +157,7 @@ fun ConversationDetailScreen(
                                 Text(
                                     text = "${group.memberCount ?: 0} 位成员",
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = if (liquidGlassEnabled) {
-                                        topAppBarGlassSecondaryContentColor
-                                    } else {
-                                        MaterialTheme.colorScheme.onSurfaceVariant
-                                    },
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     maxLines = 1
                                 )
                             }
@@ -205,6 +167,7 @@ fun ConversationDetailScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) { AutoMirroredIcon(AppIcons.ArrowBack, "返回") }
                 },
+                scrollBehavior = scrollBehavior,
                 actions = {
                     val group = state.detail?.takeIf { it.chatType == 2 }
                     if ((group?.permissionLevel ?: 0) >= 2) {
@@ -213,11 +176,12 @@ fun ConversationDetailScreen(
                         }
                     }
                     Box {
-                        ExpressiveOverflowIconButton(
-                            expanded = showMore,
+                        IconButton(
                             onClick = { showMore = true },
-                            contentDescription = "更多"
-                        )
+                            modifier = Modifier.size(44.dp)
+                        ) {
+                            Icon(AppIcons.MoreVert, contentDescription = "更多")
+                        }
                         ExpressiveDropdownMenu(
                             expanded = showMore,
                             onDismissRequest = { showMore = false }
@@ -1490,11 +1454,12 @@ private fun MemberRow(
         trailingContent = {
             if (canManage) {
                 Box {
-                    ExpressiveOverflowIconButton(
-                        expanded = expanded,
-                        onClick = { expanded = !expanded },
-                        contentDescription = "管理成员"
-                    )
+                    IconButton(
+                        onClick = { expanded = true },
+                        modifier = Modifier.size(44.dp)
+                    ) {
+                        Icon(AppIcons.MoreVert, contentDescription = "更多")
+                    }
                     ExpressiveDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                         if (canSetAdmin) {
                             DropdownMenuItem(

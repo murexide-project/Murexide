@@ -91,11 +91,6 @@
             android:theme="@style/Theme.Murexide"
             android:windowSoftInputMode="adjustResize" />
         <activity
-            android:name=".ui.conversation.HomeSearchActivity"
-            android:exported="false"
-            android:theme="@style/Theme.Murexide.Search"
-            android:windowSoftInputMode="adjustResize" />
-        <activity
             android:name=".ui.conversation.CreationActivity"
             android:exported="false"
             android:theme="@style/Theme.Murexide"

@@ -152,31 +152,37 @@ fun AccountRow(
     var showDeleteDialog by remember { mutableStateOf(false) }
 
     Box {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable {
-                    if (!isChooseMode) {
-                        showMenu = true
-                    } else {
-                        onSwitchAccount(account)
-                    }
+        ListItem(
+            onClick = {
+                if (!isChooseMode) {
+                    showMenu = true
+                } else {
+                    onSwitchAccount(account)
                 }
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            if (account.avatar.isNotBlank()) {
-                Avatar(url = account.avatar, size = 48.dp)
-            } else {
-                Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-                )
+            },
+            leadingContent = {
+                if (account.avatar.isNotBlank()) {
+                    Avatar(url = account.avatar, size = 48.dp)
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                    )
+                }
+            },
+            trailingContent = {
+                if (!isCurrentAccount) {
+                    Icon(
+                        AppIcons.ChevronRight,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
-            Spacer(Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
+        ) {
+            Column(modifier = Modifier.fillMaxWidth()) {
                 Text(account.username, style = MaterialTheme.typography.bodyMedium)
                 Text(
                     "ID: ${account.id}",
@@ -201,11 +207,6 @@ fun AccountRow(
                     }
                 }
             }
-            Icon(
-                AppIcons.ChevronRight,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
         }
 
         DropdownMenu(

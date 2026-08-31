@@ -59,7 +59,6 @@ import com.juhao.murexide.ui.chat.ChatActivity
 import com.juhao.murexide.ui.contact.ContactListScreen
 import com.juhao.murexide.ui.conversation.ConversationListScreen
 import com.juhao.murexide.ui.conversation.CreationActivity
-import com.juhao.murexide.ui.conversation.HomeSearchActivity
 import com.juhao.murexide.ui.login.LoginActivity
 import com.juhao.murexide.ui.mine.MineScreen
 import com.juhao.murexide.ui.theme.MurexideTheme
@@ -698,12 +697,6 @@ fun MainScreen(account: UserAccount) {
                                             chatAvatar = conversation.avatarUrl,
                                         )
                                     }
-                                },
-                                onSearchClick = { origin ->
-                                    HomeSearchActivity.start(
-                                        context,
-                                        origin
-                                    )
                                 },
                                 onCreateClick = { kind -> CreationActivity.start(context, kind) }
                             )

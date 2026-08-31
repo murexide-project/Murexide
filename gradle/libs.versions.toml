@@ -31,7 +31,7 @@ benchmark = "1.4.1"
 testExtJunit = "1.3.0"
 testRunner = "1.7.0"
 uiautomator = "2.4.0"
-material3 = "1.5.0-alpha25"
+material3 = "1.5.0-alpha27"
 materialSymbols = "2.2.1"
 
 [libraries]

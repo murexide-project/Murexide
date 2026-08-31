@@ -557,7 +557,10 @@ fun ChatScreen(
     val bubbleOpacity by settingsStorage.bubbleOpacityFlow.collectAsState(initial = 0.9f)
     val showMyBubbleAvatarSetting by settingsStorage.showMyBubbleAvatarFlow.collectAsState(initial = true)
     val showMsgTagsSetting by settingsStorage.showMsgTagsFlow.collectAsState(initial = false)
+    
+    val showBackground by settingsStorage.showBackgroundFlow.collectAsState(initial = true)
     val backgroundOpacity by settingsStorage.backgroundOpacityFlow.collectAsState(initial = 0.5f)
+    
     val recentDefaultEmojiNames by settingsStorage.recentDefaultEmojiNamesFlow.collectAsState(
         initial = emptyList()
     )
@@ -1624,7 +1627,7 @@ fun ChatScreen(
                     .matchParentSize()
                     .background(chatBackgroundColor)
             ) {
-                uiState.backgroundUrl?.takeIf { it.isNotEmpty() }?.let { bgUrl ->
+                uiState.backgroundUrl?.takeIf { showBackground && it.isNotEmpty() }?.let { bgUrl ->
                     val bgRequest = remember(bgUrl) {
                         ImageRequest.Builder(context)
                             .data(bgUrl)

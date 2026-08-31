@@ -56,35 +56,6 @@ fun StyledTopBar(
     )
 }
 
-/** Shared overflow treatment for chat-related surfaces. */
-@Composable
-fun ExpressiveOverflowIconButton(
-    expanded: Boolean,
-    onClick: () -> Unit,
-    contentDescription: String,
-    modifier: Modifier = Modifier
-) {
-    FilledTonalIconButton(
-        onClick = onClick,
-        modifier = modifier.size(44.dp),
-        shape = RoundedCornerShape(18.dp),
-        colors = IconButtonDefaults.filledTonalIconButtonColors(
-            containerColor = if (expanded) {
-                MaterialTheme.colorScheme.secondaryContainer
-            } else {
-                MaterialTheme.colorScheme.surfaceContainerHigh
-            },
-            contentColor = if (expanded) {
-                MaterialTheme.colorScheme.onSecondaryContainer
-            } else {
-                MaterialTheme.colorScheme.onSurfaceVariant
-            }
-        )
-    ) {
-        Icon(AppIcons.MoreVert, contentDescription = contentDescription)
-    }
-}
-
 @Composable
 fun ExpressiveDropdownMenu(
     expanded: Boolean,
