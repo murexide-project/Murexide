@@ -6,6 +6,7 @@ import com.juhao.murexide.ui.icons.AutoMirroredIcon
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
@@ -53,6 +54,7 @@ fun ConversationListScreen(
     modifier: Modifier = Modifier,
     token: String,
     accountId: String,
+    accountAvatar: String,
     innerPadding: PaddingValues,
     bigScreenMode: Boolean,
     onConversationClick: (ConversationItem) -> Unit,
@@ -129,7 +131,7 @@ fun ConversationListScreen(
                     searchViewModel.updateQuery(it)
                 },
                 placeholder = {
-                    Text(modifier = Modifier.clearAndSetSemantics {}, text = "搜索会话")
+                    Text(modifier = Modifier.clearAndSetSemantics {}, text = "搜索群、用户、机器人")
                 },
                 leadingIcon = {
                     if (searchBarState.targetValue != SearchBarValue.Collapsed) {
@@ -147,22 +149,33 @@ fun ConversationListScreen(
                     }
                 },
                 trailingIcon = {
-                    if (textFieldState.text.isNotBlank()) {
-                        IconButton(
-                            onClick = {
-                                textFieldState.clearText()
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (textFieldState.text.isNotBlank()) {
+                            IconButton(
+                                onClick = {
+                                    textFieldState.clearText()
+                                    searchViewModel.updateQuery("")
+                                }
+                            ) {
+                                Icon(AppIcons.Close, contentDescription = null)
                             }
-                        ) {
-                            Icon(AppIcons.Close, contentDescription = null)
+                        }
+                        if (searchBarState.targetValue == SearchBarValue.Collapsed) {
+                            Avatar(url = accountAvatar, size = 36.dp, alwaysCircle = true, modifier = Modifier.padding(end = 2.dp))
                         }
                     }
                 }
             )
         }
         
-    val isSearchBarVisible by remember {
+    val hideFloatingButton by remember {
         derivedStateOf {
-            listState.firstVisibleItemIndex == 0
+            val isScrollInProgress = listState.isScrollInProgress
+            
+            val layoutInfo = listState.layoutInfo
+            val visibleItems = layoutInfo.visibleItemsInfo
+            val isAtBottom = visibleItems.isNotEmpty() && !listState.canScrollForward
+            isScrollInProgress || isAtBottom
         }
     }
 
@@ -170,7 +183,7 @@ fun ConversationListScreen(
         modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         containerColor = Color.Transparent,
         topBar = {
-            Box(modifier = Modifier.fillMaxWidth()) {
+            Box {
                 Box(
                     modifier = Modifier
                         .matchParentSize()
@@ -183,135 +196,59 @@ fun ConversationListScreen(
                             block = null,
                         )
                 )
-                Column {
-                    TopAppBar(
-                        title = {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    stringResource(R.string.app_name),
-                                    maxLines = 1
-                                )
-                                if (!isWsConnected) {
-                                    Spacer(modifier = Modifier.width(12.dp))
-                                    Surface(
-                                        modifier = Modifier
-                                            .size(8.dp)
-                                            .clip(CircleShape),
-                                        color = MaterialTheme.colorScheme.error
-                                    ) {}
-                                }
-                            }
-                        },
-                        scrollBehavior = scrollBehavior,
-                        colors = TopAppBarDefaults.topAppBarColors(
-                            containerColor = Color.Transparent,
-                            scrolledContainerColor = Color.Transparent,
-                        ),
-                        actions = {
-                            Crossfade(targetState = isSearchBarVisible) { hide ->
-                                if (hide) return@Crossfade
-                                IconButton(
-                                    onClick = { 
-                                        scope.launch {
-                                            searchBarState.animateToExpanded()
-                                        }
-                                    }
-                                ) {
-                                    Icon(AppIcons.Search, contentDescription = "搜索")
-                                }
-                            }
-                            Box {
-                                StyledIconButton(onClick = { showCreateMenu = true }) {
-                                    Icon(AppIcons.Add, contentDescription = "创建")
-                                }
-                                DropdownMenu(
-                                    expanded = showCreateMenu,
-                                    onDismissRequest = { showCreateMenu = false }) {
-                                    DropdownMenuItem(
-                                        text = { Text("创建群聊") },
-                                        onClick = {
-                                            showCreateMenu = false; onCreateClick(CreationKind.GROUP)
-                                        },
-                                        leadingIcon = {
-                                            Icon(
-                                                AppIcons.Group,
-                                                contentDescription = null
-                                            )
-                                        }
-                                    )
-                                    DropdownMenuItem(
-                                        text = { Text("创建机器人") },
-                                        onClick = {
-                                            showCreateMenu = false; onCreateClick(CreationKind.BOT)
-                                        },
-                                        leadingIcon = {
-                                            Icon(
-                                                AppIcons.SmartToy,
-                                                contentDescription = null
-                                            )
-                                        }
-                                    )
-                                }
-                            }
+                SearchBar(
+                    modifier = Modifier.statusBarsPadding().padding(12.dp),
+                    state = searchBarState,
+                    inputField = inputField
+                )
+            }
+        },
+        floatingActionButton = {
+            Crossfade(targetState = hideFloatingButton) { hide ->
+                if (hide) return@Crossfade
+                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(bottom = innerPadding.calculateBottomPadding())) {
+                    FloatingActionButton(
+                        onClick = { viewModel.refresh() },
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Icon(AppIcons.Refresh, contentDescription = "刷新")
+                    }
+                    Spacer(Modifier.height(12.dp))
+                    Box {
+                        FloatingActionButton(
+                            onClick = { showCreateMenu = true },
+                            containerColor = MaterialTheme.colorScheme.primary
+                        ) {
+                            Icon(AppIcons.Add, contentDescription = "添加")
                         }
-                    )
-                    
-                    ExpandedFullScreenSearchBar(state = searchBarState, inputField = inputField) {
-                        when {
-                            searchState.isLoading && searchState.results.isEmpty() -> LoadingScreen(Modifier)
-                            searchState.error != null -> Column(
-                                modifier = Modifier.fillMaxSize(),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center
-                            ) {
-                                Text(searchState.error!!)
-                                Spacer(Modifier.size(12.dp))
-                                TextButton(onClick = searchViewModel::retry) { Text("重试") }
-                            }
-                            searchState.results.isEmpty() -> Column(
-                                modifier = Modifier.fillMaxSize(),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center
-                            ) {
-                                Icon(
-                                    AppIcons.Inbox,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(48.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                Spacer(Modifier.height(12.dp))
-                                Text(
-                                    text = if (searchState.hasSearched) "未找到相关结果" else "暂无搜索内容",
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                            else -> LazyColumn(
-                                modifier = Modifier.fillMaxSize(),
-                            ) {
-                                listOf(1 to "用户", 2 to "群聊", 3 to "机器人").forEach { (type, title) ->
-                                    val items = searchState.resultsFor(type)
-                                    if (items.isNotEmpty()) {
-                                        item {
-                                            Text(
-                                                title,
-                                                style = MaterialTheme.typography.titleSmall,
-                                                modifier = Modifier.padding(16.dp, 14.dp, 16.dp, 6.dp)
-                                            )
-                                        }
-                                        items(items, key = { "${it.chatType}:${it.chatId}" }) { result ->
-                                            SearchRow(result, { result ->
-                                                ConversationDetailActivity.start(
-                                                    context,
-                                                    result.chatId,
-                                                    result.chatType,
-                                                    result.name,
-                                                    result.avatarUrl
-                                                )
-                                            })
-                                        }
-                                    }
+                        DropdownMenu(
+                            expanded = showCreateMenu,
+                            onDismissRequest = { showCreateMenu = false }) {
+                            DropdownMenuItem(
+                                text = { Text("创建群聊") },
+                                onClick = {
+                                    showCreateMenu = false; onCreateClick(CreationKind.GROUP)
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        AppIcons.Group,
+                                        contentDescription = null
+                                    )
                                 }
-                            }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("创建机器人") },
+                                onClick = {
+                                    showCreateMenu = false; onCreateClick(CreationKind.BOT)
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        AppIcons.SmartToy,
+                                        contentDescription = null
+                                    )
+                                }
+                            )
                         }
                     }
                 }
@@ -324,119 +261,83 @@ fun ConversationListScreen(
                 .background(listContainerColor)
                 .hazeSource(hazeState)
         ) {
-            PullToRefreshBox(
-                isRefreshing = isRefreshing,
-                onRefresh = { viewModel.refresh() },
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(contentPadding),
-            ) {
-                val state = uiState
-                if (state is ConversationUiState.Success) {
-                    val (stickyConvs, normalConvs) = state.conversations.partition { 
-                        stickyIds.contains(it.chatId) 
-                    }
+            val state = uiState
+            if (state is ConversationUiState.Success) {
+                val (stickyConvs, normalConvs) = state.conversations.partition { 
+                    stickyIds.contains(it.chatId) 
+                }
 
-                    val allowCollapseSticky = stickyConvs.size > 5
-                    val isStickyCollapsed = !isStickyExpanded && allowCollapseSticky
+                val allowCollapseSticky = stickyConvs.size > 5
+                val isStickyCollapsed = !isStickyExpanded && allowCollapseSticky
 
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        state = listState,
-                        contentPadding = PaddingValues(bottom = innerPadding.calculateBottomPadding())
-                    ) {
-                        val totalItems = stickyConvs.size + normalConvs.size
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize().padding(bottom = contentPadding.calculateBottomPadding()),
+                    state = listState,
+                    contentPadding = PaddingValues(top = contentPadding.calculateTopPadding(), bottom = innerPadding.calculateBottomPadding())
+                ) {
+                    val totalItems = stickyConvs.size + normalConvs.size
 
-                        if (totalItems == 0) {
-                            item {
-                                Box(
-                                    modifier = Modifier.fillParentMaxSize(),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text("暂无会话")
+                    if (totalItems == 0) {
+                        item {
+                            Box(
+                                modifier = Modifier.fillParentMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("暂无会话")
+                            }
+                        }
+                    } else {
+                        item(key = "divider") {
+                            HorizontalDivider()
+                        }
+                        
+                        if (allowCollapseSticky) {
+                            item(key = "collapseStickyButton") {
+                                val bkgolor = if (themeColor != "WHITE") {
+                                    MaterialTheme.colorScheme.surfaceContainer
+                                } else {
+                                    MaterialTheme.colorScheme.surface
                                 }
-                            }
-                        } else {
-                            item {
-                                SearchBar(
-                                    modifier = Modifier.padding(horizontal = 8.dp).padding(bottom = 8.dp),
-                                    state = searchBarState,
-                                    inputField = inputField
-                                )
-                            }
-
-                            if (allowCollapseSticky) {
-                                stickyHeader(key = "collapseStickyButton") {
-                                    val bkgolor = if (themeColor != "WHITE") {
-                                        MaterialTheme.colorScheme.surfaceContainer
-                                    } else {
-                                        MaterialTheme.colorScheme.surface
-                                    }
-                                    ListItem(
-                                        onClick = { 
-                                            scope.launch {
-                                                settingsStorage.setShowSticky(!isStickyExpanded)
-                                            }
-                                        },
-                                        leadingContent = {
-                                            Icon(
-                                                imageVector = if (isStickyCollapsed) AppIcons.KeyboardArrowDown else AppIcons.KeyboardArrowUp,
-                                                contentDescription = null
-                                            )
-                                        },
-                                        colors = ListItemDefaults.colors(
-                                            containerColor = bkgolor
-                                        )
-                                    ) {
-                                        Text(
-                                            if (isStickyCollapsed) "${stickyConvs.size}个置顶会话" else "折叠置顶会话",
-                                            style = MaterialTheme.typography.bodyMedium
-                                        )
-                                    }
-                                }
-                            }
-
-                            items(
-                                items = stickyConvs,
-                                key = { item -> "sticky_${item.chatType}:${item.chatId}" }
-                            ) { conversation ->
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .animateContentSize()
-                                ) {
-                                    if (isStickyCollapsed) return@Box
-                                    ConversationItem(
-                                        conversation = conversation,
-                                        isSelected = currentConversation?.chatId == conversation.chatId &&
-                                                currentConversation.chatType == conversation.chatType &&
-                                                bigScreenMode,
-                                        isSticky = true,
-                                        onClick = {
-                                            viewModel.clearUnread(
-                                                conversation.chatId,
-                                                conversation.chatType
-                                            )
-                                            onConversationClick(conversation)
+                                ListItem(
+                                    onClick = { 
+                                        scope.launch {
+                                            settingsStorage.setShowSticky(!isStickyExpanded)
                                         }
+                                    },
+                                    leadingContent = {
+                                        Icon(
+                                            imageVector = if (isStickyCollapsed) AppIcons.KeyboardArrowDown else AppIcons.KeyboardArrowUp,
+                                            contentDescription = null
+                                        )
+                                    },
+                                    colors = ListItemDefaults.colors(
+                                        containerColor = bkgolor
+                                    )
+                                ) {
+                                    Text(
+                                        if (isStickyCollapsed) "${stickyConvs.size}个置顶会话" else "折叠置顶会话",
+                                        style = MaterialTheme.typography.bodyMedium
                                     )
                                 }
                             }
+                        }
 
-                            stickyHeader(key = "divider") {
-                                HorizontalDivider()
-                            }
-
-                            items(
-                                items = normalConvs,
-                                key = { item -> "normal_${item.chatType}:${item.chatId}" }
-                            ) { conversation ->
+                        items(
+                            items = stickyConvs,
+                            key = { item -> "sticky_${item.chatType}:${item.chatId}" }
+                        ) { conversation ->
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .animateContentSize()
+                            ) {
+                                if (isStickyCollapsed) return@Box
                                 ConversationItem(
                                     conversation = conversation,
                                     isSelected = currentConversation?.chatId == conversation.chatId &&
                                             currentConversation.chatType == conversation.chatType &&
                                             bigScreenMode,
-                                    isSticky = false,
+                                    isSticky = true,
                                     onClick = {
                                         viewModel.clearUnread(
                                             conversation.chatId,
@@ -447,20 +348,105 @@ fun ConversationListScreen(
                                 )
                             }
                         }
+
+                        item(key = "divider2") {
+                            HorizontalDivider()
+                        }
+
+                        items(
+                            items = normalConvs,
+                            key = { item -> "normal_${item.chatType}:${item.chatId}" }
+                        ) { conversation ->
+                            ConversationItem(
+                                conversation = conversation,
+                                isSelected = currentConversation?.chatId == conversation.chatId &&
+                                        currentConversation.chatType == conversation.chatType &&
+                                        bigScreenMode,
+                                isSticky = false,
+                                onClick = {
+                                    viewModel.clearUnread(
+                                        conversation.chatId,
+                                        conversation.chatType
+                                    )
+                                    onConversationClick(conversation)
+                                }
+                            )
+                        }
                     }
-                } else if (state is ConversationUiState.Error) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(contentPadding),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("加载失败: ${state.message}")
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Button(onClick = { viewModel.refresh() }) {
-                                Text("重试")
-                            }
+                }
+            } else if (state is ConversationUiState.Error) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(contentPadding),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("加载失败: ${state.message}")
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Button(onClick = { viewModel.refresh() }) {
+                            Text("重试")
+                        }
+                    }
+                }
+            }
+            
+            if (isRefreshing) { LinearProgressIndicator(modifier = Modifier.fillMaxWidth().padding(contentPadding)) }
+        }
+    }
+    
+    ExpandedFullScreenSearchBar(state = searchBarState, inputField = inputField) {
+        when {
+            searchState.isLoading && searchState.results.isEmpty() -> LoadingScreen(Modifier)
+            searchState.error != null -> Column(
+                modifier = Modifier.fillMaxSize(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(searchState.error!!)
+                Spacer(Modifier.size(12.dp))
+                TextButton(onClick = searchViewModel::retry) { Text("重试") }
+            }
+            searchState.results.isEmpty() -> Column(
+                modifier = Modifier.fillMaxSize(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Icon(
+                    AppIcons.Inbox,
+                    contentDescription = null,
+                    modifier = Modifier.size(48.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    text = if (searchState.hasSearched) "未找到相关结果" else "暂无搜索内容",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            else -> LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+            ) {
+                listOf(1 to "用户", 2 to "群聊", 3 to "机器人").forEach { (type, title) ->
+                    val items = searchState.resultsFor(type)
+                    if (items.isNotEmpty()) {
+                        item {
+                            Text(
+                                title,
+                                style = MaterialTheme.typography.titleSmall,
+                                modifier = Modifier.padding(16.dp, 14.dp, 16.dp, 6.dp)
+                            )
+                        }
+                        items(items, key = { "${it.chatType}:${it.chatId}" }) { result ->
+                            SearchRow(result, { result ->
+                                ConversationDetailActivity.start(
+                                    context,
+                                    result.chatId,
+                                    result.chatType,
+                                    result.name,
+                                    result.avatarUrl
+                                )
+                            })
                         }
                     }
                 }
@@ -486,10 +472,27 @@ fun ConversationItem(
     ListItem(
         onClick = onClick,
         leadingContent = {
-            Avatar(
-                url = conversation.avatarUrl,
-                size = 48.dp
-            )
+            Box{
+                Avatar(
+                    url = conversation.avatarUrl,
+                    size = 52.dp
+                )
+                if (conversation.certificationLevel >= 1) {
+                    Badge(
+                        containerColor = MaterialTheme.colorScheme.secondary,
+                        contentColor = MaterialTheme.colorScheme.onSecondary,
+                        modifier = Modifier
+                            .border(
+                                width = 1.dp,
+                                color = listItemColor,
+                                shape = CircleShape
+                            )
+                            .align(Alignment.BottomEnd)
+                    ) {
+                        Text(if (conversation.certificationLevel == 1) "官" else "城")
+                    }
+                }
+            }
         },
         colors = ListItemDefaults.colors(
             containerColor = if (isSelected)
@@ -526,13 +529,13 @@ fun ConversationItem(
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.Top
             ) {
                 Text(
                     text = conversation.chatContent,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f)
                 )

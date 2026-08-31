@@ -682,6 +682,7 @@ fun MainScreen(account: UserAccount) {
                                     .fillMaxHeight(),
                                 token = token,
                                 accountId = account.id,
+                                accountAvatar = account.avatar,
                                 innerPadding = innerPadding,
                                 bigScreenMode = isBigScreen && bigScreenEnabled,
                                 currentConversation = if (isBigScreen && bigScreenEnabled) currentConversation else null,

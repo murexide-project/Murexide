@@ -801,8 +801,7 @@ fun ChatScreen(
             }
 
             val atBottom = if (visibleItems.isNotEmpty()) {
-                val firstVisibleIndex = visibleItems.first().index
-                firstVisibleIndex == 0
+                !listState.canScrollBackward
             } else {
                 true
             }
