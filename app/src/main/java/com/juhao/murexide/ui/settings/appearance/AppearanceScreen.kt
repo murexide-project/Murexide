@@ -447,6 +447,32 @@ fun AppearanceScreen(
                 }
                 
                 SettingsSwitchItem(
+                    icon = AppIcons.Face,
+                    title = "显示我的头像",
+                    subtitle = "在我发送的消息气泡旁显示我的头像",
+                    checked = showMyBubbleAvatar,
+                    onCheckedChange = { checked ->
+                        scope.launch {
+                            settingsStorage.setShowMyBubbleAvatar(checked)
+                        }
+                    }
+                )
+                
+                SettingsSwitchItem(
+                    icon = AppIcons.Tag,
+                    title = "显示用户标签",
+                    subtitle = "在发送者名称旁显示Ta的标签",
+                    checked = showMsgTags,
+                    onCheckedChange = { checked ->
+                        scope.launch {
+                            settingsStorage.setShowMsgTags(checked)
+                        }
+                    }
+                )
+            }
+
+            SettingsGroup(title = "界面") {
+                SettingsSwitchItem(
                     icon = AppIcons.Image,
                     title = "显示会话背景",
                     subtitle = "在会话页面显示设定的背景",
@@ -528,32 +554,6 @@ fun AppearanceScreen(
                     }
                 }
                 
-                SettingsSwitchItem(
-                    icon = AppIcons.Face,
-                    title = "显示我的头像",
-                    subtitle = "在我发送的消息气泡旁显示我的头像",
-                    checked = showMyBubbleAvatar,
-                    onCheckedChange = { checked ->
-                        scope.launch {
-                            settingsStorage.setShowMyBubbleAvatar(checked)
-                        }
-                    }
-                )
-                
-                SettingsSwitchItem(
-                    icon = AppIcons.Tag,
-                    title = "显示用户标签",
-                    subtitle = "在发送者名称旁显示Ta的标签",
-                    checked = showMsgTags,
-                    onCheckedChange = { checked ->
-                        scope.launch {
-                            settingsStorage.setShowMsgTags(checked)
-                        }
-                    }
-                )
-            }
-
-            SettingsGroup(title = "界面") {
                 SettingsSwitchItem(
                     icon = AppIcons.People,
                     title = "圆角矩形头像",

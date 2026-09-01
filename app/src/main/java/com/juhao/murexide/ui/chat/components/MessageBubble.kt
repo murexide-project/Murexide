@@ -66,12 +66,6 @@ import androidx.core.graphics.toColorInt
 
 private val WhiteThemeIncomingBubbleColor = Color(0xFFEEEEF0)
 
-internal fun resolveSenderDisplayName(senderName: String, isMine: Boolean): String = when {
-    senderName.isNotEmpty() -> senderName
-    isMine -> "我"
-    else -> "原发送者"
-}
-
 @Composable
 fun MessageBubble(
     message: MessageItem,
@@ -315,7 +309,7 @@ fun MessageBubble(
                                 val displayName = if (hideSenderInfo && anonymousNameProvider != null) {
                                     anonymousNameProvider(message.senderId)
                                 } else {
-                                    resolveSenderDisplayName(message.senderName, isMine)
+                                    message.senderName
                                 }
                                 
                                 if (!hideCard && !isMine && isLastFromSender) {

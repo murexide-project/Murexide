@@ -122,52 +122,58 @@ fun ConversationListScreen(
     val searchState by searchViewModel.uiState.collectAsState()
     val searchBarState = rememberSearchBarState()
     val textFieldState = rememberTextFieldState()
-    val inputField =
-        @Composable {
-            SearchBarDefaults.InputField(
-                textFieldState = textFieldState,
-                searchBarState = searchBarState,
-                enabled = searchBarState.targetValue != SearchBarValue.Collapsed,
-                onSearch = {
-                    searchViewModel.updateQuery(it)
-                },
-                placeholder = {
-                    Text(modifier = Modifier.clearAndSetSemantics {}, text = "搜索群、用户、机器人")
-                },
-                leadingIcon = {
-                    if (searchBarState.targetValue != SearchBarValue.Collapsed) {
-                        IconButton(
-                            onClick = {
-                                scope.launch {
-                                    searchBarState.animateToCollapsed()
-                                }
+    val searchBarExpanded = searchBarState.targetValue != SearchBarValue.Collapsed
+    val inputField = @Composable {
+        SearchBarDefaults.InputField(
+            textFieldState = textFieldState,
+            searchBarState = searchBarState,
+            enabled = searchBarExpanded,
+            colors = TextFieldDefaults.colors(
+                disabledLeadingIconColor = MaterialTheme.colorScheme.onSurface,
+                disabledTrailingIconColor = MaterialTheme.colorScheme.onSurface,
+                disabledPlaceholderColor = MaterialTheme.colorScheme.onSurface,
+                disabledTextColor = MaterialTheme.colorScheme.onSurface,
+                focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                disabledContainerColor = MaterialTheme.colorScheme.surfaceContainer
+            ),
+            onSearch = {
+                searchViewModel.updateQuery(it)
+            },
+            placeholder = {
+                Text(modifier = Modifier.clearAndSetSemantics {}, text = "搜索&发现")
+            },
+            leadingIcon = {
+                if (searchBarState.targetValue != SearchBarValue.Collapsed) {
+                    IconButton(
+                        onClick = {
+                            scope.launch {
+                                searchBarState.animateToCollapsed()
                             }
-                        ) {
-                            AutoMirroredIcon(AppIcons.ArrowBack, contentDescription = null)
                         }
-                    } else {
-                        AutoMirroredIcon(AppIcons.Search, contentDescription = null)
+                    ) {
+                        AutoMirroredIcon(AppIcons.ArrowBack, contentDescription = null)
                     }
-                },
-                trailingIcon = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        if (textFieldState.text.isNotBlank()) {
-                            IconButton(
-                                onClick = {
-                                    textFieldState.clearText()
-                                    searchViewModel.updateQuery("")
-                                }
-                            ) {
-                                Icon(AppIcons.Close, contentDescription = null)
-                            }
+                } else {
+                    AutoMirroredIcon(AppIcons.Search, contentDescription = null)
+                }
+            },
+            trailingIcon = {
+                if (searchBarState.targetValue == SearchBarValue.Collapsed) {
+                    Avatar(url = accountAvatar, size = 36.dp, alwaysCircle = true, modifier = Modifier.padding(end = 2.dp))
+                } else if (textFieldState.text.isNotBlank()) {
+                    IconButton(
+                        onClick = {
+                            textFieldState.clearText()
+                            searchViewModel.updateQuery("")
                         }
-                        if (searchBarState.targetValue == SearchBarValue.Collapsed) {
-                            Avatar(url = accountAvatar, size = 36.dp, alwaysCircle = true, modifier = Modifier.padding(end = 2.dp))
-                        }
+                    ) {
+                        Icon(AppIcons.Close, contentDescription = null)
                     }
                 }
-            )
-        }
+            }
+        )
+    }
         
     val hideFloatingButton by remember {
         derivedStateOf {

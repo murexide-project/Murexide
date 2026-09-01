@@ -148,7 +148,7 @@ fun ConversationDetailScreen(
                         ) {
                             Column {
                                 Text(
-                                    text = group.name.ifBlank { "未知群聊" },
+                                    text = group.name,
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold,
                                     maxLines = 1,
@@ -851,7 +851,7 @@ private fun UserHeader(
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             Text(
-                detail.name.ifBlank { "未知用户" },
+                detail.name,
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 maxLines = 1,
@@ -1127,7 +1127,7 @@ private fun GroupHeader(
         Avatar(url = detail.avatarUrl, size = 88.dp, canView = true)
         Spacer(Modifier.height(10.dp))
         Text(
-            detail.name.ifBlank { "未知群聊" },
+            detail.name,
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold
         )
@@ -1492,7 +1492,7 @@ private fun MemberRow(
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 Text(
-                    member.name.ifBlank { "未知用户" },
+                    member.name,
                     modifier = Modifier.weight(1f, fill = false),
                     style = MaterialTheme.typography.titleMedium,
                     maxLines = 1,
@@ -1530,7 +1530,7 @@ private fun BotRow(bot: BotItem, onClick: () -> Unit) {
     ) {
         Column(Modifier.fillMaxWidth()) {
             Text(
-                bot.name.ifBlank { "未知机器人" },
+                bot.name,
                 style = MaterialTheme.typography.titleMedium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
@@ -1795,7 +1795,7 @@ private fun LegacyDetail(
         Avatar(url = detail.avatarUrl, size = 88.dp, canView = true)
         Spacer(Modifier.height(14.dp))
         Text(
-            detail.name.ifBlank { "未知" },
+            detail.name,
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold
         )
