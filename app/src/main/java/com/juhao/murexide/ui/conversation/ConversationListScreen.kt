@@ -127,7 +127,7 @@ fun ConversationListScreen(
             SearchBarDefaults.InputField(
                 textFieldState = textFieldState,
                 searchBarState = searchBarState,
-                readOnly = searchBarState.targetValue == SearchBarValue.Collapsed,
+                enabled = searchBarState.targetValue != SearchBarValue.Collapsed,
                 onSearch = {
                     searchViewModel.updateQuery(it)
                 },
