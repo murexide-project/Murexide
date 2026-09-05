@@ -256,15 +256,12 @@ class MineViewModel(
         locationCode: String
     ): String? {
         if (nickname.isBlank()) return "昵称不能为空"
-        if (gender !in 1..3) return "请选择性别"
-        if (birthday <= 0L) return "请选择生日"
-        if (birthday > System.currentTimeMillis() / 1000L) return "生日不能晚于今天"
-        if (province.isBlank() || city.isBlank() || district.isBlank()) {
-            return "请完整填写省份、城市和区县"
+        
+        if (birthday > 0L) {
+            val currentTime = System.currentTimeMillis() / 1000L
+            if (birthday > currentTime) return "生日不能晚于今天"
         }
-        if (!locationCode.matches(Regex("\\d{6}"))) {
-            return "地区代码应为 6 位数字"
-        }
+        
         return null
     }
 }

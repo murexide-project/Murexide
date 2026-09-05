@@ -1536,73 +1536,59 @@ fun ChatScreen(
                                 viewModel.hideStickerPanel()
                                 viewModel.hideInstructionPanel()
                             }
-
-                            when {
-                                isMeasuringIme -> {
-                                    Spacer(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .windowInsetsBottomHeight(
-                                                WindowInsets.navigationBars.union(WindowInsets.ime)
-                                            )
-                                    )
-                                }
-
-                                pendingInputPanel != null || isReturningToKeyboard -> {
-                                    Spacer(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .height(inputPanelHeight)
-                                    )
-                                }
-
-                                expressions.isVisible -> {
-                                    EmojiPanel(
-                                        defaultEmojis = defaultEmojis,
-                                        recentDefaultEmojis = recentDefaultEmojis,
-                                        expressions = expressions.expressions,
-                                        isLoading = expressions.isLoading,
-                                        onExpressionClick = { expression ->
-                                            viewModel.sendExpression(expression)
-                                        },
-                                        onStickerItemClick = { stickerItem ->
-                                            viewModel.sendStickerItem(stickerItem)
-                                        },
-                                        onDefaultEmojiClick = { emoji ->
-                                            viewModel.insertDefaultEmoji(emoji)
-                                            scope.launch {
-                                                settingsStorage.recordRecentDefaultEmoji(emoji.name)
-                                            }
-                                        },
-                                        stickerPacks = expressions.stickerPacks,
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .height(inputPanelHeight)
-                                    )
-                                }
-
-                                instructionPanel.isVisible -> {
-                                    InstructionPanel(
-                                        bots = instructionPanel.bots,
-                                        instructions = instructionPanel.instructions,
-                                        isLoading = instructionPanel.isLoading,
-                                        onInstructionClick = { viewModel.onInstructionClick(it) },
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .height(inputPanelHeight)
-                                    )
-                                }
-
-                                else -> {
-                                    Spacer(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .windowInsetsBottomHeight(
-                                                WindowInsets.navigationBars.union(WindowInsets.ime)
-                                            )
-                                    )
-                                }
+                            
+                            AnimatedVisibility(
+                                visible = expressions.isVisible,
+                                enter = fadeIn() + expandVertically(),
+                                exit = fadeOut() + shrinkVertically()
+                            ) {
+                                EmojiPanel(
+                                    defaultEmojis = defaultEmojis,
+                                    recentDefaultEmojis = recentDefaultEmojis,
+                                    expressions = expressions.expressions,
+                                    isLoading = expressions.isLoading,
+                                    onExpressionClick = { expression ->
+                                        viewModel.sendExpression(expression)
+                                    },
+                                    onStickerItemClick = { stickerItem ->
+                                        viewModel.sendStickerItem(stickerItem)
+                                    },
+                                    onDefaultEmojiClick = { emoji ->
+                                        viewModel.insertDefaultEmoji(emoji)
+                                        scope.launch {
+                                            settingsStorage.recordRecentDefaultEmoji(emoji.name)
+                                        }
+                                    },
+                                    stickerPacks = expressions.stickerPacks,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(inputPanelHeight)
+                                )
                             }
+            
+                            AnimatedVisibility(
+                                visible = instructionPanel.isVisible,
+                                enter = fadeIn() + expandVertically(),
+                                exit = fadeOut() + shrinkVertically()
+                            ) {
+                                InstructionPanel(
+                                    bots = instructionPanel.bots,
+                                    instructions = instructionPanel.instructions,
+                                    isLoading = instructionPanel.isLoading,
+                                    onInstructionClick = { viewModel.onInstructionClick(it) },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(inputPanelHeight)
+                                )
+                            }
+            
+                            Spacer(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .windowInsetsBottomHeight(
+                                        WindowInsets.navigationBars.union(WindowInsets.ime)
+                                    )
+                            )
                         }
                     }
                 }

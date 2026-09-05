@@ -4,7 +4,6 @@ import android.os.Build
 import com.juhao.murexide.ui.icons.AppIcons
 import com.juhao.murexide.ui.icons.AutoMirroredIcon
 
-import android.widget.Toast
 import android.content.Intent
 import androidx.core.net.toUri
 import androidx.compose.foundation.layout.*
@@ -34,7 +33,6 @@ fun UpdatePage() {
     val scope = rememberCoroutineScope()
 
     val updateEnabled = context.getAppVersionInfo().commitHash != "dev"
-    var showUpdateDialog by remember { mutableStateOf(false) }
     var loading by remember { mutableStateOf(false) }
     var updateInfo by remember { mutableStateOf<UpdateInfo?>(null) }
 
@@ -50,35 +48,15 @@ fun UpdatePage() {
                 includePreRelease = includePreRelease
             )
             updateInfo = info
-            if (info.shouldUpdate) {
-                showUpdateDialog = true
-            } else {
-                Toast.makeText(
-                    context,
-                    "已是最新版本",
-                    Toast.LENGTH_SHORT
-                ).show()
-            }
             loading = false
         }
     }
 
     LaunchedEffect(Unit) {
         updateChannel = settingsStorage.getUpdateChannel()
-        check()
-    }
-    
-    if (showUpdateDialog && updateInfo != null) {
-        UpdateDialog(
-            updateInfo = updateInfo!!,
-            currentVersion = context.getAppVersionInfo().versionName,
-            onDismiss = { showUpdateDialog = false },
-            onConfirm = {
-                val intent = Intent(Intent.ACTION_VIEW, updateInfo?.releaseUrl?.toUri())
-                context.startActivity(intent)
-                showUpdateDialog = false
-            }
-        )
+        if (updateEnabled) {       
+            check()
+        }
     }
     
     val newestVersion = updateInfo?.version ?: "null"
@@ -89,54 +67,85 @@ fun UpdatePage() {
         Pair(MaterialTheme.colorScheme.primaryContainer, MaterialTheme.colorScheme.onPrimaryContainer)
     else
         Pair(MaterialTheme.colorScheme.secondaryContainer, MaterialTheme.colorScheme.onSecondaryContainer)
+        
+    val subtitle = buildString {
+        appendLine("最新版本: ${newestVersion}")
+        append("当前版本: ${currentVersion}")
+        if (shouldUpdate) {
+            append("\n")
+            val type = if (updateInfo?.isPreRelease == true) {
+                "预发布版"
+            } else {
+                "正式版"
+            }
+            append("新版本类型：$type")
+        }
+    }
     
     SettingsGroup() {
-        ListItem(
-            onClick = { check() },
-            verticalAlignment = Alignment.CenterVertically,
-            leadingContent = {
-                if (loading) ContainedLoadingIndicator(Modifier.size(24.dp)) else
-                Icon(
-                    imageVector = when {
-                        updateInfo?.shouldUpdate == true -> AppIcons.Info
-                        else -> AppIcons.Check
-                    },
-                    contentDescription = null,
-                    modifier = Modifier.size(24.dp)
-                )
-            },
-            trailingContent = {
-                if (!loading) {
+        if (updateEnabled) {
+            ListItem(
+                onClick = { 
+                    if (shouldUpdate) {
+                        val intent = Intent(Intent.ACTION_VIEW, updateInfo?.releaseUrl?.toUri())
+                        context.startActivity(intent)
+                    } else {
+                        check()
+                    }
+                },
+                verticalAlignment = Alignment.CenterVertically,
+                leadingContent = {
+                    if (loading) ContainedLoadingIndicator(Modifier.size(24.dp)) else
                     Icon(
-                        AppIcons.Refresh,
+                        imageVector = when {
+                            shouldUpdate -> AppIcons.Download
+                            else -> AppIcons.Check
+                        },
                         contentDescription = null,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(24.dp)
+                    )
+                },
+                trailingContent = {
+                    if (!loading && !shouldUpdate) {
+                        Icon(
+                            AppIcons.Refresh,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                },
+                colors = ListItemDefaults.colors(
+                    containerColor = cardBgColor,
+                    headlineColor = cardTextColor,
+                    supportingColor = cardTextColor,
+                    leadingIconColor = cardTextColor,
+                    trailingIconColor = cardTextColor
+                )
+            ) {
+                Column(
+                    modifier = Modifier.padding(vertical = 4.dp)
+                ) {
+                    Text(
+                        text = when {
+                            loading -> "正在检测更新"
+                            shouldUpdate -> "更新可用"
+                            else -> "已是最新版本"
+                        },
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.bodySmall                
                     )
                 }
-            },
-            colors = ListItemDefaults.colors(
-                containerColor = cardBgColor,
-                headlineColor = cardTextColor,
-                supportingColor = cardTextColor,
-                leadingIconColor = cardTextColor,
-                trailingIconColor = cardTextColor
-            )
-        ) {
-            Column(
-                modifier = Modifier.padding(vertical = 4.dp)
-            ) {
-                Text(
-                    text = when {
-                        loading -> "正在检测更新"
-                        shouldUpdate -> "更新可用"
-                        else -> "已是最新版本"
-                    },
-                    style = MaterialTheme.typography.bodyLarge                )
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = "最新版本: ${newestVersion}\n当前版本: ${currentVersion}",
-                    style = MaterialTheme.typography.bodySmall                )
             }
+        } else {
+            SettingsItemCell(
+                icon = AppIcons.Info,
+                title = "开发版本，更新不可用",
+                subtitle = "获取更新请自行关注通知"
+            )
         }
     }
 
@@ -161,53 +170,4 @@ fun UpdatePage() {
             }
         )
     }
-}
-
-
-@Composable
-fun UpdateDialog(
-    updateInfo: UpdateInfo,
-    currentVersion: String,
-    onDismiss: () -> Unit,
-    onConfirm: () -> Unit
-) {
-    val isPreRelease = updateInfo.isPreRelease
-    val versionType = if (isPreRelease) "预发布版" else "正式版"
-    
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text(
-                text = if (isPreRelease) {
-                    "发现新预发布版"
-                } else {
-                    "发现新正式版"
-                }
-            )
-        },
-        text = {
-            Column {
-                Text(
-                    text = "$currentVersion  →  ${updateInfo.version}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-                Text(
-                    text = "版本类型：$versionType",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = onConfirm) {
-                Text("前往下载")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("稍后")
-            }
-        }
-    )
 }

@@ -123,7 +123,7 @@ fun SettingsItemCell(
     endIcon: ImageVector? = null,
     title: String,
     subtitle: String? = null,
-    onClick: () -> Unit,
+    onClick: () -> Unit = {},
     isEnabled: Boolean = true,
     isDestructive: Boolean = false
 ) {
