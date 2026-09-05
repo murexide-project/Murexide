@@ -12,12 +12,6 @@ git submodule update --init --recursive
 
 Android 构建环境需要 CMake 3.22.1 和 NDK 28.2.13676358。
 
-连接 API 23+ 真机或模拟器后，可运行 100 条静态 HTML 消息滚动基准：
-
-```shell
-./gradlew :benchmark:connectedBenchmarkAndroidTest
-```
-
 # 声明
 此项目（Murexide）仅为个人兴趣开发, 只可用于学习和测试，请于下载后24小时内删除。 所用API皆从官方网站收集, 不提供任何破解内容。
 

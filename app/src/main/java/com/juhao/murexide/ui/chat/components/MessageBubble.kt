@@ -42,7 +42,6 @@ import coil.request.ImageRequest
 import coil.request.videoFrameMillis
 import com.juhao.murexide.data.MessageButton
 import com.juhao.murexide.data.MessageItem
-import com.juhao.murexide.data.DefaultEmojiCatalog
 import com.juhao.murexide.data.resolveStickerMessageUrl
 import com.juhao.murexide.ui.components.Avatar
 import com.juhao.murexide.ui.components.ImageViewerSourceBounds
@@ -137,7 +136,6 @@ fun MessageBubble(
         else -> MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp)
     }
     val context = LocalContext.current
-    val defaultEmojis = remember(context) { DefaultEmojiCatalog.load(context.assets) }
 
     val timestampDisplay = remember(message.timestamp) {
         try {
@@ -482,10 +480,9 @@ fun MessageBubble(
                                                         if (message.isEdited) append(" 已编辑")
                                                     }
                                                 }
-                                                BatchedDefaultEmojiText(
+                                                MessageText(
                                                     text = message.content,
                                                     timestampText = timeText,
-                                                    emojis = defaultEmojis,
                                                     bodyStyle = MaterialTheme.typography.bodyMedium.copy(
                                                         color = MaterialTheme.colorScheme.onSurface
                                                     ),

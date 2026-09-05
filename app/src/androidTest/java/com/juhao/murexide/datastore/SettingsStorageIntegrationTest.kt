@@ -60,23 +60,4 @@ class SettingsStorageIntegrationTest {
         assertEquals(0.25f, storage.getBackgroundOpacity())
         assertFalse(storage.showMyBubbleAvatarFlow.first { !it })
     }
-
-    @Test
-    fun blurIsClampedAndRecentEmojiFlowUsesStorageOrdering() = runBlocking {
-        storage.setLiquidGlassBlur(-2f)
-        assertEquals(0f, storage.getLiquidGlassBlur())
-
-        storage.setLiquidGlassBlur(10f)
-        assertEquals(4f, storage.getLiquidGlassBlur())
-
-        storage.recordRecentDefaultEmoji("integration-emoji-a")
-        storage.recordRecentDefaultEmoji("integration-emoji-b")
-
-        assertEquals(
-            listOf("integration-emoji-b", "integration-emoji-a"),
-            storage.recentDefaultEmojiNamesFlow.first {
-                it.take(2) == listOf("integration-emoji-b", "integration-emoji-a")
-            }.take(2)
-        )
-    }
 }

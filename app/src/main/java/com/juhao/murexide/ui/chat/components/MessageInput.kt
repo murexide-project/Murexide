@@ -57,7 +57,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import com.juhao.murexide.R
-import com.juhao.murexide.data.DefaultEmoji
 import com.juhao.murexide.data.MentionToken
 import kotlin.math.roundToInt
 
@@ -97,7 +96,6 @@ fun MessageInput(
     inputText: String,
     inputSelectionStart: Int,
     inputSelectionEnd: Int,
-    defaultEmojis: List<DefaultEmoji>,
     isSending: Boolean = false,
     onTextChange: (String, List<MentionToken>, Int, Int) -> Unit,
     onSendClick: () -> Unit,
@@ -149,10 +147,9 @@ fun MessageInput(
             )
         }
 
-        DefaultEmojiTextField(
+        MessageTextField(
             value = fieldValue,
             mentions = mentions,
-            emojis = defaultEmojis,
             enabled = true,
             textColor = MaterialTheme.colorScheme.onSurface,
             hintColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.65f),
@@ -170,7 +167,7 @@ fun MessageInput(
             onFocused = onInputFocused,
             modifier = Modifier
                 .weight(1f)
-                .heightIn(min = 48.dp, max = 144.dp)
+                .heightIn(max = 144.dp)
                 .padding(horizontal = 4.dp)
         )
 

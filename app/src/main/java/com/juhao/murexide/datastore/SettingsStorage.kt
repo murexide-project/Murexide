@@ -13,41 +13,7 @@ import kotlinx.coroutines.flow.map
 
 private val Context.dataStore by preferencesDataStore(name = "app_preferences")
 
-internal const val MAX_RECENT_DEFAULT_EMOJIS = 16
-private const val RECENT_DEFAULT_EMOJI_SEPARATOR = "\u0000"
-
-internal fun updateRecentDefaultEmojiNames(
-    recentNames: Iterable<String>,
-    usedName: String,
-    limit: Int = MAX_RECENT_DEFAULT_EMOJIS
-): List<String> {
-    if (limit <= 0) return emptyList()
-
-    return buildList {
-        if (usedName.isNotBlank()) add(usedName)
-        recentNames.forEach { name ->
-            if (name.isNotBlank() && name != usedName) add(name)
-        }
-    }.distinct().take(limit)
-}
-
-internal fun encodeRecentDefaultEmojiNames(names: Iterable<String>): String {
-    return updateRecentDefaultEmojiNames(
-        recentNames = names,
-        usedName = ""
-    ).joinToString(RECENT_DEFAULT_EMOJI_SEPARATOR)
-}
-
-internal fun decodeRecentDefaultEmojiNames(value: String?): List<String> {
-    if (value.isNullOrEmpty()) return emptyList()
-    return updateRecentDefaultEmojiNames(
-        recentNames = value.split(RECENT_DEFAULT_EMOJI_SEPARATOR),
-        usedName = ""
-    )
-}
-
-class SettingsStorage(private val context: Context) {
-    
+class SettingsStorage(private val context: Context) {    
     companion object {
         private val THEME_MODE_KEY = stringPreferencesKey("theme_mode")
         private val THEME_COLOR_KEY = stringPreferencesKey("theme_color")
@@ -72,8 +38,6 @@ class SettingsStorage(private val context: Context) {
         private val SHOW_MY_BUBBLE_AVATAR_KEY = booleanPreferencesKey("show_my_bubble_avatar")
         private val LIQUID_GLASS_ENABLED_KEY = booleanPreferencesKey("liquid_glass_enabled")
         private val LIQUID_GLASS_BLUR_KEY = floatPreferencesKey("liquid_glass_blur")
-        private val RECENT_DEFAULT_EMOJI_NAMES_KEY =
-            stringPreferencesKey("recent_default_emoji_names")
 
         // ====== 截图隐私设置 ======
         private val SCREENSHOT_HIDE_SENDER_INFO_KEY = booleanPreferencesKey("screenshot_hide_sender_info")
@@ -323,24 +287,6 @@ class SettingsStorage(private val context: Context) {
 
     suspend fun getLiquidGlassBlur(): Float {
         return liquidGlassBlurFlow.first()
-    }
-
-    // ====== 最近使用的默认表情 ======
-    val recentDefaultEmojiNamesFlow: Flow<List<String>> = context.dataStore.data.map { preferences ->
-        decodeRecentDefaultEmojiNames(preferences[RECENT_DEFAULT_EMOJI_NAMES_KEY])
-    }
-
-    suspend fun recordRecentDefaultEmoji(name: String) {
-        if (name.isBlank()) return
-
-        context.dataStore.edit { preferences ->
-            val recentNames = decodeRecentDefaultEmojiNames(
-                preferences[RECENT_DEFAULT_EMOJI_NAMES_KEY]
-            )
-            preferences[RECENT_DEFAULT_EMOJI_NAMES_KEY] = encodeRecentDefaultEmojiNames(
-                updateRecentDefaultEmojiNames(recentNames, name)
-            )
-        }
     }
 
     // ====== 截图隐私设置 ======

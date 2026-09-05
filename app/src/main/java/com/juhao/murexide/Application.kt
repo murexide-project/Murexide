@@ -27,8 +27,6 @@ import com.juhao.murexide.datastore.AccountStorage
 import com.juhao.murexide.datastore.SettingsStorage
 import com.juhao.murexide.data.local.LocalCache
 import com.juhao.murexide.data.local.CacheSyncCoordinator
-import com.juhao.murexide.data.DefaultEmojiBitmapCache
-import com.juhao.murexide.data.DefaultEmojiCatalog
 import com.juhao.murexide.network.NetworkClient
 import com.juhao.murexide.network.WebSocketManager
 import com.juhao.murexide.repository.ConversationRepository
@@ -81,11 +79,6 @@ class MyApplication : Application(), ImageLoaderFactory {
             ).roundToInt(),
             (40f * displayMetrics.density).roundToInt()
         ).distinct().toIntArray()
-        DefaultEmojiCatalog.prewarmBitmapCache(
-            assetManager = assets,
-            targetHeights = emojiTargetHeights,
-            scope = applicationScope
-        )
         observeAvatarSetting()
         initWebSocket()
         CacheSyncCoordinator(
@@ -101,18 +94,6 @@ class MyApplication : Application(), ImageLoaderFactory {
         ).start(applicationScope)
         observeNetworkStatus()
         observeMessages(this)
-    }
-
-    override fun onTrimMemory(level: Int) {
-        super.onTrimMemory(level)
-        if (level >= TRIM_MEMORY_RUNNING_LOW) {
-            DefaultEmojiBitmapCache.clearMemory()
-        }
-    }
-
-    override fun onLowMemory() {
-        super.onLowMemory()
-        DefaultEmojiBitmapCache.clearMemory()
     }
 
     private fun observeMessages(context: Context) {

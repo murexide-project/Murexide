@@ -81,10 +81,8 @@ import com.juhao.murexide.ui.chat.components.UploadProgressBar
 import com.juhao.murexide.ui.chat.components.ScreenshotBottomSheet
 import com.juhao.murexide.ui.chat.components.GroupMemberSheet
 import com.juhao.murexide.datastore.SettingsStorage
-import com.juhao.murexide.data.DefaultEmoji
 import com.juhao.murexide.data.MessageItem
 import com.juhao.murexide.data.ForwardTarget
-import com.juhao.murexide.data.DefaultEmojiCatalog
 import com.juhao.murexide.data.resolveStickerMessageUrl
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
@@ -284,7 +282,6 @@ private suspend fun View.measureShownImeHeight(): Int? {
 @Composable
 private fun ChatComposer(
     viewModel: ChatViewModel,
-    defaultEmojis: List<DefaultEmoji>,
     chatType: Int,
     isSending: Boolean,
     isEmojiPanelVisible: Boolean,
@@ -302,7 +299,6 @@ private fun ChatComposer(
         inputText = composerState.text,
         inputSelectionStart = composerState.selectionStart,
         inputSelectionEnd = composerState.selectionEnd,
-        defaultEmojis = defaultEmojis,
         isSending = isSending,
         onTextChange = { text, mentions, selectionStart, selectionEnd ->
             viewModel.updateInputText(
@@ -350,7 +346,6 @@ fun ChatScreen(
 ) {
     val density = LocalDensity.current
     val context = LocalContext.current
-    val defaultEmojis = remember(context) { DefaultEmojiCatalog.load(context.assets) }
     val scope = rememberCoroutineScope()
     val clipboardManager = LocalClipboard.current
     val uiState by viewModel.screenState.collectAsState()
@@ -561,14 +556,6 @@ fun ChatScreen(
     val showBackground by settingsStorage.showBackgroundFlow.collectAsState(initial = true)
     val backgroundOpacity by settingsStorage.backgroundOpacityFlow.collectAsState(initial = 0.5f)
     
-    val recentDefaultEmojiNames by settingsStorage.recentDefaultEmojiNamesFlow.collectAsState(
-        initial = emptyList()
-    )
-    val recentDefaultEmojis = remember(defaultEmojis, recentDefaultEmojiNames) {
-        val emojisByName = defaultEmojis.associateBy(DefaultEmoji::name)
-        recentDefaultEmojiNames.mapNotNull(emojisByName::get)
-    }
-
     val hazeState = remember { HazeState() }
     val liquidGlassEnabled = LocalLiquidGlassEnabled.current
     val liquidGlassBlur = LocalLiquidGlassBlur.current
@@ -1494,7 +1481,6 @@ fun ChatScreen(
 
                             ChatComposer(
                                 viewModel = viewModel,
-                                defaultEmojis = defaultEmojis,
                                 chatType = chatType,
                                 isSending = uiState.isSending,
                                 onAddAlbumClick = { openAlbumPicker() },
@@ -1543,8 +1529,6 @@ fun ChatScreen(
                                 exit = fadeOut() + shrinkVertically()
                             ) {
                                 EmojiPanel(
-                                    defaultEmojis = defaultEmojis,
-                                    recentDefaultEmojis = recentDefaultEmojis,
                                     expressions = expressions.expressions,
                                     isLoading = expressions.isLoading,
                                     onExpressionClick = { expression ->
@@ -1552,12 +1536,6 @@ fun ChatScreen(
                                     },
                                     onStickerItemClick = { stickerItem ->
                                         viewModel.sendStickerItem(stickerItem)
-                                    },
-                                    onDefaultEmojiClick = { emoji ->
-                                        viewModel.insertDefaultEmoji(emoji)
-                                        scope.launch {
-                                            settingsStorage.recordRecentDefaultEmoji(emoji.name)
-                                        }
                                     },
                                     stickerPacks = expressions.stickerPacks,
                                     modifier = Modifier

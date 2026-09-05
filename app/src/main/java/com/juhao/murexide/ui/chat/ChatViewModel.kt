@@ -672,26 +672,6 @@ class ChatViewModel(
         }
     }
 
-    fun insertDefaultEmoji(emoji: DefaultEmoji) {
-        _uiState.update { state ->
-            val result = MentionUtils.replaceRange(
-                text = state.inputText,
-                mentions = state.mentions,
-                selection = TextRange(
-                    start = state.inputSelectionStart,
-                    end = state.inputSelectionEnd
-                ),
-                replacement = emoji.marker
-            )
-            state.copy(
-                inputText = result.text,
-                mentions = result.mentions,
-                inputSelectionStart = result.selection.start,
-                inputSelectionEnd = result.selection.end
-            )
-        }
-    }
-
     fun setReplyTo(message: MessageItem) {
         _uiState.update { it.copy(replyTo = message) }
     }
