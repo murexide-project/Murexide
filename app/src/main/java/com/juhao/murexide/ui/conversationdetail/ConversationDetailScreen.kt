@@ -905,7 +905,7 @@ private fun UserHeader(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 12.dp),
-                icon = AppIcons.ChatBubbleOutline,
+                icon = AppIcons.ChatBubble,
                 label = "消息",
                 onClick = onMessage
             )
@@ -916,7 +916,7 @@ private fun UserHeader(
                     .padding(horizontal = 12.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                TelegramAction(Modifier.weight(1f), AppIcons.ChatBubbleOutline, "消息", onMessage)
+                TelegramAction(Modifier.weight(1f), AppIcons.ChatBubble, "消息", onMessage)
                 TelegramAction(
                     Modifier.weight(1f),
                     if (detail.doNotDisturb) AppIcons.NotificationsOff else AppIcons.Notifications,
@@ -1143,7 +1143,7 @@ private fun GroupHeader(
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             if (isAdded == true) {
-                TelegramAction(Modifier.weight(1f), AppIcons.ChatBubbleOutline, "消息", onMessage)
+                TelegramAction(Modifier.weight(1f), AppIcons.ChatBubble, "消息", onMessage)
                 TelegramAction(
                     Modifier.weight(1f),
                     if (detail.doNotDisturb) AppIcons.NotificationsOff else AppIcons.Notifications,

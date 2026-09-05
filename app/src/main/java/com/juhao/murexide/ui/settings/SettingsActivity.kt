@@ -24,11 +24,14 @@ class SettingsActivity : ComponentActivity() {
 
         val accountStorage = AccountStorage.getInstance(this)
         val authRepository = AuthRepository()
+        
+        val page = intent.getIntExtra("page", 0)
 
         setContent {
             MurexideTheme {
                 SettingsScreen(
                     onBack = { finish() },
+                    page = page,
                     onLogout = {
                         lifecycleScope.launch {
                             val token = accountStorage.getCurrentToken()

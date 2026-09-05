@@ -15,7 +15,6 @@ import androidx.compose.foundation.text.input.clearText
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.platform.LocalContext
@@ -231,7 +230,9 @@ fun ConversationListScreen(
                         }
                         DropdownMenu(
                             expanded = showCreateMenu,
-                            onDismissRequest = { showCreateMenu = false }) {
+                            onDismissRequest = { showCreateMenu = false },
+                            shape = MenuDefaults.standaloneGroupShape
+                        ) {
                             DropdownMenuItem(
                                 text = { Text("创建群聊") },
                                 onClick = {
@@ -572,11 +573,12 @@ fun ConversationItem(
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun LoadingScreen(modifier: Modifier = Modifier) = Box(
     modifier = modifier.fillMaxSize(),
     contentAlignment = Alignment.Center
-) { CircularProgressIndicator() }
+) { ContainedLoadingIndicator() }
 
 @Composable
 private fun SearchRow(result: HomeSearchResult, onClick: (HomeSearchResult) -> Unit) {

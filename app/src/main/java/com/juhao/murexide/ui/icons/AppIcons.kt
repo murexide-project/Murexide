@@ -34,7 +34,6 @@ object AppIcons {
     val CardGiftcard get() = MaterialSymbols.Rounded.Redeem
     val Category get() = MaterialSymbols.Rounded.Category
     val ChatBubble get() = MaterialSymbols.Rounded.Chat_bubble
-    val ChatBubbleOutline get() = MaterialSymbols.Rounded.Chat_bubble
     val Check get() = MaterialSymbols.Rounded.Check
     val CheckBox get() = MaterialSymbols.RoundedFilled.Check_box
     val CheckBoxOutlineBlank get() = MaterialSymbols.Rounded.Check_box_outline_blank
@@ -47,6 +46,7 @@ object AppIcons {
     val Colorize get() = MaterialSymbols.Rounded.Colorize
     val Delete get() = MaterialSymbols.Rounded.Delete
     val Description get() = MaterialSymbols.Rounded.Description
+    val DragClick get() = MaterialSymbols.Rounded.Drag_click
     val Download get() = MaterialSymbols.Rounded.Download
     val Draw get() = MaterialSymbols.Rounded.Draw
     val DriveFileRenameOutline get() = MaterialSymbols.Rounded.Drive_file_rename_outline
@@ -109,6 +109,7 @@ object AppIcons {
     val Search get() = MaterialSymbols.Rounded.Search
     val Send get() = MaterialSymbols.Rounded.Send
     val Settings get() = MaterialSymbols.Rounded.Settings
+    val Style get() = MaterialSymbols.Rounded.Style
     val Share get() = MaterialSymbols.Rounded.Share
     val Slideshow get() = MaterialSymbols.Rounded.Slideshow
     val SmartToy get() = MaterialSymbols.Rounded.Smart_toy

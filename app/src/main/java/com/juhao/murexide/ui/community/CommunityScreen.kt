@@ -461,7 +461,7 @@ fun PostCard(
 
             // 评论
             InteractionButton(
-                icon = AppIcons.ChatBubbleOutline,
+                icon = AppIcons.ChatBubble,
                 count = post.commentNum,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 onClick = { /* TODO: 打开评论 */ }

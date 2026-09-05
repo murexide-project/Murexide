@@ -7,9 +7,10 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 
 data class UpdateInfo(
-    val version: String,
-    val releaseUrl: String,
-    val isPreRelease: Boolean = false
+    val version: String = "",
+    val releaseUrl: String = "",
+    val isPreRelease: Boolean = false,
+    val shouldUpdate: Boolean = false
 )
 
 suspend fun checkForUpdateWithDetails(
@@ -17,7 +18,7 @@ suspend fun checkForUpdateWithDetails(
     owner: String = "murexide-project",
     repo: String = "Murexide",
     includePreRelease: Boolean = false
-): UpdateInfo? = withContext(Dispatchers.IO) {
+): UpdateInfo = withContext(Dispatchers.IO) {
     try {
         val currentInfo = context.getAppVersionInfo()
         val isSnapshot = currentInfo.isSnapShotVersion
@@ -38,7 +39,7 @@ suspend fun checkForUpdateWithDetails(
             .build()
 
         val response = client.newCall(request).execute()
-        if (!response.isSuccessful) return@withContext null
+        if (!response.isSuccessful) return@withContext UpdateInfo()
 
         val body = response.body.string()
 
@@ -51,7 +52,7 @@ suspend fun checkForUpdateWithDetails(
             if (version.contains("-") && !version.startsWith("v")) null else latestRelease
         }
 
-        if (targetRelease == null) return@withContext null
+        if (targetRelease == null) return@withContext UpdateInfo()
 
         val latestVersion = targetRelease.version
         val releaseUrl = targetRelease.url
@@ -80,18 +81,15 @@ suspend fun checkForUpdateWithDetails(
             }
         }
 
-        if (shouldUpdate) {
-            UpdateInfo(
-                version = latestVersion,
-                releaseUrl = releaseUrl,
-                isPreRelease = isLatestPreRelease
-            )
-        } else {
-            null
-        }
+        UpdateInfo(
+            version = latestVersion,
+            releaseUrl = releaseUrl,
+            isPreRelease = isLatestPreRelease,
+            shouldUpdate = shouldUpdate
+        )
     } catch (e: Exception) {
         e.printStackTrace()
-        null
+        UpdateInfo()
     }
 }
 

@@ -439,7 +439,8 @@ private fun MoreActionsButton(
 
         DropdownMenu(
             expanded = showMenu,
-            onDismissRequest = { showMenu = false }
+            onDismissRequest = { showMenu = false },
+            shape = MenuDefaults.standaloneGroupShape
         ) {
             DropdownMenuItem(
                 text = { Text("相册") },

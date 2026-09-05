@@ -55,7 +55,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.core.graphics.createBitmap
 import com.juhao.murexide.datastore.SettingsStorage
-import com.juhao.murexide.ui.settings.ScreenshotSettingsActivity
+import com.juhao.murexide.ui.settings.SettingsActivity
 
 private const val SCREENSHOT_TAG = "ScreenshotBottomSheet"
 
@@ -213,7 +213,9 @@ fun ScreenshotBottomSheet(
                     icon = AppIcons.Settings,
                     label = "截图设置",
                     onClick = {
-                        val intent = Intent(context, ScreenshotSettingsActivity::class.java)
+                        val intent = Intent(context, SettingsActivity::class.java).apply{
+                            putExtra("page", 6)
+                        }
                         context.startActivity(intent)
                     }
                 )

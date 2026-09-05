@@ -331,7 +331,7 @@ private fun PostHeader(post: PostDetail, viewModel: PostDetailViewModel) {
                 onClick = { viewModel.toggleLike() }
             )
             InteractionButton(
-                icon = AppIcons.ChatBubbleOutline,
+                icon = AppIcons.ChatBubble,
                 count = post.commentNum,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 onClick = { }
