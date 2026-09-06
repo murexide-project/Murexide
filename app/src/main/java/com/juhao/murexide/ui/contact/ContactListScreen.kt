@@ -363,6 +363,7 @@ private fun ContactTabContent(
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun NewMessageShortcut(
     pendingCount: Int,
@@ -399,7 +400,7 @@ private fun NewMessageShortcut(
             ) {
                 Surface(
                     modifier = Modifier.size(48.dp),
-                    shape = RoundedCornerShape(16.dp),
+                    shape = MaterialShapes.Square.toShape(),
                     color = MaterialTheme.colorScheme.tertiaryContainer
                 ) {
                     Box(contentAlignment = Alignment.Center) {
@@ -503,6 +504,7 @@ private fun ContactItemRow(
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun AlphabetFastScroller(
     modifier: Modifier,
@@ -533,7 +535,7 @@ private fun AlphabetFastScroller(
         ) {
             Surface(
                 modifier = Modifier.size(72.dp),
-                shape = RoundedCornerShape(22.dp),
+                shape = MaterialShapes.Sunny.toShape(),
                 color = MaterialTheme.colorScheme.primaryContainer,
                 shadowElevation = 4.dp
             ) {

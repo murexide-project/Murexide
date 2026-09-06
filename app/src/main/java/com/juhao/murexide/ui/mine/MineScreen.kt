@@ -23,7 +23,6 @@ import com.juhao.murexide.ui.components.*
 import androidx.compose.ui.platform.LocalContext
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.window.Dialog
@@ -265,6 +264,7 @@ private fun MineContent(
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun ActivityOverviewCard(
     onlineDay: Int?,
@@ -284,7 +284,7 @@ private fun ActivityOverviewCard(
         ) {
             Surface(
                 modifier = Modifier.size(48.dp),
-                shape = RoundedCornerShape(16.dp),
+                shape = MaterialShapes.Square.toShape(),
                 color = MaterialTheme.colorScheme.tertiaryContainer
             ) {
                 Box(contentAlignment = Alignment.Center) {
@@ -352,6 +352,7 @@ private fun ActivityMetric(
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun ProfileCard(
     userInfo: UserInfo,
@@ -386,7 +387,7 @@ private fun ProfileCard(
                     )
 
                     Surface(
-                        shape = CircleShape,
+                        shape = MaterialShapes.Circle.toShape(),
                         color = MaterialTheme.colorScheme.primaryContainer,
                         tonalElevation = 2.dp,
                         modifier = Modifier

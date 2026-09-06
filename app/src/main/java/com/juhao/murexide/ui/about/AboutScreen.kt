@@ -22,7 +22,7 @@ import com.juhao.murexide.R
 import com.juhao.murexide.ui.components.*
 import com.juhao.murexide.utils.getAppVersionInfo
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun AboutScreen(
     onBack: () -> Unit
@@ -63,11 +63,17 @@ fun AboutScreen(
                 ) {
                     Spacer(modifier = Modifier.height(8.dp))
                     
-                    Icon(
-                        imageVector = AppFilledIcons.ChatBubble,
-                        contentDescription = null,
-                        modifier = Modifier.size(48.dp),
-                    )
+                    Surface(
+                        modifier = Modifier.size(64.dp),
+                        shape = MaterialShapes.Cookie12Sided.toShape(),
+                        color = MaterialTheme.colorScheme.primaryContainer
+                    ) {
+                        Icon(
+                            imageVector = AppFilledIcons.ChatBubble,
+                            contentDescription = null,
+                            modifier = Modifier.requiredSize(32.dp),
+                        )
+                    }
 
                     Spacer(modifier = Modifier.height(8.dp))
 
