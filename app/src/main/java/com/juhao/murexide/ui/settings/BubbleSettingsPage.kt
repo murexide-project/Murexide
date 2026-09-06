@@ -1,20 +1,17 @@
 package com.juhao.murexide.ui.settings
 
 import com.juhao.murexide.ui.icons.AppIcons
-import com.juhao.murexide.ui.icons.AutoMirroredIcon
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.juhao.murexide.ui.components.*
 import com.juhao.murexide.datastore.SettingsStorage
-import com.juhao.murexide.ui.theme.UiState
 import com.juhao.murexide.ui.theme.liquidglass.LiquidGlassSlider
 import com.juhao.murexide.data.MessageItem
 import com.juhao.murexide.data.MessageTag
@@ -29,11 +26,6 @@ fun BubblePage() {
     val settingsStorage = remember { SettingsStorage(context) }
     val scope = rememberCoroutineScope()
 
-    val themeMode by UiState.themeMode
-    val themeColor by UiState.themeColor
-    
-    val squareAvatar by UiState.squareAvatar
-    
     var bubbleCornerRadius by remember { mutableFloatStateOf(16f) }
     val showMyBubbleAvatar by settingsStorage.showMyBubbleAvatarFlow.collectAsState(initial = true)
     val showMsgTags by settingsStorage.showMsgTagsFlow.collectAsState(initial = true)
@@ -85,15 +77,12 @@ fun BubblePage() {
             )
         )
     }
-    
-    // 气泡预览区域
-    SettingsGroup() {
-        Card(
-            modifier = Modifier
-                .fillMaxWidth(),
-            shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant
+
+    SettingsGroup {
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(
+                alpha = 0.64f
             )
         ) {
             Column(

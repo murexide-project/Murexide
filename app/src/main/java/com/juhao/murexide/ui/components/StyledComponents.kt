@@ -1,12 +1,9 @@
 package com.juhao.murexide.ui.components
 
-import com.juhao.murexide.ui.icons.AppIcons
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.unit.dp
 import com.juhao.murexide.ui.theme.liquidglass.LiquidGlassToggle
 
 @Composable
@@ -22,22 +19,6 @@ fun StyledSwitch(
         enabled = enabled,
         modifier = modifier,
     )
-}
-
-@Composable
-fun StyledIconButton(
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit,
-    enabled: Boolean = true,
-    content: @Composable () -> Unit
-) {
-    FilledTonalIconButton(
-        onClick = onClick,
-        enabled = enabled,
-        modifier = modifier
-    ) {
-        content()
-    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

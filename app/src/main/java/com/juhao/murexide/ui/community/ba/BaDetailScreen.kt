@@ -21,7 +21,6 @@ import com.juhao.murexide.data.BaDetail
 import com.juhao.murexide.ui.community.PostCard
 import com.juhao.murexide.ui.community.detail.PostDetailActivity
 import com.juhao.murexide.ui.components.Avatar
-import com.juhao.murexide.ui.components.StyledIconButton
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -49,7 +48,7 @@ fun BaDetailScreen(
             TopAppBar(
                 title = { Text(uiState.ba?.name ?: "分区") },
                 navigationIcon = {
-                    StyledIconButton(onClick = onBackClick) {
+                    IconButton(onClick = onBackClick) {
                         AutoMirroredIcon(AppIcons.ArrowBack, contentDescription = "返回")
                     }
                 }

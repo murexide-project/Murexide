@@ -22,7 +22,6 @@ import com.juhao.murexide.ui.components.Avatar
 import com.juhao.murexide.ui.components.CustomItemCell
 import com.juhao.murexide.ui.components.SettingsGroup
 import com.juhao.murexide.ui.components.SettingsSwitchItem
-import com.juhao.murexide.ui.components.StyledIconButton
 import kotlinx.coroutines.flow.collectLatest
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -58,7 +57,7 @@ fun GroupSettingsScreen(
             TopAppBar(
                 title = { Text("群设置") },
                 navigationIcon = {
-                    StyledIconButton(onClick = onBack) {
+                    IconButton(onClick = onBack) {
                         AutoMirroredIcon(AppIcons.ArrowBack, contentDescription = "返回")
                     }
                 },

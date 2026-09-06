@@ -14,7 +14,6 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.*
@@ -45,7 +44,6 @@ import com.juhao.murexide.data.ContactGroup
 import com.juhao.murexide.data.ContactItem
 import com.juhao.murexide.data.ContactRequestItem
 import com.juhao.murexide.ui.components.Avatar
-import com.juhao.murexide.ui.components.StyledIconButton
 import com.juhao.murexide.ui.theme.UiState
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -655,7 +653,7 @@ private fun NewMessagesScreen(
             TopAppBar(
                 title = { Text("新消息") },
                 navigationIcon = {
-                    StyledIconButton(onClick = onBack) {
+                    IconButton(onClick = onBack) {
                         AutoMirroredIcon(AppIcons.ArrowBack, contentDescription = "返回通讯录")
                     }
                 },

@@ -77,7 +77,6 @@ import com.juhao.murexide.ui.components.AccountQuickSwitchMenu
 import com.juhao.murexide.ui.components.AccountQuickSwitchGlassMenu
 import com.juhao.murexide.ui.community.CommunityScreen
 import com.juhao.murexide.ui.settings.SettingsActivity
-import com.juhao.murexide.utils.getAppVersionInfo
 import androidx.compose.foundation.combinedClickable
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeEffect
@@ -460,23 +459,15 @@ fun MainScreen(account: UserAccount) {
     NavigationSuiteScaffold(
         layoutType = if (useNavigationRail) {
             NavigationSuiteType.NavigationRail
-        } else if (!floatBottomBarEnabled) {
+        } else if (!floatBottomBarEnabled && !hideMobileNavigation) {
             NavigationSuiteType.NavigationBar
         } else {
             NavigationSuiteType.None
         },
-        navigationSuiteColors = if (themeColor == "WHITE" || liquidGlassEnabled) {
+        navigationSuiteColors = if (themeColor == "WHITE") {
             NavigationSuiteDefaults.colors(
-                navigationBarContainerColor = if (liquidGlassEnabled) {
-                    Color.Transparent
-                } else {
-                    MaterialTheme.colorScheme.surfaceContainer
-                },
-                navigationRailContainerColor = if (liquidGlassEnabled) {
-                    Color.Transparent
-                } else {
-                    MaterialTheme.colorScheme.surfaceContainer
-                }
+                navigationBarContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                navigationRailContainerColor = MaterialTheme.colorScheme.surfaceContainer
             )
         } else {
             NavigationSuiteDefaults.colors()

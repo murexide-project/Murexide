@@ -4,13 +4,6 @@ import com.juhao.murexide.ui.icons.AppIcons
 import com.juhao.murexide.ui.icons.AutoMirroredIcon
 
 import android.content.Intent
-import android.content.pm.PackageManager
-import android.net.Uri
-import android.os.Build
-import android.provider.Settings
-import android.Manifest
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -19,15 +12,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.core.net.toUri
 import com.juhao.murexide.ui.components.*
-import com.juhao.murexide.datastore.SettingsStorage
-import kotlinx.coroutines.launch
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.core.content.ContextCompat
-import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.juhao.murexide.ui.about.AboutActivity
-import com.juhao.murexide.utils.hasLegacyWritePermission
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -39,9 +26,6 @@ fun SettingsScreen(
     val scrollState = rememberScrollState()
         
     val context = LocalContext.current
-    val settingsStorage = remember { SettingsStorage(context) }
-    val scope = rememberCoroutineScope()
-        
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     
     val title = when (page) {
@@ -61,7 +45,7 @@ fun SettingsScreen(
                 title = { Text(title) },
                 scrollBehavior = scrollBehavior,
                 navigationIcon = {
-                    StyledIconButton(onClick = onBack) {
+                    IconButton(onClick = onBack) {
                         AutoMirroredIcon(AppIcons.ArrowBack, contentDescription = "返回")
                     }
                 },
@@ -105,7 +89,7 @@ fun SettingsScreen(
 private fun MainScreen() {
     val context = LocalContext.current
     
-    SettingsGroup() {
+    SettingsGroup {
         SettingsItem(
             icon = AppIcons.ChatBubble,
             title = "消息气泡",

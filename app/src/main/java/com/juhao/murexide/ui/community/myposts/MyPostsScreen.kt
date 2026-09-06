@@ -19,7 +19,6 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.juhao.murexide.ui.community.PostCard
 import com.juhao.murexide.ui.community.detail.PostDetailActivity
-import com.juhao.murexide.ui.components.StyledIconButton
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -60,7 +59,7 @@ fun MyPostsScreen(
             TopAppBar(
                 title = { Text("我的文章") },
                 navigationIcon = {
-                    StyledIconButton(onClick = onBackClick) {
+                    IconButton(onClick = onBackClick) {
                         AutoMirroredIcon(AppIcons.ArrowBack, contentDescription = "返回")
                     }
                 }

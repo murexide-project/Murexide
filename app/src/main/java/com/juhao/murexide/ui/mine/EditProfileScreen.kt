@@ -21,7 +21,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.juhao.murexide.ui.components.StyledIconButton
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.withContext
@@ -149,7 +148,7 @@ fun EditProfileScreen(
             TopAppBar(
                 title = { Text("编辑资料") },
                 navigationIcon = {
-                    StyledIconButton(onClick = onBackClick, enabled = !isSaving) {
+                    IconButton(onClick = onBackClick, enabled = !isSaving) {
                         AutoMirroredIcon(AppIcons.ArrowBack, contentDescription = "返回")
                     }
                 },

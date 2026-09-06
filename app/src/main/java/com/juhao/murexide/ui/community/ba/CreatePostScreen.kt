@@ -12,7 +12,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.juhao.murexide.ui.components.StyledIconButton
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -66,12 +65,12 @@ fun CreatePostScreen(
                     )
                 },
                 navigationIcon = {
-                    StyledIconButton(onClick = onClose) {
+                    IconButton(onClick = onClose) {
                         Icon(AppIcons.Close, contentDescription = "关闭")
                     }
                 },
                 actions = {
-                    StyledIconButton(
+                    IconButton(
                         onClick = { viewModel.publish() },
                         enabled = !uiState.isPublishing
                     ) {

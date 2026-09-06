@@ -39,7 +39,7 @@ fun AboutScreen(
                 title = { Text("关于") },
                 scrollBehavior = scrollBehavior,
                 navigationIcon = {
-                    StyledIconButton(onClick = onBack) {
+                    IconButton(onClick = onBack) {
                         AutoMirroredIcon(AppIcons.ArrowBack, contentDescription = "返回")
                     }
                 }

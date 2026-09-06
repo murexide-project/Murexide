@@ -2,7 +2,6 @@ package com.juhao.murexide
 
 import android.Manifest
 import android.app.Application
-import android.content.ComponentCallbacks2
 import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
@@ -13,7 +12,6 @@ import android.net.NetworkCapabilities
 import android.net.NetworkRequest
 import android.os.Build
 import android.util.Log
-import android.util.TypedValue
 import androidx.core.content.ContextCompat
 import coil.ImageLoader
 import coil.ImageLoaderFactory
@@ -44,7 +42,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlin.math.roundToInt
 
 class MyApplication : Application(), ImageLoaderFactory {
     private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
@@ -63,22 +60,6 @@ class MyApplication : Application(), ImageLoaderFactory {
         }
         NotificationHelper.createNotificationChannel(this)
         AppForegroundState.init(this)
-        // Warm the canonical message/editor/grid sizes. Decoding is bounded and
-        // asynchronous, so app startup and the first keystroke stay on the UI path.
-        val displayMetrics = resources.displayMetrics
-        val emojiTargetHeights = intArrayOf(
-            TypedValue.applyDimension(
-                TypedValue.COMPLEX_UNIT_SP,
-                14f * 1.2f,
-                displayMetrics
-            ).roundToInt(),
-            TypedValue.applyDimension(
-                TypedValue.COMPLEX_UNIT_SP,
-                16f * 1.2f,
-                displayMetrics
-            ).roundToInt(),
-            (40f * displayMetrics.density).roundToInt()
-        ).distinct().toIntArray()
         observeAvatarSetting()
         initWebSocket()
         CacheSyncCoordinator(

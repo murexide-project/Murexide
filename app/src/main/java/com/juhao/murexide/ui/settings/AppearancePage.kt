@@ -2,7 +2,6 @@ package com.juhao.murexide.ui.settings
 
 import android.os.Build
 import com.juhao.murexide.ui.icons.AppIcons
-import com.juhao.murexide.ui.icons.AutoMirroredIcon
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
@@ -28,13 +27,10 @@ import com.juhao.murexide.ui.components.*
 import com.juhao.murexide.datastore.SettingsStorage
 import com.juhao.murexide.ui.theme.UiState
 import com.juhao.murexide.ui.theme.liquidglass.LiquidGlassSlider
-import com.juhao.murexide.data.MessageItem
-import com.juhao.murexide.data.MessageTag
-import com.juhao.murexide.ui.chat.components.MessageBubble
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.shape.RoundedCornerShape
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun AppearancePage() {        
     val context = LocalContext.current
@@ -56,6 +52,40 @@ fun AppearancePage() {
     LaunchedEffect(Unit) {
         backgroundOpacity = settingsStorage.getBackgroundOpacity()
         liquidGlassBlur = settingsStorage.getLiquidGlassBlur()
+    }
+
+    SettingsGroup {
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(
+                alpha = 0.64f
+            )
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(8.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        onClick = {}
+                    ) {
+                        Text("添加聊天")
+                    }
+                    var checked by remember { mutableStateOf(true) }
+                    StyledSwitch(
+                        checked = checked,
+                        onCheckedChange = { checked = it }
+                    )
+                }
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    ContainedLoadingIndicator(Modifier.size(36.dp))
+                    Text("正在加载")
+                }
+            }
+        }
     }
 
     // 主题设置

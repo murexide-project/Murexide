@@ -95,9 +95,7 @@ internal class DampedDragAnimation(
             withFrameNanos { }
             if (value != targetValue) {
                 val threshold = (valueRange.endInclusive - valueRange.start) * 0.025f
-                snapshotFlow { valueAnimation.value }
-                    .filter { abs(it - valueAnimation.targetValue) < threshold }
-                    .first()
+                snapshotFlow { valueAnimation.value }.first { abs(it - valueAnimation.targetValue) < threshold }
             }
             launch { pressProgressAnimation.animateTo(0f, pressProgressAnimationSpec) }
             launch { scaleXAnimation.animateTo(initialScale, scaleXAnimationSpec) }

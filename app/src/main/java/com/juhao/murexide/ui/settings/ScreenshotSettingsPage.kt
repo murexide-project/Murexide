@@ -1,20 +1,11 @@
 package com.juhao.murexide.ui.settings
 
 import com.juhao.murexide.ui.icons.AppIcons
-import com.juhao.murexide.ui.icons.AutoMirroredIcon
 
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
 import com.juhao.murexide.datastore.SettingsStorage
 import com.juhao.murexide.ui.components.*
-import com.juhao.murexide.ui.theme.MurexideTheme
 import kotlinx.coroutines.launch
 
 @Composable
@@ -22,9 +13,6 @@ fun ScreenshotPage() {
     val context = LocalContext.current
     val settingsStorage = remember { SettingsStorage(context) }
     val scope = rememberCoroutineScope()
-    
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()    
-    val state = rememberScrollState()
 
     var hideSenderInfo by remember { mutableStateOf(false) }
     var hideMyInfo by remember { mutableStateOf(false) }

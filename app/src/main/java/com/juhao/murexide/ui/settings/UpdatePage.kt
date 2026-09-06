@@ -1,23 +1,17 @@
 package com.juhao.murexide.ui.settings
 
-import android.os.Build
-import com.juhao.murexide.ui.icons.AppIcons
-import com.juhao.murexide.ui.icons.AutoMirroredIcon
-
 import android.content.Intent
-import androidx.core.net.toUri
+import com.juhao.murexide.ui.icons.AppIcons
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import com.juhao.murexide.ui.components.*
 import com.juhao.murexide.datastore.SettingsStorage
 import com.juhao.murexide.utils.UpdateInfo
@@ -69,8 +63,8 @@ fun UpdatePage() {
         Pair(MaterialTheme.colorScheme.secondaryContainer, MaterialTheme.colorScheme.onSecondaryContainer)
         
     val subtitle = buildString {
-        appendLine("最新版本: ${newestVersion}")
-        append("当前版本: ${currentVersion}")
+        appendLine("最新版本: $newestVersion")
+        append("当前版本: $currentVersion")
         if (shouldUpdate) {
             append("\n")
             val type = if (updateInfo?.isPreRelease == true) {
@@ -82,10 +76,12 @@ fun UpdatePage() {
         }
     }
     
-    SettingsGroup() {
+    SettingsGroup {
         if (updateEnabled) {
-            ListItem(
-                onClick = { 
+            Surface(
+                color = cardBgColor,
+                contentColor = cardTextColor,
+                onClick = {
                     if (shouldUpdate) {
                         val intent = Intent(Intent.ACTION_VIEW, updateInfo?.releaseUrl?.toUri())
                         context.startActivity(intent)
@@ -93,38 +89,39 @@ fun UpdatePage() {
                         check()
                     }
                 },
-                verticalAlignment = Alignment.CenterVertically,
-                leadingContent = {
-                    if (loading) ContainedLoadingIndicator(Modifier.size(24.dp)) else
-                    Icon(
-                        imageVector = when {
-                            shouldUpdate -> AppIcons.Download
-                            else -> AppIcons.Check
-                        },
-                        contentDescription = null,
-                        modifier = Modifier.size(24.dp)
-                    )
-                },
-                trailingContent = {
-                    if (!loading && !shouldUpdate) {
-                        Icon(
-                            AppIcons.Refresh,
-                            contentDescription = null,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                },
-                colors = ListItemDefaults.colors(
-                    containerColor = cardBgColor,
-                    headlineColor = cardTextColor,
-                    supportingColor = cardTextColor,
-                    leadingIconColor = cardTextColor,
-                    trailingIconColor = cardTextColor
-                )
             ) {
                 Column(
-                    modifier = Modifier.padding(vertical = 4.dp)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 12.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    if (loading) {
+                        ContainedLoadingIndicator(Modifier.size(64.dp))
+                    } else {
+                        Surface(
+                            modifier = Modifier.size(64.dp),
+                            shape = MaterialShapes.Pill.toShape(),
+                            color = if (shouldUpdate)
+                                MaterialTheme.colorScheme.primary
+                            else
+                                MaterialTheme.colorScheme.secondary
+                        ) {
+                            Icon(
+                                imageVector = when {
+                                    shouldUpdate -> AppIcons.Download
+                                    else -> AppIcons.Check
+                                },
+                                contentDescription = null,
+                                modifier = Modifier.requiredSize(32.dp),
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
                     Text(
                         text = when {
                             loading -> "正在检测更新"
@@ -133,11 +130,25 @@ fun UpdatePage() {
                         },
                         style = MaterialTheme.typography.bodyLarge
                     )
-                    Spacer(modifier = Modifier.height(2.dp))
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
                     Text(
                         text = subtitle,
-                        style = MaterialTheme.typography.bodySmall                
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
                     )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    if (!loading && !shouldUpdate) {
+                        Icon(
+                            AppIcons.Refresh,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
                 }
             }
         } else {
@@ -149,7 +160,7 @@ fun UpdatePage() {
         }
     }
 
-    SettingsGroup() {
+    SettingsGroup {
         SettingsDropdownItem(
             icon = AppIcons.List,
             title = "更新频道",

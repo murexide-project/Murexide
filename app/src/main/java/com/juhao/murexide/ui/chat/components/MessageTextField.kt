@@ -40,7 +40,6 @@ internal fun MessageTextField(
     modifier: Modifier = Modifier
 ) {
     val cursorColor = MaterialTheme.colorScheme.primary
-    val selectionColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)
     
     var currentMentions by remember { mutableStateOf(mentions) }
     var currentProtectedRanges by remember { mutableStateOf<List<TextRange>>(emptyList()) }

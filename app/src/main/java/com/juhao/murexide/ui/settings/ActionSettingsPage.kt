@@ -1,7 +1,6 @@
 package com.juhao.murexide.ui.settings
 
 import com.juhao.murexide.ui.icons.AppIcons
-import com.juhao.murexide.ui.icons.AutoMirroredIcon
 
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -11,22 +10,16 @@ import androidx.core.content.ContextCompat
 import android.Manifest
 import android.content.Intent
 import android.widget.Toast
-import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.juhao.murexide.ui.components.*
 import com.juhao.murexide.datastore.SettingsStorage
-import com.juhao.murexide.ui.theme.UiState
 import kotlinx.coroutines.launch
 import com.juhao.murexide.utils.hasLegacyWritePermission
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.lifecycle.compose.LifecycleResumeEffect
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -101,7 +94,7 @@ fun ActionPage() {
         }
     }
 
-    SettingsGroup() {
+    SettingsGroup {
         SettingsSwitchItem(
             icon = AppIcons.Notifications,
             title = "消息通知",

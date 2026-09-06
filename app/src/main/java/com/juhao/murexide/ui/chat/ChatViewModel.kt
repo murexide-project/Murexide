@@ -4,7 +4,6 @@ import android.net.Uri
 import android.content.Context
 import android.util.Log
 import androidx.compose.runtime.Immutable
-import androidx.compose.ui.text.TextRange
 import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -33,7 +32,6 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.isActive
-import kotlin.coroutines.coroutineContext
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -48,6 +46,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.sync.Mutex
@@ -807,7 +806,7 @@ class ChatViewModel(
                 }
             )
 
-            if (!coroutineContext.isActive) {
+            if (!currentCoroutineContext().isActive) {
                 _uiState.update {
                     it.copy(
                         isUploading = false,

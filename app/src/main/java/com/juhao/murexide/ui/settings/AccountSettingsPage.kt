@@ -7,9 +7,6 @@ import android.content.ClipData
 import android.content.Intent
 import android.widget.Toast
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -18,12 +15,9 @@ import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.juhao.murexide.ui.components.*
 import com.juhao.murexide.datastore.AccountStorage
 import com.juhao.murexide.datastore.UserAccount
-import com.juhao.murexide.datastore.SettingsStorage
-import com.juhao.murexide.ui.theme.UiState
 import kotlinx.coroutines.launch
 import com.juhao.murexide.ui.settings.switchAccount.SwitchAccountActivity
 
@@ -33,7 +27,6 @@ fun AccountPage(
     onLogout: () -> Unit = {}
 ) {
     val context = LocalContext.current
-    val settingsStorage = remember { SettingsStorage(context) }
     val scope = rememberCoroutineScope()
     
     var showLogoutDialog by remember { mutableStateOf(false) }
@@ -106,7 +99,7 @@ fun AccountPage(
     }
     
     currentAccount?.let {
-        SettingsGroup() {
+        SettingsGroup {
             ListItem(
                 verticalAlignment = Alignment.CenterVertically,
                 leadingContent = {

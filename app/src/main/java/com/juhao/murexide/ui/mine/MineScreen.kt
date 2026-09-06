@@ -74,7 +74,7 @@ fun MineScreen(
                 title = { Text("我的") },
                 scrollBehavior = scrollBehavior,
                 actions = {
-                    StyledIconButton(onClick = onSettingsClick) {
+                    IconButton(onClick = onSettingsClick) {
                         Icon(AppIcons.Settings, contentDescription = "设置")
                     }
                 }

@@ -61,7 +61,7 @@ class HomeSearchRepository {
         fun appendList(element: JsonElement?, type: Int) {
             val items = element as? JsonArray ?: return
             recognized = true
-            items.mapNotNull { item -> item as? JsonObject }
+            items.filterIsInstance<JsonObject>()
                 .mapNotNull { item -> item.toSearchResult(type) }
                 .forEach(result::add)
         }
@@ -69,7 +69,7 @@ class HomeSearchRepository {
         when (container) {
             is JsonArray -> {
                 recognized = true
-                container.mapNotNull { it as? JsonObject }.mapNotNull { item ->
+                container.filterIsInstance<JsonObject>().mapNotNull { item ->
                     item.toSearchResult(item["chatType"].asInt() ?: item["chat_type"].asInt())
                 }.forEach(result::add)
             }
@@ -81,7 +81,7 @@ class HomeSearchRepository {
                 } == true
                 if (isCategorizedResponse) {
                     recognized = true
-                    categorizedLists.mapNotNull { it as? JsonObject }.forEach { category ->
+                    categorizedLists.filterIsInstance<JsonObject>().forEach { category ->
                         val fallbackType = when (category["title"].asString()) {
                             "用户" -> 1
                             "群组", "群聊" -> 2
@@ -89,7 +89,7 @@ class HomeSearchRepository {
                             else -> null
                         }
                         (category["list"] as? JsonArray).orEmpty()
-                            .mapNotNull { it as? JsonObject }
+                            .filterIsInstance<JsonObject>()
                             .mapNotNull { item ->
                                 item.toSearchResult(item["friendType"].asInt() ?: fallbackType)
                             }

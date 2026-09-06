@@ -38,7 +38,6 @@ import com.juhao.murexide.datastore.AccountStorage
 import com.juhao.murexide.datastore.UserAccount
 import com.juhao.murexide.data.local.LocalCache
 import com.juhao.murexide.ui.components.Avatar
-import com.juhao.murexide.ui.components.StyledIconButton
 import com.juhao.murexide.ui.components.StyledTopBar
 import com.juhao.murexide.ui.login.LoginActivity
 import kotlinx.coroutines.launch
@@ -68,7 +67,7 @@ fun Greeting(
                 title = { Text(if (isChooseMode) "现有账号" else "切换账号") },
                 scrollBehavior = scrollBehavior,
                 navigationIcon = {
-                    StyledIconButton(onClick = onBack) {
+                    IconButton(onClick = onBack) {
                         AutoMirroredIcon(AppIcons.ArrowBack, contentDescription = "返回")
                     }
                 }
