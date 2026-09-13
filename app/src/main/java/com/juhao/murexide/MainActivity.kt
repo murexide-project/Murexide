@@ -130,7 +130,7 @@ private fun HomeNavigationIcon(
                 inheritedGlassContentColor
             } else {
                 MaterialTheme.colorScheme.onSurfaceVariant
-            },
+            }
         )
     }
 
@@ -153,10 +153,35 @@ private fun HomeNavigationLabel(
 ) {
     val liquidGlassEnabled = LocalLiquidGlassEnabled.current
     val inheritedGlassContentColor = LocalContentColor.current
+
+    val visible = compact || selected
+
     AnimatedVisibility(
-        visible = compact || selected,
-        enter = fadeIn() + expandVertically(),
-        exit = fadeOut() + shrinkVertically()
+        visible = visible,
+        enter = fadeIn(
+            animationSpec = tween(
+                durationMillis = 280,
+                easing = LinearOutSlowInEasing
+            )
+        ) + expandVertically(
+            animationSpec = tween(
+                durationMillis = 280,
+                easing = LinearOutSlowInEasing
+            ),
+            expandFrom = Alignment.Top
+        ),
+        exit = fadeOut(
+            animationSpec = tween(
+                durationMillis = 180,
+                easing = FastOutLinearInEasing
+            )
+        ) + shrinkVertically(
+            animationSpec = tween(
+                durationMillis = 180,
+                easing = FastOutLinearInEasing
+            ),
+            shrinkTowards = Alignment.Top
+        )
     ) {
         Text(
             text = item.title,
@@ -165,9 +190,7 @@ private fun HomeNavigationLabel(
             } else {
                 LocalTextStyle.current
             },
-            color = if (selected) {
-                MaterialTheme.colorScheme.primary
-            } else if (liquidGlassEnabled) {
+            color = if (liquidGlassEnabled) {
                 inheritedGlassContentColor
             } else {
                 MaterialTheme.colorScheme.onSurfaceVariant
@@ -453,16 +476,15 @@ fun MainScreen(account: UserAccount) {
     }
 
     val useNavigationRail = bigScreenEnabled && isBigScreen
-    val hideMobileNavigation = currentRoute == "contacts" && isContactNewMessagesVisible
     val navigationBarInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
     NavigationSuiteScaffold(
-        layoutType = if (useNavigationRail) {
-            NavigationSuiteType.NavigationRail
-        } else if (!floatBottomBarEnabled && !hideMobileNavigation) {
-            NavigationSuiteType.NavigationBar
-        } else {
+        layoutType = if (floatBottomBarEnabled) {
             NavigationSuiteType.None
+        } else if (useNavigationRail) {
+            NavigationSuiteType.NavigationRail
+        } else {
+            NavigationSuiteType.NavigationBar
         },
         navigationSuiteColors = if (themeColor == "WHITE") {
             NavigationSuiteDefaults.colors(
@@ -491,8 +513,7 @@ fun MainScreen(account: UserAccount) {
                                         outlineIcon = item.outlineIcon,
                                         filledIcon = item.filledIcon,
                                         selected = selected,
-                                        contentDescription = item.title,
-                                        tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        contentDescription = item.title
                                     )
                                     AccountQuickSwitchMenu(
                                         expanded = showAccountMenu && !liquidGlassEnabled,
@@ -509,8 +530,7 @@ fun MainScreen(account: UserAccount) {
                                         outlineIcon = item.outlineIcon,
                                         filledIcon = item.filledIcon,
                                         selected = selected,
-                                        contentDescription = item.title,
-                                        tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        contentDescription = item.title
                                     )
                                 }
                             }
@@ -520,8 +540,7 @@ fun MainScreen(account: UserAccount) {
                                     outlineIcon = item.outlineIcon,
                                     filledIcon = item.filledIcon,
                                     selected = selected,
-                                    contentDescription = item.title,
-                                    tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    contentDescription = item.title
                                 )
                             }
                         }
@@ -537,7 +556,7 @@ fun MainScreen(account: UserAccount) {
             containerColor = Color.Transparent,
             contentWindowInsets = WindowInsets(0),
             bottomBar = {
-                if (!useNavigationRail && !hideMobileNavigation && floatBottomBarEnabled) {
+                if (!useNavigationRail && floatBottomBarEnabled) {
                     if (liquidGlassEnabled && liquidBackdrop != null) {
                         LiquidBottomTabs(
                             selectedTabIndex = navItems.indexOfFirst { it.route == currentRoute }
