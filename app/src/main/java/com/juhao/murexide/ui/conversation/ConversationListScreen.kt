@@ -23,6 +23,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
@@ -184,24 +185,28 @@ fun ConversationListScreen(
             isScrollInProgress || isAtBottom
         }
     }
+    
+    val topBarColor = MaterialTheme.colorScheme.surfaceContainer
 
     Scaffold(
         modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
-        containerColor = Color.Transparent,
+        containerColor = topBarColor,
         topBar = {
             Box {
                 Box(
                     modifier = Modifier
                         .matchParentSize()
-                        .hazeEffect(
-                            state = hazeState,
-                            style = HazeMaterials.thin().copy(
-                                blurRadius = 32.dp,
-                                noiseFactor = 0f,
-                            ),
-                            block = null,
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    topBarColor,
+                                    topBarColor.copy(alpha = 0.6f),
+                                    Color.Transparent
+                                )
+                            )
                         )
                 )
+            
                 SearchBar(
                     modifier = Modifier.statusBarsPadding().padding(12.dp).fillMaxWidth(),
                     state = searchBarState,

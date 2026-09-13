@@ -27,7 +27,7 @@ import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
@@ -339,17 +339,18 @@ fun MessageBubble(
                                         
                                         if (showTags && !hideSenderInfo && message.tags.isNotEmpty()){
                                             val tag = message.tags[0]
+                                            val color = Color(tag.color.toColorInt())
 
                                             Spacer(modifier = Modifier.width(2.dp))
                                             
                                             Surface(
                                                 shape = RoundedCornerShape(50.dp),
-                                                color = Color(tag.color.toColorInt())
+                                                color = color.copy(alpha = 0.2f)
                                             ) {
                                                 Text(
                                                     text = tag.text,
                                                     style = MaterialTheme.typography.labelSmall,
-                                                    color = getTextColor(tag.color),
+                                                    color = lerp(color, MaterialTheme.colorScheme.onSurface, 0.5f),
                                                     maxLines = 1,
                                                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                                 )
@@ -1219,9 +1220,4 @@ private fun processQuoteText(quoteText: String): String {
     } else {
         quoteText
     }
-}
-
-fun getTextColor(colorString: String): Color {
-    val color = Color(colorString.toColorInt())
-    return if (color.luminance() > 0.5) Color.Black else Color.White
 }
