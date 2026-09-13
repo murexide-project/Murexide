@@ -29,8 +29,8 @@ fun SettingsScreen(
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     
     val title = when (page) {
-        1 -> "消息气泡设置"
-        2 -> "外观设置"
+        1 -> "外观设置"
+        2 -> "消息气泡设置"
         3 -> "行为设置"
         4 -> "更新"
         5 -> "账号设置"
@@ -69,8 +69,8 @@ fun SettingsScreen(
                 .verticalScroll(scrollState)
         ) {
             when (page) {
-                1 -> BubblePage()
-                2 -> AppearancePage()
+                1 -> AppearancePage()
+                2 -> BubblePage()
                 3 -> ActionPage()
                 4 -> UpdatePage()
                 5 -> AccountPage(onLogout = onLogout)
@@ -91,9 +91,9 @@ private fun MainScreen() {
     
     SettingsGroup {
         SettingsItem(
-            icon = AppIcons.ChatBubble,
-            title = "消息气泡",
-            subtitle = "自定义气泡透明度、圆角大小、控件显示等",
+            icon = AppIcons.Style,
+            title = "应用外观",
+            subtitle = "主题模式、主题颜色、液态玻璃等",
             onClick = {
                 val intent = Intent(context, SettingsActivity::class.java).apply{
                     putExtra("page", 1)
@@ -102,9 +102,9 @@ private fun MainScreen() {
             }
         )
         SettingsItem(
-            icon = AppIcons.Style,
-            title = "应用外观",
-            subtitle = "主题模式、主题颜色、液态玻璃等",
+            icon = AppIcons.ChatBubble,
+            title = "消息气泡",
+            subtitle = "自定义气泡透明度、圆角大小、控件显示等",
             onClick = {
                 val intent = Intent(context, SettingsActivity::class.java).apply{
                     putExtra("page", 2)
@@ -112,6 +112,9 @@ private fun MainScreen() {
                 context.startActivity(intent)
             }
         )
+    }
+    
+    SettingsGroup {
         SettingsItem(
             icon = AppIcons.DragClick,
             title = "行为",

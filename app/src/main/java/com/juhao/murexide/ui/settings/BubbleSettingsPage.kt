@@ -52,6 +52,11 @@ fun BubblePage() {
                         id = 0,
                         text = "化学式",
                         color = "#66CCFF"
+                    ),
+                    MessageTag(
+                        id = 1,
+                        text = "Hi",
+                        color = "#6DB4FF"
                     )
                 )
             ),
@@ -99,7 +104,8 @@ fun BubblePage() {
                     showTags = showMsgTags,
                     showMyBubbleAvatarSetting = showMyBubbleAvatar,
                     bubbleOpacity = bubbleOpacity,
-                    bubbleCornerRadius = bubbleCornerRadius
+                    bubbleCornerRadius = bubbleCornerRadius,
+                    roleLabel = "群主"
                 )
 
                 MessageBubble(

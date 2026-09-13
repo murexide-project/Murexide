@@ -479,10 +479,10 @@ fun MainScreen(account: UserAccount) {
     val navigationBarInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
     NavigationSuiteScaffold(
-        layoutType = if (floatBottomBarEnabled) {
-            NavigationSuiteType.None
-        } else if (useNavigationRail) {
+        layoutType = if (useNavigationRail) {
             NavigationSuiteType.NavigationRail
+        } else if (floatBottomBarEnabled) {
+            NavigationSuiteType.None
         } else {
             NavigationSuiteType.NavigationBar
         },

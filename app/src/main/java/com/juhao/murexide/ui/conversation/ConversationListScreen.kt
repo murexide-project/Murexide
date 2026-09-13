@@ -42,13 +42,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.juhao.murexide.ui.conversationdetail.ConversationDetailActivity
-import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.hazeEffect
-import dev.chrisbanes.haze.hazeSource
-import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
-import dev.chrisbanes.haze.materials.HazeMaterials
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalHazeMaterialsApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ConversationListScreen(
     modifier: Modifier = Modifier,
@@ -76,7 +71,6 @@ fun ConversationListScreen(
     })
 ) {
     val context = LocalContext.current
-    val hazeState = remember { HazeState() }
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
     val uiState by viewModel.uiState.collectAsState()
     val isWsConnected by viewModel.isWsConnected.collectAsState()
@@ -272,7 +266,6 @@ fun ConversationListScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .background(listContainerColor)
-                .hazeSource(hazeState)
         ) {
             val state = uiState
             if (state is ConversationUiState.Success) {

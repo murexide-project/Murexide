@@ -64,6 +64,7 @@ import androidx.core.graphics.toColorInt
 
 private val WhiteThemeIncomingBubbleColor = Color(0xFFEEEEF0)
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun MessageBubble(
     message: MessageItem,
@@ -310,9 +311,11 @@ fun MessageBubble(
                                 }
                                 
                                 if (!hideCard && !isMine && isLastFromSender) {
-                                    Row(
+                                    FlowRow(
                                         modifier = Modifier.padding(bottom = 4.dp),
-                                        verticalAlignment = Alignment.CenterVertically
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                                        itemVerticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Text(
                                             text = displayName,
@@ -321,64 +324,38 @@ fun MessageBubble(
                                             fontWeight = FontWeight.Bold
                                         )
                                         
-                                        Spacer(modifier = Modifier.width(2.dp))
-                                        
                                         if (message.senderType == 3) {
-                                            Surface(
-                                                shape = RoundedCornerShape(50.dp),
-                                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
-                                            ) {
-                                                Text(
-                                                    text = "机器人",
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    color = MaterialTheme.colorScheme.primary,
-                                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                                )
-                                            }
+                                            TagChip(
+                                                text = "机器人",
+                                                containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
+                                                contentColor = MaterialTheme.colorScheme.primary,
+                                                type = 1
+                                            )
                                         }
-                                        
-                                        if (showTags && !hideSenderInfo && message.tags.isNotEmpty()){
-                                            val tag = message.tags[0]
-                                            val color = Color(tag.color.toColorInt())
-
-                                            Spacer(modifier = Modifier.width(2.dp))
-                                            
-                                            Surface(
-                                                shape = RoundedCornerShape(50.dp),
-                                                color = color.copy(alpha = 0.2f)
-                                            ) {
-                                                Text(
+                                
+                                        if (showTags && !hideSenderInfo && message.tags.isNotEmpty()) {
+                                            message.tags.forEach { tag ->
+                                                val color = Color(tag.color.toColorInt())
+                                                TagChip(
                                                     text = tag.text,
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    color = lerp(color, MaterialTheme.colorScheme.onSurface, 0.5f),
-                                                    maxLines = 1,
-                                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                                    containerColor = color.copy(alpha = 0.2f),
+                                                    contentColor = lerp(color, MaterialTheme.colorScheme.onSurface, 0.5f)
                                                 )
                                             }
-                                            Spacer(modifier = Modifier.width(2.dp))
                                         }
-                                        
+                                
                                         if (roleLabel != null) {
                                             val roleColor = if (roleLabel == "群主") {
                                                 Color(0xFFE6A23C)
                                             } else {
                                                 MaterialTheme.colorScheme.tertiary
                                             }
-                                            
-                                            Spacer(modifier = Modifier.width(2.dp))
-                                            
-                                            Surface(
-                                                shape = RoundedCornerShape(50.dp),
-                                                color = roleColor.copy(alpha = 0.2f)
-                                            ) {
-                                                Text(
-                                                    text = roleLabel,
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    color = roleColor,
-                                                    maxLines = 1,
-                                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                                )
-                                            }
+                                            TagChip(
+                                                text = roleLabel,
+                                                containerColor = roleColor.copy(alpha = 0.2f),
+                                                contentColor = roleColor,
+                                                type = 0
+                                            )
                                         }
                                     }
                                 }
@@ -1087,6 +1064,55 @@ fun MessageBubble(
                     Spacer(modifier = Modifier.width(44.dp))
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun TagChip(
+    text: String,
+    containerColor: Color,
+    contentColor: Color,
+    type: Int? = null
+) {
+    Surface(
+        shape = RoundedCornerShape(50.dp),
+        color = containerColor
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Spacer(Modifier.width(6.dp))
+            
+            type?.let{
+                if (type == 0) {
+                    Icon(
+                        imageVector = AppIcons.Person,
+                        contentDescription = null,
+                        modifier = Modifier.size(14.dp),
+                        tint = contentColor
+                    )
+                } else if (type == 1) {
+                    Icon(
+                        imageVector = AppIcons.Robot,
+                        contentDescription = null,
+                        modifier = Modifier.size(14.dp),
+                        tint = contentColor
+                    )
+                }
+                
+                Spacer(Modifier.width(2.dp))
+            }
+            
+            Text(
+                text = text,
+                style = MaterialTheme.typography.labelSmall,
+                color = contentColor,
+                maxLines = 1,
+                modifier = Modifier.padding(vertical = 2.dp)
+            )
+            
+            Spacer(Modifier.width(6.dp))
         }
     }
 }

@@ -103,6 +103,7 @@ object AppIcons {
     val PowerSettingsNew get() = MaterialSymbols.Rounded.Power_settings_new
     val Redo get() = MaterialSymbols.Rounded.Redo
     val Refresh get() = MaterialSymbols.Rounded.Refresh
+    val Robot get() = MaterialSymbols.Rounded.Robot
     val RoundedCorner get() = MaterialSymbols.Rounded.Rounded_corner
     val SaveAlt get() = MaterialSymbols.Rounded.Download
     val Screenshot get() = MaterialSymbols.Rounded.Screenshot
