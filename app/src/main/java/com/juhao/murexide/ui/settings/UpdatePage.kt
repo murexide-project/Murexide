@@ -60,7 +60,7 @@ fun UpdatePage() {
     val (cardBgColor, cardTextColor) = if (shouldUpdate)
         Pair(MaterialTheme.colorScheme.primaryContainer, MaterialTheme.colorScheme.onPrimaryContainer)
     else
-        Pair(MaterialTheme.colorScheme.secondaryContainer, MaterialTheme.colorScheme.onSecondaryContainer)
+        Pair(MaterialTheme.colorScheme.tertiaryContainer, MaterialTheme.colorScheme.onTertiaryContainer)
         
     val subtitle = buildString {
         appendLine("最新版本: $newestVersion")
@@ -107,7 +107,7 @@ fun UpdatePage() {
                             color = if (shouldUpdate)
                                 MaterialTheme.colorScheme.primary
                             else
-                                MaterialTheme.colorScheme.secondary
+                                MaterialTheme.colorScheme.tertiary
                         ) {
                             Icon(
                                 imageVector = when {
