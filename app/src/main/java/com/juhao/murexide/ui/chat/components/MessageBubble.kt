@@ -11,6 +11,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
@@ -26,14 +27,19 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathOperation
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -50,6 +56,7 @@ import com.juhao.murexide.ui.components.MarkdownText
 import com.juhao.murexide.ui.components.showImageViewer
 import com.juhao.murexide.ui.theme.UiState
 import com.juhao.murexide.ui.theme.usesDarkTheme
+import com.juhao.murexide.utils.isYunhuImageUrl
 import com.juhao.murexide.utils.imageAspectRatio
 import com.juhao.murexide.utils.imageThumbnailUrl
 import com.juhao.murexide.utils.videoAspectRatio
@@ -269,9 +276,8 @@ fun MessageBubble(
                             size = 36.dp
                         )
                     }
-                    Spacer(modifier = Modifier.width(8.dp))
                 } else {
-                    Spacer(modifier = Modifier.width(44.dp))
+                    Spacer(modifier = Modifier.width(36.dp))
                 }
     
                 val hideCard = remember(message.contentType, message.isRecalled) {
@@ -283,22 +289,43 @@ fun MessageBubble(
                 }
     
                 Box(modifier = Modifier.weight(1f, fill = false)) {
-                    Column(horizontalAlignment = if (isMine) Alignment.End else Alignment.Start) {
+                    val cardColor = if (hideCard)
+                        Color.Transparent
+                    else if (isMine)
+                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = bubbleOpacity)
+                    else
+                        incomingBubbleColor
+                    Row(
+                        verticalAlignment = Alignment.Bottom,
+                        horizontalArrangement = if (isMine) Arrangement.End else Arrangement.Start
+                    ) {
+                        if (!isMine && isFirstFromSender && !hideCard) {
+                            Spacer(Modifier.size(4.dp))
+                            QuarterCircleCorner(isMine = isMine, color = cardColor)
+                        } else {
+                            Spacer(Modifier.size(12.dp))
+                        }
                         Card(
                             shape = RoundedCornerShape(
                                 topStart = if (!isMine && !isLastFromSender) (bubbleCornerRadius / 4).dp else bubbleCornerRadius.dp,
                                 topEnd = if (isMine && !isLastFromSender) (bubbleCornerRadius / 4).dp else bubbleCornerRadius.dp,
-                                bottomStart = if (!isMine && !isFirstFromSender) (bubbleCornerRadius / 4).dp else bubbleCornerRadius.dp,
-                                bottomEnd = if (isMine && !isFirstFromSender) (bubbleCornerRadius / 4).dp else bubbleCornerRadius.dp
+                                bottomStart = if (!isMine && isFirstFromSender)
+                                    0.dp
+                                else if (!isMine) 
+                                    (bubbleCornerRadius / 4).dp
+                                else 
+                                    bubbleCornerRadius.dp,
+                                bottomEnd = if (isMine && isFirstFromSender)
+                                    0.dp
+                                else if (isMine) 
+                                    (bubbleCornerRadius / 4).dp 
+                                else
+                                    bubbleCornerRadius.dp
                             ),
                             colors = CardDefaults.cardColors(
-                                containerColor = if (hideCard)
-                                    Color.Transparent
-                                else if (isMine)
-                                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = bubbleOpacity)
-                                else
-                                    incomingBubbleColor
-                            )
+                                containerColor = cardColor
+                            ),
+                            modifier = Modifier.weight(1f, fill = false)
                         ) {
                             Column(
                                 modifier = Modifier.padding(if (hideCard) 0.dp else 8.dp),
@@ -324,6 +351,20 @@ fun MessageBubble(
                                             fontWeight = FontWeight.Bold
                                         )
                                         
+                                        if (roleLabel != null) {
+                                            val roleColor = if (roleLabel == "群主") {
+                                                Color(0xFFE6A23C)
+                                            } else {
+                                                MaterialTheme.colorScheme.tertiary
+                                            }
+                                            TagChip(
+                                                text = roleLabel,
+                                                containerColor = roleColor.copy(alpha = 0.2f),
+                                                contentColor = roleColor,
+                                                type = 0
+                                            )
+                                        }
+                                        
                                         if (message.senderType == 3) {
                                             TagChip(
                                                 text = "机器人",
@@ -342,20 +383,6 @@ fun MessageBubble(
                                                     contentColor = lerp(color, MaterialTheme.colorScheme.onSurface, 0.5f)
                                                 )
                                             }
-                                        }
-                                
-                                        if (roleLabel != null) {
-                                            val roleColor = if (roleLabel == "群主") {
-                                                Color(0xFFE6A23C)
-                                            } else {
-                                                MaterialTheme.colorScheme.tertiary
-                                            }
-                                            TagChip(
-                                                text = roleLabel,
-                                                containerColor = roleColor.copy(alpha = 0.2f),
-                                                contentColor = roleColor,
-                                                type = 0
-                                            )
                                         }
                                     }
                                 }
@@ -403,9 +430,7 @@ fun MessageBubble(
                                                     val builder = ImageRequest.Builder(context)
                                                         .data(message.quoteImageUrl)
         
-                                                    if (message.quoteImageUrl.contains("chat-img.jwznb.com") ||
-                                                        message.quoteImageUrl.contains("jwznb.com") ||
-                                                        message.quoteImageUrl.contains("myapp.jwznb.com")) {
+                                                    if (isYunhuImageUrl(message.quoteImageUrl)) {
                                                         builder.setHeader("Referer", "https://myapp.jwznb.com")
                                                     }
         
@@ -569,7 +594,6 @@ fun MessageBubble(
                                                         val request = ImageRequest.Builder(context)
                                                             .data(displayUrl)
                                                             .setParameter("retry", retryCount)
-                                                            .crossfade(false)
                                                             .allowHardware(
                                                                 chatMediaAllowsHardwareBitmaps(message.contentType)
                                                             )
@@ -949,6 +973,12 @@ fun MessageBubble(
                                 }
                             }
                         }
+                        if (isMine && isFirstFromSender && !hideCard) {
+                            QuarterCircleCorner(isMine = isMine, color = cardColor)
+                            Spacer(Modifier.size(4.dp))
+                        } else {
+                            Spacer(Modifier.size(12.dp))
+                        }
                     }
     
                     DropdownMenu(
@@ -1052,7 +1082,6 @@ fun MessageBubble(
                 }
     
                 if (isMine && showAvatar && showMyBubbleAvatarSetting) {
-                    Spacer(modifier = Modifier.width(8.dp))
                     Avatar(
                         url = message.senderAvatar,
                         modifier = Modifier.clickable {
@@ -1061,7 +1090,7 @@ fun MessageBubble(
                         size = 36.dp
                     )
                 } else if ((isMine && showMyBubbleAvatarSetting) || !isMine) {
-                    Spacer(modifier = Modifier.width(44.dp))
+                    Spacer(modifier = Modifier.width(36.dp))
                 }
             }
         }
@@ -1162,6 +1191,46 @@ private fun MessageButtons(
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun QuarterCircleCorner(
+    modifier: Modifier = Modifier,
+    color: Color = MaterialTheme.colorScheme.primaryContainer,
+    size: Dp = 16.dp,
+    isMine: Boolean = false
+) {
+    val halfWidth = size / 2
+    val fullHeight = size
+
+    Canvas(modifier = modifier.size(width = halfWidth, height = fullHeight)) {
+        val w = this.size.width
+        val h = this.size.height
+
+        val cx = if (isMine) w else 0f
+        val cy = 0f
+
+        val left = cx - w
+        val top = cy - h
+        val right = cx + w
+        val bottom = cy + h
+
+        val rectPath = Path().apply {
+            addRect(Rect(left, top, right, bottom))
+        }
+
+        val ovalPath = Path().apply {
+            addOval(Rect(left, top, right, bottom))
+        }
+
+        val diffPath = Path().apply {
+            op(rectPath, ovalPath, PathOperation.Difference)
+        }
+
+        clipRect(left = 0f, top = 0f, right = w, bottom = h) {
+            drawPath(path = diffPath, color = color)
         }
     }
 }

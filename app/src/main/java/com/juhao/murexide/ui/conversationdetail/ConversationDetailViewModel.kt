@@ -426,17 +426,17 @@ class ConversationDetailViewModel(
         }
     }
 
-    fun leaveGroup() {
-        if (chatType != 2 || _uiState.value.isLeaving) return
+    fun deleteChat() {
+        if (_uiState.value.isLeaving) return
         _uiState.update { it.copy(isLeaving = true) }
         viewModelScope.launch {
-            friendRepository.deleteFriend(token, chatId, type = 2).onSuccess {
+            friendRepository.deleteFriend(token, chatId, type = chatType).onSuccess {
                 LocalCache.currentAccountId()?.let { accountId ->
                     LocalCache.removeConversation(accountId, chatId, chatType)
                 }
                 _uiState.update { it.copy(isLeaving = false, hasLeft = true) }
             }.onFailure { error ->
-                _uiState.update { it.copy(isLeaving = false, message = error.message ?: "退出群聊失败") }
+                _uiState.update { it.copy(isLeaving = false, message = error.message ?: "操作失败") }
             }
         }
     }

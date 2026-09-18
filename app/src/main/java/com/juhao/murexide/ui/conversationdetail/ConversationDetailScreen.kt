@@ -267,9 +267,11 @@ fun ConversationDetailScreen(
                         isCurrentUser = detail.chatId == currentUserId,
                         isAdded = state.isAdded,
                         isAdding = state.isAdding,
+                        isLeaving = state.isLeaving,
                         onAdd = viewModel::addChat,
                         onMessage = { onEnterChat(detail) },
                         onMute = viewModel::toggleMute,
+                        onLeave = { showLeaveConfirm = true },
                         isChangingMute = state.isChangingMute,
                         media = state.mediaMessages,
                         isLoadingHistory = state.isLoadingHistory,
@@ -286,9 +288,11 @@ fun ConversationDetailScreen(
                         detail = detail,
                         isAdded = state.isAdded,
                         isAdding = state.isAdding,
+                        isLeaving = state.isLeaving,
                         onAdd = viewModel::addChat,
                         onMessage = { onEnterChat(detail) },
                         onMute = viewModel::toggleMute,
+                        onLeave = { showLeaveConfirm = true },
                         isChangingMute = state.isChangingMute,
                         onInviteToGroup = { onInviteBotToGroup(detail) },
                         media = state.mediaMessages,
@@ -314,18 +318,18 @@ fun ConversationDetailScreen(
         AlertDialog(
             onDismissRequest = { if (!state.isLeaving) showLeaveConfirm = false },
             icon = { Icon(AppIcons.Warning, null, tint = MaterialTheme.colorScheme.error) },
-            title = { Text("退出群聊") },
-            text = { Text("确定要退出该群聊吗？") },
+            title = { Text("删除会话") },
+            text = { Text("确定要永久删除会话吗？将会删除/退出此会话。") },
             confirmButton = {
                 TextButton(
                     enabled = !state.isLeaving,
-                    onClick = viewModel::leaveGroup
+                    onClick = viewModel::deleteChat
                 ) {
                     if (state.isLeaving) CircularProgressIndicator(
                         Modifier.size(18.dp),
                         strokeWidth = 2.dp
                     )
-                    else Text("退出", color = MaterialTheme.colorScheme.error)
+                    else Text("确定", color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
@@ -604,9 +608,11 @@ private fun UserConversationDetail(
     isCurrentUser: Boolean,
     isAdded: Boolean?,
     isAdding: Boolean,
+    isLeaving: Boolean,
     onAdd: () -> Unit,
     onMessage: () -> Unit,
     onMute: () -> Unit,
+    onLeave: () -> Unit,
     isChangingMute: Boolean,
     media: List<MessageItem>,
     isLoadingHistory: Boolean,
@@ -648,9 +654,11 @@ private fun UserConversationDetail(
                 isCurrentUser = isCurrentUser,
                 isAdded = isAdded,
                 isAdding = isAdding,
+                isLeaving = isLeaving,
                 onAdd = onAdd,
                 onMessage = onMessage,
                 onMute = onMute,
+                onLeave = onLeave,
                 isChangingMute = isChangingMute,
                 introductionExpanded = introductionExpanded,
                 onIntroductionClick = { introductionExpanded = true }
@@ -723,9 +731,11 @@ private fun BotConversationDetail(
     detail: ConversationDetail,
     isAdded: Boolean?,
     isAdding: Boolean,
+    isLeaving: Boolean,
     onAdd: () -> Unit,
     onMessage: () -> Unit,
     onMute: () -> Unit,
+    onLeave: () -> Unit,
     isChangingMute: Boolean,
     onInviteToGroup: () -> Unit,
     media: List<MessageItem>,
@@ -763,9 +773,11 @@ private fun BotConversationDetail(
                 detail = detail,
                 isAdded = isAdded,
                 isAdding = isAdding,
+                isLeaving = isLeaving,
                 onAdd = onAdd,
                 onMessage = onMessage,
                 onMute = onMute,
+                onLeave = onLeave,
                 isChangingMute = isChangingMute,
                 introductionExpanded = introductionExpanded,
                 onIntroductionClick = { introductionExpanded = true },
@@ -830,9 +842,11 @@ private fun UserHeader(
     isCurrentUser: Boolean = false,
     isAdded: Boolean?,
     isAdding: Boolean,
+    isLeaving: Boolean,
     onAdd: () -> Unit,
     onMessage: () -> Unit,
     onMute: () -> Unit,
+    onLeave: () -> Unit,
     isChangingMute: Boolean,
     introductionExpanded: Boolean,
     onIntroductionClick: () -> Unit,
@@ -924,12 +938,22 @@ private fun UserHeader(
                     onMute,
                     isChangingMute
                 )
+                if (isBot) {
+                    TelegramAction(
+                        Modifier.weight(1f),
+                        AppIcons.Group,
+                        "添加到群",
+                        onClick = onInviteToGroup ?: {},
+                        enabled = onInviteToGroup != null
+                    )
+                }
                 TelegramAction(
                     Modifier.weight(1f),
-                    if (isBot) AppIcons.Group else AppIcons.Phone,
-                    if (isBot) "添加到群" else "通话",
-                    onClick = onInviteToGroup ?: {},
-                    enabled = isBot && onInviteToGroup != null
+                    AppIcons.Delete,
+                    "删除",
+                    onLeave,
+                    isLeaving,
+                    isDanger = true
                 )
             }
         } else {
@@ -1301,43 +1325,30 @@ private fun IntroductionContent(
 
     var hasOverflow by remember(introduction) { mutableStateOf(false) }
     val cardColor = MaterialTheme.colorScheme.surfaceContainerHigh
-    Column(Modifier.padding(14.dp)) {
-        Box(
-            modifier = Modifier.animateContentSize()
-        ) {
-            SelectionContainer {
+    Column(Modifier.padding(14.dp).animateContentSize()) {
+        SelectionContainer {
+            Text(
+                text = introduction,
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = if (expanded) Int.MAX_VALUE else 4,
+                overflow = TextOverflow.Clip,
+                onTextLayout = { hasOverflow = it.hasVisualOverflow }
+            )
+        }
+        Spacer(Modifier.height(6.dp))
+        if (!expanded && hasOverflow) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onExpand),
+                contentAlignment = Alignment.CenterEnd
+            ) {
                 Text(
-                    text = introduction,
-                    style = MaterialTheme.typography.bodyMedium,
-                    maxLines = if (expanded) Int.MAX_VALUE else 4,
-                    overflow = TextOverflow.Clip,
-                    onTextLayout = { hasOverflow = it.hasVisualOverflow }
+                    "更多",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(end = 2.dp)
                 )
-            }
-            if (!expanded && hasOverflow) {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .fillMaxWidth()
-                        .background(
-                            Brush.verticalGradient(
-                                listOf(
-                                    Color.Transparent,
-                                    cardColor.copy(alpha = 0.8f),
-                                    cardColor
-                                )
-                            )
-                        )
-                        .clickable(onClick = onExpand),
-                    contentAlignment = Alignment.CenterEnd
-                ) {
-                    Text(
-                        "更多",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(end = 2.dp)
-                    )
-                }
             }
         }
         Spacer(Modifier.height(6.dp))
@@ -1381,49 +1392,31 @@ private fun TelegramAction(
     enabled: Boolean = true
 ) {
     val actionColor = when {
-        !enabled -> resolvedLiquidGlassContentColor(MaterialTheme.colorScheme.onSurfaceVariant)
         isDanger -> MaterialTheme.colorScheme.error
-        else -> MaterialTheme.colorScheme.primary
+        else -> MaterialTheme.colorScheme.onSurface
     }
-    LiquidGlassSurface(
-        modifier = modifier
-            .height(72.dp)
-            .clickable(
-                enabled = enabled && !loading,
-                onClick = onClick
-            ),
-        shape = RoundedCornerShape(24.dp),
-        color = detailGlassColor(if (enabled) {
-            MaterialTheme.colorScheme.surfaceContainerHigh
-        } else {
-            MaterialTheme.colorScheme.surfaceContainer
-        }),
-        blurRadius = 6.dp,
-        lensHeight = 8.dp,
-        lensAmount = 14.dp
+    Surface(
+        onClick = onClick,
+        enabled = enabled && !loading,
+        modifier = modifier,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        shape = RoundedCornerShape(20.dp)
     ) {
         Column(
-            Modifier.fillMaxSize(),
+            Modifier.fillMaxSize().padding(vertical = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
             if (loading) CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp)
             else {
-                Surface(
-                    modifier = Modifier.size(32.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    color = actionColor.copy(alpha = if (enabled) 0.16f else 0.08f),
-                    contentColor = actionColor
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(icon, null, modifier = Modifier.size(18.dp))
-                    }
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(icon, null, modifier = Modifier.size(24.dp), tint = actionColor)
                 }
             }
-            Spacer(Modifier.height(5.dp))
+            Spacer(Modifier.height(4.dp))
             Text(
                 label,
-                style = MaterialTheme.typography.labelLarge,
+                style = MaterialTheme.typography.bodySmall,
                 color = if (enabled && !isDanger) {
                     resolvedLiquidGlassContentColor(MaterialTheme.colorScheme.onSurface)
                 } else {
