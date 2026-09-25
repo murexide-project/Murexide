@@ -1,5 +1,5 @@
 [versions]
-agp = "9.3.1"
+agp = "9.3.3"
 coreKtx = "1.19.0"
 hazeMaterials = "1.7.2"
 lifecycleRuntimeKtx = "2.11.0"
