@@ -307,7 +307,7 @@ private fun ContactTabContent(
                         )
 
                         error != null -> ErrorState(
-                            modifier = Modifier.fillParentMaxHeight(
+                            modifier = Modifier.fillMaxWidth().fillParentMaxHeight(
                                 if (showNewMessageShortcut) 0.7f else 1f
                             ),
                             message = error,
@@ -315,7 +315,7 @@ private fun ContactTabContent(
                         )
 
                         else -> EmptyState(
-                            modifier = Modifier.fillParentMaxHeight(
+                            modifier = Modifier.fillMaxWidth().fillParentMaxHeight(
                                 if (showNewMessageShortcut) 0.7f else 1f
                             ),
                             icon = tab.icon,
