@@ -26,7 +26,6 @@
             android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
@@ -36,10 +35,8 @@
             android:theme="@style/Theme.Murexide">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
-
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-
                 <data
                     android:host="post-detail"
                     android:scheme="yunhu" />
@@ -51,10 +48,8 @@
             android:theme="@style/Theme.Murexide">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
-
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-
                 <data
                     android:host="alley-detail"
                     android:scheme="yunhu" />
@@ -101,13 +96,22 @@
             android:theme="@style/Theme.Murexide">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
-
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-
                 <data
                     android:host="chat-add"
                     android:scheme="yunhu" />
+            </intent-filter>
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="yunhu"
+                      android:host="chat-add" />
+                <data android:scheme="https"
+                      android:host="yhfx.jwznb.com" />
+                <data android:scheme="yunhu"
+                      android:host="jwznb.com" />
             </intent-filter>
         </activity>
         <activity

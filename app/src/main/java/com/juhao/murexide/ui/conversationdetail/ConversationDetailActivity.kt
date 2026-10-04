@@ -10,6 +10,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Text
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -17,45 +18,47 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.juhao.murexide.datastore.AccountStorage
 import com.juhao.murexide.MainActivity
+import com.juhao.murexide.datastore.AccountStorage
+import com.juhao.murexide.repository.ShareRepository
 import com.juhao.murexide.ui.chat.ChatActivity
 import com.juhao.murexide.ui.community.ba.BaDetailActivity
 import com.juhao.murexide.ui.theme.MurexideTheme
 import kotlinx.coroutines.launch
 
-/**
- * 会话详情页面。同时处理 yunhu://chat-add?id=xxx&type=user 协议链接。
- */
 class ConversationDetailActivity : ComponentActivity() {
+
+    private val accountState =
+        mutableStateOf<com.juhao.murexide.datastore.UserAccount?>(null)
+
+    private val detailState =
+        mutableStateOf<DetailState>(DetailState.Resolving)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        val chatId = resolveChatId()
-        if (chatId.isNullOrEmpty()) {
-            Toast.makeText(this, "无效的会话链接", Toast.LENGTH_SHORT).show()
-            return finish()
-        }
-        val chatType = resolveChatType()
-        val chatName = intent.getStringExtra("chat_name") ?: ""
-        val chatAvatar = intent.getStringExtra("chat_avatar") ?: ""
-
-        val accountStorage = AccountStorage.getInstance(this)
-        val accountState = mutableStateOf<com.juhao.murexide.datastore.UserAccount?>(null)
-
         setContent {
             MurexideTheme {
                 val account = accountState.value
-                if (account == null) {
-                    Box(
+                val state = detailState.value
+                when {
+                    account == null -> Box(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator()
-                    }
-                } else {
-                    ConversationDetailScreen(
+                    ) { CircularProgressIndicator() }
+
+                    state is DetailState.Resolving -> Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) { CircularProgressIndicator() }
+
+                    state is DetailState.Error -> Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) { Text(state.message) }
+
+                    state is DetailState.Ready -> ConversationDetailScreen(
                         onBack = { finish() },
                         onEnterChat = { detail ->
                             ChatActivity.start(
@@ -96,21 +99,23 @@ class ConversationDetailActivity : ComponentActivity() {
                         },
                         onLeaveGroup = {
                             startActivity(Intent(this, MainActivity::class.java).apply {
-                                addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                                addFlags(
+                                    Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                                        Intent.FLAG_ACTIVITY_SINGLE_TOP
+                                )
                             })
                             finish()
                         },
                         currentUserId = account.id,
                         viewModel = viewModel(
+                            key = "${state.chatId}_${state.chatType}",
                             factory = object : ViewModelProvider.Factory {
                                 @Suppress("UNCHECKED_CAST")
                                 override fun <T : ViewModel> create(modelClass: Class<T>): T {
                                     return ConversationDetailViewModel(
                                         token = account.token,
-                                        chatId = chatId,
-                                        chatType = chatType,
-                                        fallbackName = chatName,
-                                        fallbackAvatar = chatAvatar
+                                        chatId = state.chatId,
+                                        chatType = state.chatType
                                     ) as T
                                 }
                             }
@@ -121,33 +126,104 @@ class ConversationDetailActivity : ComponentActivity() {
         }
 
         lifecycleScope.launch {
-            val account = runCatching { accountStorage.getCurrentAccount() }.getOrNull()
+            val account = runCatching {
+                AccountStorage.getInstance(this@ConversationDetailActivity)
+                    .getCurrentAccount()
+            }.getOrNull()
+
             if (account?.token.isNullOrEmpty()) {
-                Toast.makeText(this@ConversationDetailActivity, "请先登录", Toast.LENGTH_SHORT).show()
+                Toast.makeText(
+                    this@ConversationDetailActivity,
+                    "请先登录",
+                    Toast.LENGTH_SHORT
+                ).show()
                 finish()
                 return@launch
             }
             accountState.value = account
+
+            resolveDetail(account.token)
         }
     }
 
-    private fun resolveChatId(): String? {
-        intent.getStringExtra("chat_id")?.takeIf { it.isNotEmpty() }?.let { return it }
-        // yunhu://chat-add?id=xxx&type=user
-        return intent.data?.getQueryParameter("id")?.takeIf { it.isNotEmpty() }
+    private suspend fun resolveDetail(token: String) {
+        val direct = readDirectChat()
+        if (direct != null) {
+            detailState.value = DetailState.Ready(
+                chatId = direct.chatId,
+                chatType = direct.chatType
+            )
+            return
+        }
+
+        val share = readShareParams()
+        if (share == null) {
+            detailState.value = DetailState.Error("无效的会话链接")
+            Toast.makeText(this, "无效的会话链接", Toast.LENGTH_SHORT).show()
+            finish()
+            return
+        }
+
+        ShareRepository()
+            .getShareInfo(token, share.first, share.second)
+            .onSuccess { info ->
+                detailState.value = DetailState.Ready(
+                    chatId = info.chatId,
+                    chatType = info.chatType
+                )
+            }
+            .onFailure { error ->
+                detailState.value = DetailState.Error(
+                    error.message ?: "分享链接解析失败"
+                )
+            }
     }
 
-    private fun resolveChatType(): Int {
-        if (intent.hasExtra("chat_type")) {
-            val t = intent.getIntExtra("chat_type", 1)
-            if (t in 1..3) return t
+    private data class DirectChat(
+        val chatId: String,
+        val chatType: Int
+    )
+
+    private fun readDirectChat(): DirectChat? {
+        val chatId = intent.getStringExtra("chat_id")
+            ?.takeIf { it.isNotEmpty() }
+            ?: intent.data?.getQueryParameter("id")?.takeIf { it.isNotEmpty() }
+            ?: return null
+
+        val chatType = when {
+            intent.hasExtra("chat_type") -> {
+                val t = intent.getIntExtra("chat_type", 1)
+                if (t in 1..3) t else 1
+            }
+            else -> when (intent.data?.getQueryParameter("type")) {
+                "group" -> 2
+                "bot" -> 3
+                else -> 1
+            }
         }
-        // scheme 里的 type 为 user/group/bot 文本
-        return when (intent.data?.getQueryParameter("type")) {
-            "group" -> 2
-            "bot" -> 3
-            else -> 1
-        }
+
+        return DirectChat(chatId, chatType)
+    }
+
+    private fun readShareParams(): Pair<String, String>? {
+        val uri = intent.data
+        val key = intent.getStringExtra("share_key")
+            ?: uri?.getQueryParameter("key")
+            ?: uri?.getQueryParameter("share_key")
+        val ts = intent.getStringExtra("share_ts")
+            ?: uri?.getQueryParameter("ts")
+            ?: uri?.getQueryParameter("share_ts")
+        if (key.isNullOrEmpty() || ts.isNullOrEmpty()) return null
+        return key to ts
+    }
+
+    sealed interface DetailState {
+        data object Resolving : DetailState
+        data class Ready(
+            val chatId: String,
+            val chatType: Int
+        ) : DetailState
+        data class Error(val message: String) : DetailState
     }
 
     companion object {

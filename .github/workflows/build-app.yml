@@ -6,7 +6,29 @@ on:
       - main
 
 jobs:
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      skip: ${{ steps.check.outputs.skip }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check commit message
+        id: check
+        run: |
+          COMMIT_MSG=$(git log -1 --pretty=%B)
+          if echo "$COMMIT_MSG" | grep -qiF "[release]"; then
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
   build:
+    needs: check
+    if: needs.check.outputs.skip != 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -20,7 +42,7 @@ jobs:
         run: |
           COMMIT_MSG=$(git log -1 --pretty=%B)
           
-          if echo "$COMMIT_MSG" | grep -qiE "^[^:]+: .+"; then
+          if echo "$COMMIT_MSG" | grep -qiF "[pre]"; then
             echo "release=true" >> $GITHUB_OUTPUT
           else
             echo "release=false" >> $GITHUB_OUTPUT
@@ -73,7 +95,10 @@ jobs:
           echo "final_version=$FINAL_VERSION" >> $GITHUB_OUTPUT
 
       - name: Build and Sign APK
+        id: build
         run: |
+          set -o pipefail
+
           cat > ci-version.gradle << 'EOF'
           allprojects { project ->
             project.afterEvaluate {
@@ -90,7 +115,8 @@ jobs:
             -Pandroid.injected.signing.store.file=$(pwd)/keystore.jks \
             -Pandroid.injected.signing.store.password=${{ secrets.KEYSTORE_PASSWORD }} \
             -Pandroid.injected.signing.key.alias=${{ secrets.KEY_ALIAS }} \
-            -Pandroid.injected.signing.key.password=${{ secrets.KEY_PASSWORD }}
+            -Pandroid.injected.signing.key.password=${{ secrets.KEY_PASSWORD }} \
+            2>&1 | tee build-output.log
 
       - name: Upload Signed APK
         uses: actions/upload-artifact@v4
@@ -266,3 +292,77 @@ jobs:
               echo "APK size $(($APK_SIZE / 1048576))MB >= 20MB, sent link only"
             fi
           fi
+
+      - name: Notify bot about failure
+        if: failure()
+        continue-on-error: true
+        env:
+          BOT_SEND_TOKEN_VAR: ${{ vars.YHCHAT_BOT_SEND_TOKEN }}
+          BOT_SEND_TOKEN_SECRET: ${{ secrets.YHCHAT_BOT_SEND_TOKEN }}
+          BOT_RECV_ID_VAR: ${{ vars.YHCHAT_BOT_RECV_ID }}
+          BOT_RECV_ID_SECRET: ${{ secrets.YHCHAT_BOT_RECV_ID }}
+          BOT_RECV_TYPE_VAR: ${{ vars.YHCHAT_BOT_RECV_TYPE }}
+          BOT_RECV_TYPE_SECRET: ${{ secrets.YHCHAT_BOT_RECV_TYPE }}
+        run: |
+          BOT_SEND_TOKEN="${BOT_SEND_TOKEN_VAR:-$BOT_SEND_TOKEN_SECRET}"
+          BOT_RECV_ID="${BOT_RECV_ID_VAR:-$BOT_RECV_ID_SECRET}"
+          BOT_RECV_TYPE="${BOT_RECV_TYPE_VAR:-$BOT_RECV_TYPE_SECRET}"
+
+          if [ -z "$BOT_SEND_TOKEN" ] || [ -z "$BOT_RECV_ID" ] || [ -z "$BOT_RECV_TYPE" ]; then
+            echo "Skip bot notify (missing credentials)"
+            exit 0
+          fi
+
+          ERROR_TEXT="构建过程中发生错误，未捕获到详细日志，请查看工作流日志。"
+          if [ -f build-output.log ]; then
+            EXTRACT=$(grep -iE "FAILURE: Build failed|What went wrong|> Task .* FAILED|Execution failed for task|Caused by:|^.*error:|e: .*" build-output.log | head -n 30 || true)
+            if [ -z "$EXTRACT" ]; then
+              EXTRACT=$(tail -n 40 build-output.log)
+            fi
+            ERROR_TEXT="$EXTRACT"
+          fi
+
+          ERROR_TEXT=$(printf '%s' "$ERROR_TEXT" | head -c 3000)
+
+          VERSION_DISPLAY="${{ steps.version.outputs.final_version }}"
+          if [ -z "$VERSION_DISPLAY" ]; then
+            VERSION_DISPLAY="(未解析到版本号)"
+          fi
+
+          FAIL_MESSAGE=$(cat <<EOF
+          ### ❌ 构建失败
+
+          - **仓库**: ${{ github.repository }}
+          - **分支**: ${{ github.ref_name }}
+          - **Commit**: ${{ github.sha }}
+          - **版本**: ${VERSION_DISPLAY}
+          - **触发者**: ${{ github.actor }}
+          - **时间**: $(date +'%Y-%m-%d %H:%M:%S')
+
+          ### 错误信息
+          \`\`\`
+          ${ERROR_TEXT}
+          \`\`\`
+
+          ### 完整日志
+          [查看工作流日志](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+          EOF
+          )
+
+          payload=$(jq -n \
+            --arg recvId "$BOT_RECV_ID" \
+            --arg recvType "$BOT_RECV_TYPE" \
+            --arg text "$FAIL_MESSAGE" \
+            '{
+              recvId: $recvId,
+              recvType: $recvType,
+              contentType: "markdown",
+              content: {
+                text: $text
+              }
+            }')
+
+          curl --fail-with-body \
+            -X POST "https://chat-go.jwzhd.com/open-apis/v1/bot/send?token=${BOT_SEND_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d "$payload" || echo "Failure notification send failed"
