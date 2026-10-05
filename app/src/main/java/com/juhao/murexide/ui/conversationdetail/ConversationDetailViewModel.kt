@@ -52,14 +52,10 @@ class ConversationDetailViewModel(
 
     init {
         loadDetail()
-        checkAdded()
-        if (chatType == 2) {
-            loadMembers()
-            loadGroupBots()
-        }
         if (chatType == 1) {
             loadCreatedBoards()
         }
+        checkAdded()
     }
 
     fun loadDetail() {
@@ -97,7 +93,17 @@ class ConversationDetailViewModel(
     private fun checkAdded() {
         viewModelScope.launch {
             friendRepository.isAdded(token, chatId, chatType)
-                .onSuccess { added -> _uiState.update { it.copy(isAdded = added) } }
+                .onSuccess { added ->
+                    _uiState.update { it.copy(isAdded = added) }
+                    if (added) loadAddedContent()
+                }
+        }
+    }
+
+    private fun loadAddedContent() {
+        if (chatType == 2) {
+            loadMembers()
+            loadGroupBots()
         }
     }
 
@@ -110,19 +116,25 @@ class ConversationDetailViewModel(
                 .onSuccess { response ->
                     val detail = state.detail
                     when (response.code) {
-                        1 -> _uiState.update {
+                        1 -> {
                             val added = detail?.chatType == 3 || (detail?.chatType == 2 && detail.directJoin)
-                            it.copy(
-                                isAdding = false,
-                                isAdded = if (added) true else it.isAdded,
-                                message = when {
-                                    detail?.chatType == 3 -> "已添加机器人"
-                                    added -> "已加入群聊"
-                                    else -> "已发送申请"
-                                }
-                            )
+                            _uiState.update {
+                                it.copy(
+                                    isAdding = false,
+                                    isAdded = if (added) true else it.isAdded,
+                                    message = when {
+                                        detail?.chatType == 3 -> "已添加机器人"
+                                        added -> "已加入群聊"
+                                        else -> "已发送申请"
+                                    }
+                                )
+                            }
+                            if (added) loadAddedContent()
                         }
-                        -9 -> _uiState.update { it.copy(isAdding = false, isAdded = true, message = "你已在群聊中") }
+                        -9 -> {
+                            _uiState.update { it.copy(isAdding = false, isAdded = true, message = "你已在群聊中") }
+                            loadAddedContent()
+                        }
                         else -> _uiState.update { it.copy(isAdding = false, message = response.msg) }
                     }
                 }
@@ -142,8 +154,8 @@ class ConversationDetailViewModel(
 
     fun loadMembers(refresh: Boolean = false) {
         val current = _uiState.value
-        if (chatType != 2 || current.isLoadingMembers || current.isLoadingMoreMembers ||
-            (!refresh && !current.hasMoreMembers)
+        if (chatType != 2 || current.isAdded != true || current.isLoadingMembers ||
+            current.isLoadingMoreMembers || (!refresh && !current.hasMoreMembers)
         ) return
         val page = if (refresh) 1 else current.membersPage
         _uiState.update {
@@ -185,7 +197,9 @@ class ConversationDetailViewModel(
 
     fun loadGroupBots(refresh: Boolean = false) {
         val current = _uiState.value
-        if (chatType != 2 || current.isLoadingGroupBots || (!refresh && current.hasLoadedGroupBots)) return
+        if (chatType != 2 || current.isAdded != true || current.isLoadingGroupBots ||
+            (!refresh && current.hasLoadedGroupBots)
+        ) return
         _uiState.update { it.copy(isLoadingGroupBots = true) }
         viewModelScope.launch {
             instructionRepository.getGroupBots(token, chatId).onSuccess { (bots, _) ->
@@ -210,7 +224,9 @@ class ConversationDetailViewModel(
 
     fun loadMoreHistory() {
         val initial = _uiState.value
-        if (chatType !in 1..3 || initial.isLoadingHistory || !initial.hasMoreHistory) return
+        if (chatType !in 1..3 || initial.isAdded != true || initial.isLoadingHistory ||
+            !initial.hasMoreHistory
+        ) return
         val mediaTab = if (chatType == 2) 2 else 0
         if (initial.selectedTab != mediaTab) return
         _uiState.update { it.copy(isLoadingHistory = true) }

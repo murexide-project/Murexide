@@ -76,6 +76,7 @@ import com.juhao.murexide.ui.components.UnreadCountBadge
 import com.juhao.murexide.ui.components.AccountQuickSwitchMenu
 import com.juhao.murexide.ui.components.AccountQuickSwitchGlassMenu
 import com.juhao.murexide.ui.community.CommunityScreen
+import com.juhao.murexide.ui.discover.DiscoverScreen
 import com.juhao.murexide.ui.settings.SettingsActivity
 import androidx.compose.foundation.combinedClickable
 import dev.chrisbanes.haze.HazeState
@@ -798,27 +799,10 @@ fun MainScreen(account: UserAccount) {
                     }
 
                     composable("discover") {
-                        Scaffold(
-                            topBar = {
-                                TopAppBar(
-                                    title = { Text("发现") },
-                                    actions = {
-                                        IconButton(onClick = { /* TODO: 搜索 */ }) {
-                                            Icon(AppIcons.Search, contentDescription = "搜索")
-                                        }
-                                    }
-                                )
-                            }
-                        ) { innerPadding ->
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(innerPadding)
-                                    .padding(top = 16.dp),
-                            ) {
-                                Text("发现")
-                            }
-                        }
+                        DiscoverScreen(
+                            token = token,
+                            innerPadding = innerPadding
+                        )
                     }
 
                     composable("mine") {
