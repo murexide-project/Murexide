@@ -96,6 +96,7 @@ object AppIcons {
     val PersonAdd get() = MaterialSymbols.Rounded.Person_add
     val PersonOutline get() = MaterialSymbols.Rounded.Person
     val PersonRemove get() = MaterialSymbols.Rounded.Person_remove
+    val Pause get() = MaterialSymbols.Rounded.Pause
     val Phone get() = MaterialSymbols.Rounded.Call
     val PictureAsPdf get() = MaterialSymbols.Rounded.Picture_as_pdf
     val PlayArrow get() = MaterialSymbols.Rounded.Play_arrow

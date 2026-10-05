@@ -143,6 +143,7 @@ fun MessageBubble(
         else -> MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp)
     }
     val context = LocalContext.current
+    val audioPlaybackState by AudioPlaybackManager.state.collectAsState()
 
     val timestampDisplay = remember(message.timestamp) {
         try {
@@ -515,6 +516,61 @@ fun MessageBubble(
                                                 else
                                                     incomingAttachmentBackgroundColor
                                             )
+                                        }
+
+                                        MessageItem.CONTENT_TYPE_AUDIO -> {
+                                            val audioUrl = message.audioUrl
+                                            val audioDuration = message.audioTime?.coerceAtLeast(0) ?: 0
+                                            val isPlaying = audioPlaybackState.messageId == message.msgId &&
+                                                audioPlaybackState.isPlaying
+                                            val durationText = formatAudioDuration(audioDuration)
+                                            val audioWidth = (120 + audioDuration * 4).coerceIn(120, 240).dp
+
+                                            Surface(
+                                                modifier = Modifier
+                                                    .width(audioWidth)
+                                                    .height(48.dp)
+                                                    .clip(RoundedCornerShape(16.dp))
+                                                    .clickable(
+                                                        enabled = !isSelectionMode && !message.isRecalled && audioUrl != null
+                                                    ) {
+                                                        audioUrl?.let {
+                                                            AudioPlaybackManager.toggle(
+                                                                context = context,
+                                                                messageId = message.msgId,
+                                                                url = it
+                                                            )
+                                                        }
+                                                    },
+                                                shape = RoundedCornerShape(16.dp),
+                                                color = if (isMine) {
+                                                    MaterialTheme.colorScheme.primaryContainer
+                                                } else {
+                                                    incomingAttachmentBackgroundColor
+                                                }
+                                            ) {
+                                                Row(
+                                                    modifier = Modifier
+                                                        .fillMaxSize()
+                                                        .padding(horizontal = 12.dp),
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    Icon(
+                                                        imageVector = if (isPlaying) AppIcons.Pause else AppIcons.PlayArrow,
+                                                        contentDescription = if (isPlaying) "暂停语音" else "播放语音",
+                                                        modifier = Modifier.size(24.dp),
+                                                        tint = MaterialTheme.colorScheme.onSurface
+                                                    )
+                                                    Spacer(modifier = Modifier.width(8.dp))
+
+                                                    Text(
+                                                        text = durationText,
+                                                        style = MaterialTheme.typography.bodyMedium,
+                                                        color = MaterialTheme.colorScheme.onSurface,
+                                                        maxLines = 1
+                                                    )
+                                                }
+                                            }
                                         }
 
                                         MessageItem.CONTENT_TYPE_IMAGE,
@@ -1250,6 +1306,12 @@ private fun getFileIcon(fileName: String): androidx.compose.ui.graphics.vector.I
         "txt", "md", "json", "xml", "html", "css", "js", "kt", "java" -> AppIcons.Code
         else -> AppIcons.InsertDriveFile
     }
+}
+
+private fun formatAudioDuration(totalSeconds: Int): String {
+    val minutes = totalSeconds / 60
+    val seconds = totalSeconds % 60
+    return String.format(Locale.ROOT, "%d:%02d", minutes, seconds)
 }
 
 private fun formatFileSize(size: Long): String {
