@@ -237,7 +237,7 @@ private fun FormatSendButton(
                 .size(SendButtonSize)
                 .clip(CircleShape)
                 .background(
-                    MaterialTheme.colorScheme.primary
+                    MaterialTheme.colorScheme.primaryContainer
                 )
                 .semantics {
                     role = Role.Button
@@ -328,7 +328,7 @@ private fun FormatSendButton(
                 AutoMirroredIcon(
                     AppIcons.Send,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onPrimary
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer
                 )
             }
         }

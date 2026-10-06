@@ -75,24 +75,25 @@ fun ConversationListScreen(
     val uiState by viewModel.uiState.collectAsState()
     val isWsConnected by viewModel.isWsConnected.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
-    
+    val filter by viewModel.filter.collectAsState()
+
     val themeColor by UiState.themeColor
     val listContainerColor = if (themeColor == "WHITE") {
         MaterialTheme.colorScheme.surfaceContainer
     } else {
         MaterialTheme.colorScheme.surface
     }
-    
+
     val listState = rememberLazyListState()
     val stickyIds by viewModel.stickyIds.collectAsState()
-    
+
     LaunchedEffect(uiState) {
         if (uiState is ConversationUiState.Success) {
             val conversations = (uiState as ConversationUiState.Success).conversations
             if (conversations.isNotEmpty()) {
                 val firstVisibleIndex = listState.firstVisibleItemIndex
                 val firstVisibleOffset = listState.firstVisibleItemScrollOffset
-                
+
                 if (firstVisibleIndex <= 1 && firstVisibleOffset < 200) {
                     listState.animateScrollToItem(0)
                 }
@@ -107,12 +108,12 @@ fun ConversationListScreen(
 
     var showCreateMenu by remember { mutableStateOf(false) }
     var searchButtonCenter by remember { mutableStateOf<IntOffset?>(null) }
-    
+
     val scope = rememberCoroutineScope()
-    
+
     val settingsStorage = remember { SettingsStorage(context) }
     val isStickyExpanded by settingsStorage.showStickyFlow.collectAsState(initial = true)
-    
+
     val searchState by searchViewModel.uiState.collectAsState()
     val searchBarState = rememberSearchBarState()
     val textFieldState = rememberTextFieldState()
@@ -168,18 +169,18 @@ fun ConversationListScreen(
             }
         )
     }
-        
+
     val hideFloatingButton by remember {
         derivedStateOf {
             val isScrollInProgress = listState.isScrollInProgress
-            
+
             val layoutInfo = listState.layoutInfo
             val visibleItems = layoutInfo.visibleItemsInfo
             val isAtBottom = visibleItems.isNotEmpty() && !listState.canScrollForward
             isScrollInProgress || isAtBottom
         }
     }
-    
+
     val topBarColor = MaterialTheme.colorScheme.surfaceContainer
 
     Scaffold(
@@ -200,7 +201,7 @@ fun ConversationListScreen(
                             )
                         )
                 )
-            
+
                 SearchBar(
                     modifier = Modifier.statusBarsPadding().padding(12.dp).fillMaxWidth(),
                     state = searchBarState,
@@ -269,18 +270,57 @@ fun ConversationListScreen(
         ) {
             val state = uiState
             if (state is ConversationUiState.Success) {
-                val (stickyConvs, normalConvs) = state.conversations.partition { 
-                    stickyIds.contains(it.chatId) 
+                val filteredConversations = state.conversations.filter { conversation ->
+                    when (filter) {
+                        ConversationFilter.ALL -> true
+                        ConversationFilter.UNREAD -> conversation.hasUnread || conversation.isAtMentioned
+                        ConversationFilter.GROUP -> conversation.chatType == 2
+                        ConversationFilter.USER -> conversation.chatType == 1
+                        ConversationFilter.BOT -> conversation.chatType == 3
+                    }
+                }
+
+                val (stickyConvs, normalConvs) = filteredConversations.partition {
+                    stickyIds.contains(it.chatId)
                 }
 
                 val allowCollapseSticky = stickyConvs.size > 5
                 val isStickyCollapsed = !isStickyExpanded && allowCollapseSticky
+
+                val tabs = listOf("全部", "未读", "群聊", "用户", "机器人")
+                val selectedTabIndex = when (filter) {
+                    ConversationFilter.ALL -> 0
+                    ConversationFilter.UNREAD -> 1
+                    ConversationFilter.GROUP -> 2
+                    ConversationFilter.USER -> 3
+                    ConversationFilter.BOT -> 4
+                }
 
                 LazyColumn(
                     modifier = Modifier.fillMaxSize().padding(bottom = contentPadding.calculateBottomPadding()),
                     state = listState,
                     contentPadding = PaddingValues(top = contentPadding.calculateTopPadding(), bottom = innerPadding.calculateBottomPadding())
                 ) {
+                    item(key = "tabBar") {
+                        CapsuleTabBar(
+                            tabs = tabs,
+                            selectedTabIndex = selectedTabIndex,
+                            scrollable = true,
+                            onTabSelected = { index ->
+                                val newFilter = when (index) {
+                                    0 -> ConversationFilter.ALL
+                                    1 -> ConversationFilter.UNREAD
+                                    2 -> ConversationFilter.GROUP
+                                    3 -> ConversationFilter.USER
+                                    4 -> ConversationFilter.BOT
+                                    else -> ConversationFilter.ALL
+                                }
+                                viewModel.setFilter(newFilter)
+                            },
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                        )
+                    }
+
                     val totalItems = stickyConvs.size + normalConvs.size
 
                     if (totalItems == 0) {
@@ -296,7 +336,7 @@ fun ConversationListScreen(
                         item(key = "divider") {
                             HorizontalDivider()
                         }
-                        
+
                         if (allowCollapseSticky) {
                             item(key = "collapseStickyButton") {
                                 val bkgolor = if (themeColor != "WHITE") {
@@ -305,7 +345,7 @@ fun ConversationListScreen(
                                     MaterialTheme.colorScheme.surface
                                 }
                                 ListItem(
-                                    onClick = { 
+                                    onClick = {
                                         scope.launch {
                                             settingsStorage.setShowSticky(!isStickyExpanded)
                                         }
@@ -396,11 +436,11 @@ fun ConversationListScreen(
                     }
                 }
             }
-            
+
             if (isRefreshing) { LinearProgressIndicator(modifier = Modifier.fillMaxWidth().padding(contentPadding)) }
         }
     }
-    
+
     ExpandedFullScreenSearchBar(state = searchBarState, inputField = inputField) {
         when {
             searchState.isLoading && searchState.results.isEmpty() -> LoadingScreen(Modifier)
@@ -474,7 +514,7 @@ fun ConversationItem(
     } else {
         MaterialTheme.colorScheme.surface
     }
-    
+
     ListItem(
         onClick = onClick,
         leadingContent = {
@@ -520,7 +560,7 @@ fun ConversationItem(
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f)
                 )
-                
+
                 Spacer(modifier = Modifier.width(8.dp))
 
                 Text(

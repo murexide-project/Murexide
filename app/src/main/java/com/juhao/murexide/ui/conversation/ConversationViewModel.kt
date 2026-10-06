@@ -28,6 +28,13 @@ import kotlinx.coroutines.launch
 import com.juhao.murexide.ui.theme.UiCache
 import com.juhao.murexide.utils.AppForegroundState
 
+enum class ConversationFilter {
+    ALL,
+    UNREAD,
+    GROUP,
+    USER,
+    BOT
+}
 
 sealed class ConversationUiState {
     object Loading : ConversationUiState()
@@ -53,9 +60,12 @@ class ConversationViewModel(
 
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> = _isRefreshing
-    
+
     private val _stickyIds = MutableStateFlow<Set<String>>(emptySet())
     val stickyIds: StateFlow<Set<String>> = _stickyIds.asStateFlow()
+
+    private val _filter = MutableStateFlow(ConversationFilter.ALL)
+    val filter: StateFlow<ConversationFilter> = _filter.asStateFlow()
 
     private var loadJob: Job? = null
     private var loadGeneration = 0
@@ -67,6 +77,10 @@ class ConversationViewModel(
         observeWebSocket()
         observeWsConnection()
         observeAppForeground()
+    }
+
+    fun setFilter(filter: ConversationFilter) {
+        _filter.value = filter
     }
 
     private fun observeCachedConversations() {
@@ -83,7 +97,7 @@ class ConversationViewModel(
             LocalCache.observeSticky(accountId).collect { cached ->
                 val ids = cached.map { it.chatId }.toSet()
                 _stickyIds.value = ids
-                
+
                 _uiState.update { state ->
                     if (state is ConversationUiState.Success) state.copy(stickyConversations = cached) else state
                 }
@@ -345,7 +359,7 @@ class ConversationViewModel(
                 .onSuccess { stickyList ->
                     val ids = stickyList.map { it.chatId }.toSet()
                     _stickyIds.value = ids
-                    
+
                     _uiState.update { state ->
                         if (state is ConversationUiState.Success) {
                             state.copy(stickyConversations = stickyList)
