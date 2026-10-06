@@ -320,7 +320,7 @@ fun MessageBubble(
                             else
                                 bubbleCornerRadius.dp,
                             topEnd = bubbleCornerRadius.dp,
-                            bottomStart = if (isFirstFromSender && hideCard)
+                            bottomStart = if (isFirstFromSender && (hideCard && message.contentType != MessageItem.CONTENT_TYPE_FILE))
                                 bubbleCornerRadius.dp
                             else if (isFirstFromSender)
                                 0.dp
@@ -331,7 +331,7 @@ fun MessageBubble(
                         Row(
                             verticalAlignment = Alignment.Bottom
                         ) {
-                            if (isFirstFromSender && !hideCard) {
+                            if (isFirstFromSender && (!hideCard || message.contentType == MessageItem.CONTENT_TYPE_FILE)) {
                                 Spacer(Modifier.size(4.dp))
                                 QuarterCircleCorner(
                                     color = cardColor,
@@ -349,7 +349,7 @@ fun MessageBubble(
                                 modifier = Modifier.weight(1f, fill = false)
                             ) {
                                 Column(
-                                    modifier = Modifier.padding(if (hideCard) 1.dp else 8.dp),
+                                    modifier = Modifier.padding(if (hideCard) 0.dp else 8.dp),
                                 ) {
                                     val displayName = if (hideSenderInfo && anonymousNameProvider != null) {
                                         anonymousNameProvider(message.senderId)
@@ -648,8 +648,7 @@ fun MessageBubble(
                                                             modifier = Modifier
                                                                 .fillMaxWidth()
                                                                 .height(120.dp),
-                                                            color = incomingAttachmentBackgroundColor,
-                                                            shape = cardShape
+                                                            color = incomingAttachmentBackgroundColor
                                                         ) {
                                                             Column(
                                                                 modifier = Modifier.fillMaxSize(),
@@ -741,7 +740,6 @@ fun MessageBubble(
                                                                     .onGloballyPositioned { coordinates ->
                                                                         sourceCoordinates.value = coordinates
                                                                     }
-                                                                    .clip(cardShape)
                                                                     .background(
                                                                         if (isImageMessage || isVideoMessage) {
                                                                             incomingAttachmentBackgroundColor
