@@ -60,7 +60,7 @@ import com.juhao.murexide.R
 import com.juhao.murexide.data.MentionToken
 import kotlin.math.roundToInt
 
-private val SendButtonSize = 44.dp
+private val SendButtonSize = 36.dp
 private val SendFormatOptionWidth = 48.dp
 private val SendFormatPickerHeight = 48.dp
 private val SendFormatPickerGap = 8.dp
@@ -123,8 +123,8 @@ fun MessageInput(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .heightIn(min = 56.dp)
-            .padding(horizontal = 4.dp),
+            .heightIn(min = 48.dp)
+            .padding(horizontal = 6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         MoreActionsButton(
@@ -134,7 +134,7 @@ fun MessageInput(
         
         IconButton(
             onClick = onEmojiClick,
-            modifier = Modifier.size(44.dp)
+            modifier = Modifier.size(36.dp)
         ) {
             Icon(
                 imageVector = if (isEmojiPanelVisible) {
@@ -181,7 +181,6 @@ fun MessageInput(
         ) { showSendButton ->
             if (showSendButton) {
                 FormatSendButton(
-                    enabled = !isSending,
                     isSending = isSending,
                     onSendClick = onSendClick,
                     onSendWithType = onSendWithType
@@ -189,7 +188,7 @@ fun MessageInput(
             } else {
                 IconButton(
                     onClick = onInstructionClick,
-                    modifier = Modifier.size(44.dp)
+                    modifier = Modifier.size(36.dp)
                 ) {
                     Icon(
                         imageVector = if (isInstructionPanelVisible) {
@@ -209,7 +208,6 @@ fun MessageInput(
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun FormatSendButton(
-    enabled: Boolean,
     isSending: Boolean,
     onSendClick: () -> Unit,
     onSendWithType: (String) -> Unit
@@ -219,7 +217,6 @@ private fun FormatSendButton(
     var selectedType by remember { mutableStateOf<String?>(null) }
     var dragOrigin by remember { mutableStateOf(Offset.Zero) }
 
-    val currentEnabled by rememberUpdatedState(enabled)
     val currentOnSendClick by rememberUpdatedState(onSendClick)
     val currentOnSendWithType by rememberUpdatedState(onSendWithType)
     val hapticFeedback = LocalHapticFeedback.current
@@ -240,26 +237,22 @@ private fun FormatSendButton(
                 .size(SendButtonSize)
                 .clip(CircleShape)
                 .background(
-                    if (enabled && (isPressed || showFormatPicker)) {
-                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f)
-                    } else {
-                        Color.Transparent
-                    }
+                    MaterialTheme.colorScheme.primary
                 )
                 .semantics {
                     role = Role.Button
                     contentDescription = "发送"
-                    stateDescription = if (enabled) {
+                    stateDescription = if (!isSending) {
                         "长按并滑动可取消或选择消息格式"
                     } else {
                         "发送中"
                     }
-                    if (!enabled) disabled()
+                    if (isSending) disabled()
                     onClick(label = "发送") {
-                        if (enabled) onSendClick()
-                        enabled
+                        if (!isSending) onSendClick()
+                        !isSending
                     }
-                    customActions = if (enabled) {
+                    customActions = if (!isSending) {
                         SendFormatOptions.mapNotNull { option ->
                             val type = option.type ?: return@mapNotNull null
                             CustomAccessibilityAction(
@@ -277,7 +270,7 @@ private fun FormatSendButton(
                 .pointerInput(Unit) {
                     detectTapGestures(
                         onPress = {
-                            if (currentEnabled) {
+                            if (!isSending) {
                                 isPressed = true
                                 val released = tryAwaitRelease()
                                 isPressed = false
@@ -292,10 +285,10 @@ private fun FormatSendButton(
                             }
                         },
                         onTap = {
-                            if (currentEnabled) currentOnSendClick()
+                            if (!isSending) currentOnSendClick()
                         },
                         onLongPress = { pressPosition ->
-                            if (currentEnabled) {
+                            if (!isSending) {
                                 selectedType = "markdown"
                                 dragOrigin = pressPosition
                                 showFormatPicker = true
@@ -335,11 +328,7 @@ private fun FormatSendButton(
                 AutoMirroredIcon(
                     AppIcons.Send,
                     contentDescription = null,
-                    tint = if (enabled) {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
-                    }
+                    tint = MaterialTheme.colorScheme.onPrimary
                 )
             }
         }
@@ -426,7 +415,7 @@ private fun MoreActionsButton(
     Box {
         IconButton(
             onClick = { showMenu = true },
-            modifier = Modifier.size(44.dp)
+            modifier = Modifier.size(36.dp)
         ) {
             Icon(
                 AppIcons.Add,

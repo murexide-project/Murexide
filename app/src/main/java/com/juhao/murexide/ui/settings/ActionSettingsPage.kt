@@ -49,11 +49,9 @@ fun ActionPage() {
         }
     }
     
-    var avatarFollow by remember { mutableStateOf(false) }
     var bigScreen by remember { mutableStateOf(true) }
     
     LaunchedEffect(Unit) {
-        avatarFollow = settingsStorage.getAvatarFollow()
         bigScreen = settingsStorage.getBigScreen()
     }
     
@@ -138,18 +136,6 @@ fun ActionPage() {
                     putExtra("page", 6)
                 }
                 context.startActivity(intent)
-            }
-        )
-        SettingsSwitchItem(
-            icon = AppIcons.Animation,
-            title = "聊天页头像跟随",
-            subtitle = "头像跟随视角移动",
-            checked = avatarFollow,
-            onCheckedChange = { checked ->
-                avatarFollow = checked
-                scope.launch {
-                    settingsStorage.setAvatarFollow(checked)
-                }
             }
         )
     }

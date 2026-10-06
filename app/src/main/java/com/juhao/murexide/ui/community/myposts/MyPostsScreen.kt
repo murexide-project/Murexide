@@ -20,7 +20,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.juhao.murexide.ui.community.PostCard
 import com.juhao.murexide.ui.community.detail.PostDetailActivity
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun MyPostsScreen(
     onBackClick: () -> Unit,
@@ -76,12 +76,11 @@ fun MyPostsScreen(
             when {
                 uiState.isLoading && uiState.posts.isEmpty() -> {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
+                        ContainedLoadingIndicator()
                     }
                 }
 
                 uiState.posts.isEmpty() -> {
-                    // 需要可滚动才能触发下拉刷新
                     LazyColumn(modifier = Modifier.fillMaxSize()) {
                         item {
                             Box(

@@ -175,6 +175,7 @@ fun AllBaContent(
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun ManageContent(
     innerPadding: PaddingValues,
@@ -206,9 +207,8 @@ fun ManageContent(
                             Modifier.fillMaxWidth().padding(24.dp),
                             contentAlignment = Alignment.Center
                         ) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(28.dp),
-                                strokeWidth = 2.dp
+                            ContainedLoadingIndicator(
+                                modifier = Modifier.size(28.dp)
                             )
                         }
                     }
@@ -240,6 +240,7 @@ fun ManageContent(
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun BaList(
     innerPadding: PaddingValues,
@@ -250,7 +251,7 @@ fun BaList(
 ) {
     if (isLoading && baList.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator()
+            ContainedLoadingIndicator()
         }
     } else if (baList.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -294,7 +295,7 @@ fun BaRow(ba: BaItem, onClick: () -> Unit) {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun PostsList(
     posts: List<PostItem>,
@@ -318,7 +319,7 @@ fun PostsList(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
-                CircularProgressIndicator()
+                ContainedLoadingIndicator()
             }
         } else if (posts.isEmpty()) {
             LazyColumn(modifier = Modifier.fillMaxSize()) {
@@ -369,9 +370,8 @@ fun PostsList(
                                 .padding(vertical = 12.dp),
                             contentAlignment = Alignment.Center
                         ) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(32.dp),
-                                strokeWidth = 2.dp
+                            ContainedLoadingIndicator(
+                                modifier = Modifier.size(32.dp)
                             )
                         }
                     }

@@ -39,6 +39,7 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.material3.*
@@ -96,7 +97,6 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withTimeoutOrNull
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.ui.Alignment
@@ -149,7 +149,7 @@ private fun FloatingTopBar(
     val liquidGlassBlur = LocalLiquidGlassBlur.current
     val controlSize = 48.dp
     val buttonShape = CircleShape
-    val topBarColor = MaterialTheme.colorScheme.surface
+    val topBarColor = MaterialTheme.colorScheme.surfaceContainer
     val buttonHazeStyle = HazeMaterials.thin().copy(
         blurRadius = 32.dp,
         noiseFactor = 0f
@@ -1248,13 +1248,13 @@ fun ChatScreen(
                         modifier = Modifier
                             .imePadding()
                             .navigationBarsPadding()
-                            .padding(horizontal = 12.dp, vertical = 8.dp)
+                            .padding(horizontal = 6.dp, vertical = 8.dp)
                             .then(
                                 if (liquidGlassEnabled && liquidBackdrop != null) {
-                                    val surfaceColor = MaterialTheme.colorScheme.surface
+                                    val surfaceColor = MaterialTheme.colorScheme.surfaceContainer
                                     Modifier.drawBackdrop(
                                         backdrop = liquidBackdrop,
-                                        shape = { CircleShape },
+                                        shape = { RoundedCornerShape(32.dp) },
                                         effects = {
                                             vibrancy()
                                             blur(1.dp.toPx() * liquidGlassBlur)
@@ -1267,13 +1267,17 @@ fun ChatScreen(
                                         }
                                     )
                                 } else {
-                                    Modifier.hazeEffect(
-                                        state = hazeState,
-                                        style = HazeMaterials.regular().copy(
-                                            noiseFactor = 0f
-                                        ),
-                                        block = null
-                                    )
+                                    val shape = RoundedCornerShape(32.dp)
+                                    Modifier.shadow(2.dp, shape)
+                                        .clip(shape)
+                                        .hazeEffect(
+                                            state = hazeState,
+                                            style = HazeMaterials.regular().copy(
+                                                blurRadius = 32.dp,
+                                                noiseFactor = 0f
+                                            ),
+                                            block = null
+                                        )
                                 }
                             ),
                         targetState = selectionMode,
@@ -1287,7 +1291,7 @@ fun ChatScreen(
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                                    .padding(horizontal = 8.dp, vertical = 4.dp)
                                     .navigationBarsPadding(),
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
@@ -1305,7 +1309,7 @@ fun ChatScreen(
                                         Spacer(modifier = Modifier.width(4.dp))
                                         Text("引用")
                                     }
-                                    Spacer(modifier = Modifier.width(16.dp))
+                                    Spacer(modifier = Modifier.width(8.dp))
                                 }
                                 TextButton(
                                     onClick = {
@@ -1355,7 +1359,7 @@ fun ChatScreen(
                                         Box(
                                             modifier = Modifier
                                                 .width(3.dp)
-                                                .height(32.dp)
+                                                .height(16.dp)
                                                 .background(
                                                     MaterialTheme.colorScheme.primary,
                                                     RoundedCornerShape(2.dp)
@@ -1664,8 +1668,8 @@ fun ChatScreen(
                             .onSizeChanged { listHeightPx = it.height },
                         reverseLayout = true,
                         contentPadding = PaddingValues(
-                            top = innerPadding.calculateBottomPadding(),
-                            bottom = innerPadding.calculateTopPadding()
+                            top = innerPadding.calculateTopPadding(),
+                            bottom = innerPadding.calculateBottomPadding()
                         ),
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
@@ -1877,7 +1881,7 @@ fun ChatScreen(
                             .padding(
                                 bottom = with(LocalDensity.current) {
                                     composerHeightPx.toDp()
-                                } + 12.dp
+                                }
                             )
                     )
                 }

@@ -24,57 +24,51 @@ fun UploadProgressBar(
     onCancel: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp),
-        shape = RoundedCornerShape(0.dp)
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 12.dp)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 12.dp)
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 6.dp),
-                verticalAlignment = Alignment.CenterVertically
+            Column(
+                modifier = Modifier.weight(1f)
             ) {
-                Column(
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(
-                        text = "正在上传...",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = imagePath.substringAfterLast("/"),
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1
-                    )
-                }
-                
-                IconButton(
-                    onClick = onCancel,
-                    modifier = Modifier.size(32.dp)
-                ) {
-                    Icon(
-                        AppIcons.Close,
-                        contentDescription = "取消上传",
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
+                Text(
+                    text = "正在上传...",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = imagePath.substringAfterLast("/"),
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1
+                )
             }
             
-            LinearProgressIndicator(
-                progress = { progress.coerceIn(0f, 1f) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(3.dp),
-                color = MaterialTheme.colorScheme.onSurface,
-                trackColor = MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp)
-            )
+            IconButton(
+                onClick = onCancel,
+                modifier = Modifier.size(32.dp)
+            ) {
+                Icon(
+                    AppIcons.Close,
+                    contentDescription = "取消上传",
+                    modifier = Modifier.size(20.dp)
+                )
+            }
         }
+        
+        LinearProgressIndicator(
+            progress = { progress.coerceIn(0f, 1f) },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(3.dp),
+            color = MaterialTheme.colorScheme.onSurface,
+            trackColor = MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp)
+        )
     }
 }

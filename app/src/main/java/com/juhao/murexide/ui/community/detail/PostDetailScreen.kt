@@ -35,7 +35,7 @@ import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
 import dev.chrisbanes.haze.materials.HazeMaterials
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalHazeMaterialsApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalHazeMaterialsApi::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun PostDetailScreen(
     onBackClick: () -> Unit,
@@ -214,7 +214,7 @@ fun PostDetailScreen(
                             .padding(innerPadding),
                         contentAlignment = Alignment.Center
                     ) {
-                        CircularProgressIndicator()
+                        ContainedLoadingIndicator()
                     }
                 }
     
@@ -282,9 +282,8 @@ fun PostDetailScreen(
                                         .padding(16.dp),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier.size(28.dp),
-                                        strokeWidth = 2.dp
+                                    ContainedLoadingIndicator(
+                                        modifier = Modifier.size(28.dp)
                                     )
                                 }
                             }

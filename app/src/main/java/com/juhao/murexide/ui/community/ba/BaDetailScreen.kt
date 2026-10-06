@@ -22,7 +22,7 @@ import com.juhao.murexide.ui.community.PostCard
 import com.juhao.murexide.ui.community.detail.PostDetailActivity
 import com.juhao.murexide.ui.components.Avatar
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun BaDetailScreen(
     onBackClick: () -> Unit,
@@ -71,7 +71,7 @@ fun BaDetailScreen(
             when {
                 uiState.isLoadingInfo && uiState.ba == null -> {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
+                        ContainedLoadingIndicator()
                     }
                 }
 
@@ -118,9 +118,8 @@ fun BaDetailScreen(
                                     Modifier.fillMaxWidth().padding(16.dp),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier.size(28.dp),
-                                        strokeWidth = 2.dp
+                                    ContainedLoadingIndicator(
+                                        modifier = Modifier.size(28.dp)
                                     )
                                 }
                             }

@@ -21,7 +21,6 @@ class SettingsStorage(private val context: Context) {
         private val NOTIFICATION_ENABLED_KEY = booleanPreferencesKey("notification_enabled")
         
         private val SQUARE_AVATAR_KEY = booleanPreferencesKey("square_avatar")
-        private val AVATAR_FOLLOW_KEY = booleanPreferencesKey("avatar_follow")
         private val BIG_SCREEN_KEY = booleanPreferencesKey("big_screen")
         private val UPDATE_CHANNEL_KEY = stringPreferencesKey("update_channel")
         
@@ -106,21 +105,6 @@ class SettingsStorage(private val context: Context) {
         return notificationEnabledFlow.first()
     }
     
-    // 头像跟随
-    val avatarFollowFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
-        preferences[AVATAR_FOLLOW_KEY] ?: true
-    }
-
-    suspend fun setAvatarFollow(enabled: Boolean) {
-        context.dataStore.edit { preferences ->
-            preferences[AVATAR_FOLLOW_KEY] = enabled
-        }
-    }
-
-    suspend fun getAvatarFollow(): Boolean {
-        return avatarFollowFlow.first()
-    }
-
     // 大屏模式
     val bigScreenFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
         preferences[BIG_SCREEN_KEY] ?: true

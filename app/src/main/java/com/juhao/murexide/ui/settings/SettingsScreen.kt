@@ -118,7 +118,7 @@ private fun MainScreen() {
         SettingsItem(
             icon = AppIcons.DragClick,
             title = "行为",
-            subtitle = "头像跟随、大屏模式、截图、通知等",
+            subtitle = "大屏模式、截图、通知等",
             onClick = {
                 val intent = Intent(context, SettingsActivity::class.java).apply{
                     putExtra("page", 3)
