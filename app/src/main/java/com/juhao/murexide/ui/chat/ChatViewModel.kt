@@ -685,7 +685,7 @@ class ChatViewModel(
             editCurrentMessage(sendTypeOverride)
             return
         }
-        if (state.inputText.isBlank() || state.isSending) return
+        if (state.inputText.isEmpty() || state.isSending) return
 
         viewModelScope.launch {
             _uiState.update { it.copy(isSending = true) }

@@ -172,7 +172,7 @@ fun MessageInput(
         )
 
         AnimatedContent(
-            targetState = inputText.isNotBlank() || !hasInstructions,
+            targetState = inputText.isNotEmpty() || !hasInstructions,
             transitionSpec = {
                 fadeIn(animationSpec = tween(200)) togetherWith
                         fadeOut(animationSpec = tween(200))
