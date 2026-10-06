@@ -100,7 +100,7 @@ fun BubblePage() {
                     message = previewMessages[0],
                     isLastFromSender = true,
                     isFirstFromSender = false,
-                    showAvatar = false,
+                    drawAvatar = false,
                     showTags = showMsgTags,
                     showMyBubbleAvatarSetting = showMyBubbleAvatar,
                     bubbleOpacity = bubbleOpacity,
@@ -112,7 +112,7 @@ fun BubblePage() {
                     message = previewMessages[1],
                     isLastFromSender = false,
                     isFirstFromSender = true,
-                    showAvatar = true,
+                    drawAvatar = true,
                     showMyBubbleAvatarSetting = showMyBubbleAvatar,
                     bubbleOpacity = bubbleOpacity,
                     bubbleCornerRadius = bubbleCornerRadius
@@ -122,7 +122,7 @@ fun BubblePage() {
                     message = previewMessages[2],
                     isLastFromSender = true,
                     isFirstFromSender = true,
-                    showAvatar = showMyBubbleAvatar,
+                    drawAvatar = true,
                     showMyBubbleAvatarSetting = showMyBubbleAvatar,
                     bubbleOpacity = bubbleOpacity,
                     bubbleCornerRadius = bubbleCornerRadius

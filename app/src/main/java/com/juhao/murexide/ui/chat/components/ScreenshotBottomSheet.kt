@@ -317,7 +317,7 @@ private fun ScreenshotContent(
                         message = message,
                         isLastFromSender = isLastFromSender,
                         isFirstFromSender = isFirstFromSender,
-                        showAvatar = isFirstFromSender,
+                        drawAvatar = isFirstFromSender,
                         hideSenderInfo = hideSenderInfo,
                         hideMyInfo = hideMyInfo,
                         hideImages = hideImages,

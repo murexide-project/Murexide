@@ -87,7 +87,7 @@ fun MessageBubble(
     isAdmin: Boolean = false,
     isLastFromSender: Boolean = true,
     isFirstFromSender: Boolean = true,
-    showAvatar: Boolean = true,
+    drawAvatar: Boolean = true,
     showTags: Boolean = true,
     showMenu: Boolean = false,
     showMenuMsgId: String? = null,
@@ -99,7 +99,6 @@ fun MessageBubble(
     bubbleCornerRadius: Float = 18f,
     bubbleOpacity: Float = 0.9f,
     showMyBubbleAvatarSetting: Boolean = true,
-    avatarAlignment: Alignment.Vertical = Alignment.Bottom,
     downloadProgress: Float? = null,
     isDownloaded: Boolean = false,
     onDownloadClick: (MessageItem) -> Unit = {},
@@ -122,6 +121,9 @@ fun MessageBubble(
     val scope = rememberCoroutineScope()
 
     val isMine = if (hideMyInfo) false else message.isMine
+
+    val needAvatar = drawAvatar && (if (isMine) showMyBubbleAvatarSetting else true)
+
     val themeColor by UiState.themeColor
     val themeMode by UiState.themeMode
     val isWhiteLightTheme = themeColor == "WHITE" && !usesDarkTheme(
@@ -249,14 +251,14 @@ fun MessageBubble(
                         top = if (!isLastFromSender) 0.dp else 4.dp,
                         bottom = if (!isFirstFromSender) 0.dp else 4.dp
                     ),
-                verticalAlignment = avatarAlignment,
+                verticalAlignment = Alignment.Bottom,
                 horizontalArrangement = if (isMine) Arrangement.End else Arrangement.Start
             ) {
                 if (isFirstFromSender || isLastFromSender) {
                     Spacer(modifier = Modifier.height(36.dp))
                 }
             
-                if (!isMine && showAvatar) {
+                if (!isMine && needAvatar) {
                     if (hideSenderInfo) {
                         Surface(
                             modifier = Modifier.size(36.dp),
@@ -270,10 +272,11 @@ fun MessageBubble(
                     } else {
                         Avatar(
                             url = message.senderAvatar,
-                            modifier = Modifier.combinedClickable(
-                                onClick = { onAvatarClick() },
-                                onLongClick = { onAvatarLongClick() }
-                            ),
+                            modifier = Modifier
+                                .combinedClickable(
+                                    onClick = { onAvatarClick() },
+                                    onLongClick = { onAvatarLongClick() }
+                                ),
                             size = 36.dp
                         )
                     }
@@ -302,7 +305,7 @@ fun MessageBubble(
                     ) {
                         if (!isMine && isFirstFromSender && !hideCard) {
                             Spacer(Modifier.size(4.dp))
-                            QuarterCircleCorner(isMine = isMine, color = cardColor)
+                            QuarterCircleCorner(isMine = false, color = cardColor)
                         } else {
                             Spacer(Modifier.size(12.dp))
                         }
@@ -1030,7 +1033,7 @@ fun MessageBubble(
                             }
                         }
                         if (isMine && isFirstFromSender && !hideCard) {
-                            QuarterCircleCorner(isMine = isMine, color = cardColor)
+                            QuarterCircleCorner(isMine = true, color = cardColor)
                             Spacer(Modifier.size(4.dp))
                         } else {
                             Spacer(Modifier.size(12.dp))
@@ -1062,7 +1065,7 @@ fun MessageBubble(
                                 }
                             )
                         }
-    
+
                         DropdownMenuItem(
                             text = { Text("引用") },
                             onClick = {
@@ -1101,7 +1104,7 @@ fun MessageBubble(
                                 }
                             )
                         }
-    
+
                         if (isMine && message.content.isNotBlank()) {
                             DropdownMenuItem(
                                 text = { Text("编辑") },
@@ -1137,12 +1140,13 @@ fun MessageBubble(
                     }
                 }
     
-                if (isMine && showAvatar && showMyBubbleAvatarSetting) {
+                if (isMine && needAvatar) {
                     Avatar(
                         url = message.senderAvatar,
-                        modifier = Modifier.clickable {
-                            onAvatarClick()
-                        },
+                        modifier = Modifier
+                            .clickable {
+                                onAvatarClick()
+                            },
                         size = 36.dp
                     )
                 } else if ((isMine && showMyBubbleAvatarSetting) || !isMine) {
@@ -1259,9 +1263,8 @@ fun QuarterCircleCorner(
     isMine: Boolean = false
 ) {
     val halfWidth = size / 2
-    val fullHeight = size
 
-    Canvas(modifier = modifier.size(width = halfWidth, height = fullHeight)) {
+    Canvas(modifier = modifier.size(width = halfWidth, height = size)) {
         val w = this.size.width
         val h = this.size.height
 
