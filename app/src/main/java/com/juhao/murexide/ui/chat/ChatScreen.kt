@@ -2028,6 +2028,7 @@ private fun FloatingAvatarsLayer(
     val density = LocalDensity.current
     val avatarSize = 36.dp
     val avatarSizePx = with(density) { avatarSize.toPx() }
+    val bubbleInsetPx = with(density) { 2.dp.toPx() }
     val maxY = (listHeightPx - composerHeightPx).toFloat()
 
     Box(modifier = modifier) {
@@ -2054,8 +2055,13 @@ private fun FloatingAvatarsLayer(
                 continue
             }
 
-            val cellBottom = (listHeightPx - composerHeightPx - info.offset).toFloat()
-            val cellTop = cellBottom - info.size.toFloat()
+            val bottomInset = if (item.isFirstFromSender) bubbleInsetPx else 0f
+            val topInset = if (item.isLastFromSender) bubbleInsetPx else 0f
+
+            val rawBottom = (listHeightPx - composerHeightPx - info.offset).toFloat()
+            val rawTop = rawBottom - info.size.toFloat()
+            val cellBottom = rawBottom - bottomInset
+            val cellTop = rawTop + topInset
 
             val isMine = message.isMine
             val sameSender = currentGroup != null &&
@@ -2113,10 +2119,7 @@ private fun FloatingAvatarsLayer(
                     modifier = Modifier
                         .align(if (isMine) Alignment.TopEnd else Alignment.TopStart)
                         .offset(y = with(density) { avatarTopPx.toDp() })
-                        .padding(
-                            start = if (isMine) 0.dp else 8.dp,
-                            end = if (isMine) 8.dp else 0.dp
-                        )
+                        .padding(horizontal = 8.dp)
                         .pointerInput(message.msgId) {
                             detectTapGestures(
                                 onTap = { onAvatarClick(message) },

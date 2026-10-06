@@ -4,6 +4,7 @@ import com.juhao.murexide.ui.icons.AppIcons
 import com.juhao.murexide.ui.icons.AutoMirroredIcon
 
 import android.content.ClipData
+import android.view.View
 import android.widget.Toast
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -35,11 +36,14 @@ import androidx.compose.ui.graphics.PathOperation
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -147,11 +151,20 @@ fun MessageBubble(
     val context = LocalContext.current
     val audioPlaybackState by AudioPlaybackManager.state.collectAsState()
 
+    val layoutDirection = LocalConfiguration.current.layoutDirection
+    val defaultLayoutDirection = remember(layoutDirection) {
+        if (layoutDirection == View.LAYOUT_DIRECTION_RTL) {
+            LayoutDirection.Rtl
+        } else {
+            LayoutDirection.Ltr
+        }
+    }
+
     val timestampDisplay = remember(message.timestamp) {
         try {
             val date = Date(message.timestamp)
             val now = Date()
-        
+
             val todayCalendar = Calendar.getInstance().apply {
                 time = now
                 set(Calendar.HOUR_OF_DAY, 0)
@@ -159,7 +172,7 @@ fun MessageBubble(
                 set(Calendar.SECOND, 0)
                 set(Calendar.MILLISECOND, 0)
             }
-            
+
             val dateCalendar = Calendar.getInstance().apply {
                 time = date
             }
@@ -196,962 +209,976 @@ fun MessageBubble(
         animationSpec = tween(durationMillis = 250),
         label = "message_highlight"
     )
-    
-    Row(
-        modifier = Modifier
-            .alpha(animatedAlpha)
-            .background(
-                highlightColor,
-                shape = RoundedCornerShape(12.dp)
-            )
-            .combinedClickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = {
-                    if (isSelectionMode) {
-                        onClickInSelectionMode(message)
-                    } else if (!message.isRecalled && message.contentType != MessageItem.CONTENT_TYPE_TIP) {
-                        showMenuChanged(message.msgId)
+
+    val bubbleLayoutDirection = if (isMine) defaultLayoutDirection.opposite() else defaultLayoutDirection
+
+    CompositionLocalProvider(LocalLayoutDirection provides bubbleLayoutDirection) {
+        Row(
+            modifier = Modifier
+                .alpha(animatedAlpha)
+                .background(
+                    highlightColor,
+                    shape = RoundedCornerShape(12.dp)
+                )
+                .combinedClickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = {
+                        if (isSelectionMode) {
+                            onClickInSelectionMode(message)
+                        } else if (!message.isRecalled && message.contentType != MessageItem.CONTENT_TYPE_TIP) {
+                            showMenuChanged(message.msgId)
+                        }
+                    },
+                    onLongClick = {
+                        if (!isSelectionMode) {
+                            onLongPress(message)
+                        }
                     }
-                },
-                onLongClick = {
-                    if (!isSelectionMode) {
-                        onLongPress(message)
-                    }
-                }
-            )
-    ) {
-        if (message.contentType == MessageItem.CONTENT_TYPE_TIP) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 8.dp, vertical = 4.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Surface(
-                    shape = RoundedCornerShape(16.dp),
-                    color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.6f),
-                    contentColor = MaterialTheme.colorScheme.onSurface,
+                )
+        ) {
+            if (message.contentType == MessageItem.CONTENT_TYPE_TIP) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = message.content,
-                        textAlign = TextAlign.Center,
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)
-                    )
+                    Surface(
+                        shape = RoundedCornerShape(16.dp),
+                        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.6f),
+                        contentColor = MaterialTheme.colorScheme.onSurface,
+                    ) {
+                        Text(
+                            text = message.content,
+                            textAlign = TextAlign.Center,
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)
+                        )
+                    }
                 }
-            }
-        } else {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(
-                        start = 8.dp,
-                        end = 8.dp,
-                        top = if (!isLastFromSender) 0.dp else 4.dp,
-                        bottom = if (!isFirstFromSender) 0.dp else 4.dp
-                    ),
-                verticalAlignment = Alignment.Bottom,
-                horizontalArrangement = if (isMine) Arrangement.End else Arrangement.Start
-            ) {
-                if (isFirstFromSender || isLastFromSender) {
-                    Spacer(modifier = Modifier.height(36.dp))
-                }
-            
-                if (!isMine && needAvatar) {
-                    if (hideSenderInfo) {
-                        Surface(
-                            modifier = Modifier.size(36.dp),
-                            shape = RoundedCornerShape(18.dp),
-                            color = MaterialTheme.colorScheme.surfaceContainer
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(AppIcons.Person, contentDescription = null, modifier = Modifier.size(24.dp))
+            } else {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(
+                            start = 8.dp,
+                            end = 8.dp,
+                            top = if (!isLastFromSender) 0.dp else 2.dp,
+                            bottom = if (!isFirstFromSender) 0.dp else 2.dp
+                        ),
+                    verticalAlignment = Alignment.Bottom
+                ) {
+                    if (isFirstFromSender || isLastFromSender) {
+                        Spacer(modifier = Modifier.height(36.dp))
+                    }
+
+                    if (needAvatar) {
+                        if (hideSenderInfo) {
+                            Surface(
+                                modifier = Modifier.size(36.dp),
+                                shape = RoundedCornerShape(18.dp),
+                                color = MaterialTheme.colorScheme.surfaceContainer
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(AppIcons.Person, contentDescription = null, modifier = Modifier.size(24.dp))
+                                }
                             }
+                        } else {
+                            Avatar(
+                                url = message.senderAvatar,
+                                modifier = Modifier
+                                    .combinedClickable(
+                                        onClick = { onAvatarClick() },
+                                        onLongClick = { onAvatarLongClick() }
+                                    ),
+                                size = 36.dp
+                            )
                         }
                     } else {
-                        Avatar(
-                            url = message.senderAvatar,
-                            modifier = Modifier
-                                .combinedClickable(
-                                    onClick = { onAvatarClick() },
-                                    onLongClick = { onAvatarLongClick() }
-                                ),
-                            size = 36.dp
-                        )
+                        Spacer(modifier = Modifier.width(36.dp))
                     }
-                } else {
-                    Spacer(modifier = Modifier.width(36.dp))
-                }
-    
-                val hideCard = remember(message.contentType, message.isRecalled) {
-                    (message.contentType == MessageItem.CONTENT_TYPE_IMAGE
-                        || message.contentType == MessageItem.CONTENT_TYPE_STICKER
-                        || message.contentType == MessageItem.CONTENT_TYPE_VIDEO
-                        || message.contentType == MessageItem.CONTENT_TYPE_FILE)
-                        && !message.isRecalled
-                }
-    
-                Box(modifier = Modifier.weight(1f, fill = false)) {
-                    val cardColor = if (hideCard)
-                        Color.Transparent
-                    else if (isMine)
-                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = bubbleOpacity)
-                    else
-                        incomingBubbleColor
-                    Row(
-                        verticalAlignment = Alignment.Bottom,
-                        horizontalArrangement = if (isMine) Arrangement.End else Arrangement.Start
-                    ) {
-                        if (!isMine && isFirstFromSender && !hideCard) {
-                            Spacer(Modifier.size(4.dp))
-                            QuarterCircleCorner(isMine = false, color = cardColor)
-                        } else {
-                            Spacer(Modifier.size(12.dp))
-                        }
-                        Card(
-                            shape = RoundedCornerShape(
-                                topStart = if (!isMine && !isLastFromSender) (bubbleCornerRadius / 4).dp else bubbleCornerRadius.dp,
-                                topEnd = if (isMine && !isLastFromSender) (bubbleCornerRadius / 4).dp else bubbleCornerRadius.dp,
-                                bottomStart = if (!isMine && isFirstFromSender)
-                                    0.dp
-                                else if (!isMine) 
-                                    (bubbleCornerRadius / 4).dp
-                                else 
-                                    bubbleCornerRadius.dp,
-                                bottomEnd = if (isMine && isFirstFromSender)
-                                    0.dp
-                                else if (isMine) 
-                                    (bubbleCornerRadius / 4).dp 
-                                else
-                                    bubbleCornerRadius.dp
-                            ),
-                            colors = CardDefaults.cardColors(
-                                containerColor = cardColor
-                            ),
-                            modifier = Modifier.weight(1f, fill = false)
+
+                    val hideCard = remember(message.contentType, message.isRecalled) {
+                        (message.contentType == MessageItem.CONTENT_TYPE_IMAGE
+                            || message.contentType == MessageItem.CONTENT_TYPE_STICKER
+                            || message.contentType == MessageItem.CONTENT_TYPE_VIDEO
+                            || message.contentType == MessageItem.CONTENT_TYPE_FILE)
+                            && !message.isRecalled
+                    }
+
+                    val hasQuote = message.quoteMsgText != null
+
+                    Box(modifier = Modifier.weight(1f, fill = false)) {
+                        val cardColor = if (isMine)
+                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = bubbleOpacity)
+                        else
+                            incomingBubbleColor
+                        val cardShape = RoundedCornerShape(
+                            topStart = if (!isLastFromSender) 
+                                (bubbleCornerRadius / 4).dp 
+                            else
+                                bubbleCornerRadius.dp,
+                            topEnd = bubbleCornerRadius.dp,
+                            bottomStart = if (isFirstFromSender && hideCard)
+                                bubbleCornerRadius.dp
+                            else if (isFirstFromSender)
+                                0.dp
+                            else
+                                (bubbleCornerRadius / 4).dp,
+                            bottomEnd = bubbleCornerRadius.dp
+                        )
+                        Row(
+                            verticalAlignment = Alignment.Bottom
                         ) {
-                            Column(
-                                modifier = Modifier.padding(if (hideCard) 0.dp else 8.dp),
-                                horizontalAlignment = if (isMine) Alignment.End else Alignment.Start
+                            if (isFirstFromSender && !hideCard) {
+                                Spacer(Modifier.size(4.dp))
+                                QuarterCircleCorner(
+                                    color = cardColor,
+                                    isMine = if (layoutDirection == View.LAYOUT_DIRECTION_RTL) !isMine else isMine,
+                                    defaultLayoutDirection = defaultLayoutDirection
+                                )
+                            } else {
+                                Spacer(Modifier.size(12.dp))
+                            }
+                            Card(
+                                shape = cardShape,
+                                colors = CardDefaults.cardColors(
+                                    containerColor = cardColor
+                                ),
+                                modifier = Modifier.weight(1f, fill = false)
                             ) {
-                                val displayName = if (hideSenderInfo && anonymousNameProvider != null) {
-                                    anonymousNameProvider(message.senderId)
-                                } else {
-                                    message.senderName
-                                }
-                                
-                                if (!hideCard && !isMine && isLastFromSender) {
-                                    FlowRow(
-                                        modifier = Modifier.padding(bottom = 4.dp),
-                                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                        verticalArrangement = Arrangement.spacedBy(4.dp),
-                                        itemVerticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Text(
-                                            text = displayName,
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.primary,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                        
-                                        if (roleLabel != null) {
-                                            val roleColor = if (roleLabel == "群主") {
-                                                Color(0xFFE6A23C)
-                                            } else {
-                                                MaterialTheme.colorScheme.tertiary
-                                            }
-                                            TagChip(
-                                                text = roleLabel,
-                                                containerColor = roleColor.copy(alpha = 0.2f),
-                                                contentColor = roleColor,
-                                                type = 0
+                                Column(
+                                    modifier = Modifier.padding(if (hideCard) 1.dp else 8.dp),
+                                ) {
+                                    val displayName = if (hideSenderInfo && anonymousNameProvider != null) {
+                                        anonymousNameProvider(message.senderId)
+                                    } else {
+                                        message.senderName
+                                    }
+
+                                    if (!hideCard && !isMine && isLastFromSender) {
+                                        FlowRow(
+                                            modifier = Modifier.padding(bottom = 4.dp),
+                                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                                            itemVerticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                text = displayName,
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.primary,
+                                                fontWeight = FontWeight.Bold
                                             )
-                                        }
-                                        
-                                        if (message.senderType == 3) {
-                                            TagChip(
-                                                text = "机器人",
-                                                containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
-                                                contentColor = MaterialTheme.colorScheme.primary,
-                                                type = 1
-                                            )
-                                        }
-                                
-                                        if (showTags && !hideSenderInfo && message.tags.isNotEmpty()) {
-                                            message.tags.forEach { tag ->
-                                                val color = Color(tag.color.toColorInt())
+
+                                            if (roleLabel != null) {
+                                                val roleColor = if (roleLabel == "群主") {
+                                                    Color(0xFFE6A23C)
+                                                } else {
+                                                    MaterialTheme.colorScheme.tertiary
+                                                }
                                                 TagChip(
-                                                    text = tag.text,
-                                                    containerColor = color.copy(alpha = 0.2f),
-                                                    contentColor = lerp(color, MaterialTheme.colorScheme.onSurface, 0.5f)
+                                                    text = roleLabel,
+                                                    containerColor = roleColor.copy(alpha = 0.2f),
+                                                    contentColor = roleColor,
+                                                    type = 0
                                                 )
+                                            }
+
+                                            if (message.senderType == 3) {
+                                                TagChip(
+                                                    text = "机器人",
+                                                    containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
+                                                    contentColor = MaterialTheme.colorScheme.primary,
+                                                    type = 1
+                                                )
+                                            }
+
+                                            if (showTags && !hideSenderInfo && message.tags.isNotEmpty()) {
+                                                message.tags.forEach { tag ->
+                                                    val color = Color(tag.color.toColorInt())
+                                                    TagChip(
+                                                        text = tag.text,
+                                                        containerColor = color.copy(alpha = 0.2f),
+                                                        contentColor = lerp(color, MaterialTheme.colorScheme.onSurface, 0.5f)
+                                                    )
+                                                }
                                             }
                                         }
                                     }
-                                }
-    
-                                message.cmdName?.let {
-                                    Text(
-                                        text = "/$it",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                                    )
-                                }
-    
-                                if (message.quoteMsgText != null) {
-                                    val quoteText = message.quoteMsgText
-                                    
-                                    Surface(
-                                        modifier = Modifier.padding(bottom = 4.dp),
-                                        onClick = {
-                                            if (
-                                                !isSelectionMode &&
-                                                !message.quoteMsgId.isNullOrBlank() &&
-                                                onQuoteClick != null
-                                            ) {
-                                                onQuoteClick(message)
-                                            }
-                                        },
-                                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
-                                        shape = RoundedCornerShape(6.dp)
-                                    ) {
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            modifier = Modifier.height(IntrinsicSize.Max)
+
+                                    message.cmdName?.let {
+                                        Text(
+                                            text = "/$it",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                        )
+                                    }
+
+                                    if (hasQuote && !hideCard) {
+                                        QuoteCard(
+                                            message = message,
+                                            hideSenderInfo = hideSenderInfo,
+                                            hideImages = hideImages,
+                                            isSelectionMode = isSelectionMode,
+                                            onQuoteClick = onQuoteClick
+                                        )
+                                    }
+
+                                    CompositionLocalProvider(LocalLayoutDirection provides defaultLayoutDirection) {
+                                        DropdownMenu(
+                                            expanded = showMenu,
+                                            onDismissRequest = { showMenuChanged(null) },
+                                            shape = MenuDefaults.standaloneGroupShape
                                         ) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .width(3.dp)
-                                                    .fillMaxHeight()
-                                                    .background(MaterialTheme.colorScheme.primary)
-                                            )
-                                            Row(
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                modifier = Modifier.padding(8.dp)
-                                            ) {
-                                                if (message.quoteImageUrl != null && !hideImages) {
-                                                    val builder = ImageRequest.Builder(context)
-                                                        .data(message.quoteImageUrl)
-        
-                                                    if (isYunhuImageUrl(message.quoteImageUrl)) {
-                                                        builder.setHeader("Referer", "https://myapp.jwznb.com")
+                                            if (message.content.isNotBlank()) {
+                                                DropdownMenuItem(
+                                                    text = { Text("复制") },
+                                                    onClick = {
+                                                        scope.launch {
+                                                            clipboardManager.setClipEntry(ClipEntry(ClipData.newPlainText("msg", message.content)))
+                                                        }
+                                                        Toast.makeText(context, "复制成功", Toast.LENGTH_SHORT).show()
+                                                        showMenuChanged(null)
+                                                    },
+                                                    leadingIcon = {
+                                                        Icon(
+                                                            AppIcons.ContentCopy,
+                                                            contentDescription = null,
+                                                            modifier = Modifier.size(18.dp)
+                                                        )
                                                     }
-        
-                                                    AsyncImage(
-                                                        model = builder.build(),
-                                                        contentDescription = null,
-                                                        contentScale = ContentScale.Crop,
-                                                        modifier = Modifier
-                                                            .size(40.dp)
-                                                            .clip(RoundedCornerShape(8.dp))
-                                                    )
-                                                    Spacer(modifier = Modifier.width(8.dp))
+                                                )
+                                            }
+                
+                                            DropdownMenuItem(
+                                                text = { Text("引用") },
+                                                onClick = {
+                                                    showMenuChanged(null)
+                                                    onReply()
+                                                },
+                                                leadingIcon = {
+                                                    Icon(AppIcons.FormatQuote, contentDescription = null, modifier = Modifier.size(18.dp))
                                                 }
-                                                Text(
-                                                    text = if (hideSenderInfo) processQuoteText(quoteText) else quoteText,
-                                                    style = MaterialTheme.typography.bodySmall,
-                                                    maxLines = 2,
-                                                    overflow = TextOverflow.Ellipsis,
+                                            )
+                
+                                            DropdownMenuItem(
+                                                text = { Text("转发") },
+                                                onClick = {
+                                                    showMenuChanged(null)
+                                                    onForward()
+                                                },
+                                                leadingIcon = {
+                                                    AutoMirroredIcon(
+                                                        AppIcons.Redo,
+                                                        contentDescription = null,
+                                                        modifier = Modifier.size(18.dp)
+                                                    )
+                                                }
+                                            )
+                
+                                            if (isMine || isAdmin) {
+                                                DropdownMenuItem(
+                                                    text = { Text("撤回") },
+                                                    onClick = {
+                                                        showMenuChanged(null)
+                                                        onRecall()
+                                                    },
+                                                    leadingIcon = {
+                                                        AutoMirroredIcon(AppIcons.Undo, contentDescription = null, modifier = Modifier.size(18.dp))
+                                                    }
+                                                )
+                                            }
+                
+                                            if (isMine && message.content.isNotBlank()) {
+                                                DropdownMenuItem(
+                                                    text = { Text("编辑") },
+                                                    onClick = {
+                                                        showMenuChanged(null)
+                                                        onEdit()
+                                                    },
+                                                    leadingIcon = {
+                                                        Icon(
+                                                            AppIcons.Edit,
+                                                            contentDescription = null,
+                                                            modifier = Modifier.size(18.dp)
+                                                        )
+                                                    }
+                                                )
+                                            }
+                
+                                            if (message.isEdited) {
+                                                DropdownMenuItem(
+                                                    text = { Text("编辑历史") },
+                                                    onClick = {
+                                                        onEditIconClick(message.msgId)
+                                                    },
+                                                    leadingIcon = {
+                                                        Icon(
+                                                            AppIcons.History,
+                                                            contentDescription = null,
+                                                            modifier = Modifier.size(18.dp)
+                                                        )
+                                                    }
+                                                )
+                                            }
+                                        }
+                                        
+                                        if (message.isRecalled) {
+                                            Text(
+                                                text = message.getRecallDisplayContent(),
+                                                style = MaterialTheme.typography.bodySmall.copy(
                                                     color = MaterialTheme.colorScheme.onSurface
                                                 )
-                                            }
-                                        }
-                                    }
-                                }
-
-                                if (message.isRecalled) {
-                                    Text(
-                                        text = message.getRecallDisplayContent(),
-                                        style = MaterialTheme.typography.bodySmall.copy(
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
-                                    )
-                                } else {
-                                    when (message.contentType) {
-                                        MessageItem.CONTENT_TYPE_TEXT,
-                                        MessageItem.CONTENT_TYPE_MARKDOWN -> {
-                                            if (message.contentType == MessageItem.CONTENT_TYPE_MARKDOWN) {
-                                                MarkdownText(
-                                                    markdown = message.content,
-                                                    enableTextSelection = isSelected,
-                                                    onImageClick = { url ->
-                                                        onMarkdownImageClick(url)
-                                                    }
-                                                )
-                                            } else {
-                                                val timeText = remember(timestampDisplay, message.isEdited) {
-                                                    buildString {
-                                                        append(timestampDisplay)
-                                                        if (message.isEdited) append(" 已编辑")
-                                                    }
-                                                }
-                                                MessageText(
-                                                    text = message.content,
-                                                    timestampText = timeText,
-                                                    bodyStyle = MaterialTheme.typography.bodyMedium.copy(
-                                                        color = MaterialTheme.colorScheme.onSurface
-                                                    ),
-                                                    timestampStyle = MaterialTheme.typography.labelSmall.copy(
-                                                        color = MaterialTheme.colorScheme.onSurface.copy(
-                                                            alpha = 0.7f
-                                                        )
-                                                    ),
-                                                    enableSelection = isSelected
-                                                )
-                                            }
-                                        }
-                                        
-                                        MessageItem.CONTENT_TYPE_HTML -> {
-                                            LiteHtmlContent(
-                                                htmlContent = message.content,
-                                                modifier = Modifier.fillMaxWidth(),
-                                                onImageClick = { imageUrl ->
-                                                    val allImages = extractImageUrls(message.content)
-                                                    showImageViewer(
-                                                        context = context,
-                                                        images = allImages.map(::fullImagePreviewItem),
-                                                        initialIndex = allImages.indexOf(imageUrl).coerceAtLeast(0)
-                                                    )
-                                                },
-                                                backgroundColor = if (isMine)
-                                                    MaterialTheme.colorScheme.primaryContainer
-                                                else
-                                                    incomingAttachmentBackgroundColor
                                             )
-                                        }
-
-                                        MessageItem.CONTENT_TYPE_AUDIO -> {
-                                            val audioUrl = message.audioUrl
-                                            val audioDuration = message.audioTime?.coerceAtLeast(0) ?: 0
-                                            val isPlaying = audioPlaybackState.messageId == message.msgId &&
-                                                audioPlaybackState.isPlaying
-                                            val durationText = formatAudioDuration(audioDuration)
-                                            val audioWidth = (120 + audioDuration * 4).coerceIn(120, 240).dp
-
-                                            Surface(
-                                                modifier = Modifier
-                                                    .width(audioWidth)
-                                                    .height(48.dp)
-                                                    .clip(RoundedCornerShape(16.dp))
-                                                    .clickable(
-                                                        enabled = !isSelectionMode && !message.isRecalled && audioUrl != null
-                                                    ) {
-                                                        audioUrl?.let {
-                                                            AudioPlaybackManager.toggle(
+                                        } else {
+                                            when (message.contentType) {
+                                                MessageItem.CONTENT_TYPE_TEXT,
+                                                MessageItem.CONTENT_TYPE_MARKDOWN -> {
+                                                    if (message.contentType == MessageItem.CONTENT_TYPE_MARKDOWN) {
+                                                        MarkdownText(
+                                                            markdown = message.content,
+                                                            enableTextSelection = isSelected,
+                                                            onImageClick = { url ->
+                                                                onMarkdownImageClick(url)
+                                                            }
+                                                        )
+                                                    } else {
+                                                        val timeText = remember(timestampDisplay, message.isEdited) {
+                                                            buildString {
+                                                                append(timestampDisplay)
+                                                                if (message.isEdited) append(" 已编辑")
+                                                            }
+                                                        }
+                                                        MessageText(
+                                                            text = message.content,
+                                                            timestampText = timeText,
+                                                            bodyStyle = MaterialTheme.typography.bodyMedium.copy(
+                                                                color = MaterialTheme.colorScheme.onSurface
+                                                            ),
+                                                            timestampStyle = MaterialTheme.typography.labelSmall.copy(
+                                                                color = MaterialTheme.colorScheme.onSurface.copy(
+                                                                    alpha = 0.7f
+                                                                )
+                                                            ),
+                                                            enableSelection = isSelected
+                                                        )
+                                                    }
+                                                }
+    
+                                                MessageItem.CONTENT_TYPE_HTML -> {
+                                                    LiteHtmlContent(
+                                                        htmlContent = message.content,
+                                                        modifier = Modifier.fillMaxWidth(),
+                                                        onImageClick = { imageUrl ->
+                                                            val allImages = extractImageUrls(message.content)
+                                                            showImageViewer(
                                                                 context = context,
-                                                                messageId = message.msgId,
-                                                                url = it
+                                                                images = allImages.map(::fullImagePreviewItem),
+                                                                initialIndex = allImages.indexOf(imageUrl).coerceAtLeast(0)
                                                             )
-                                                        }
-                                                    },
-                                                shape = RoundedCornerShape(16.dp),
-                                                color = if (isMine) {
-                                                    MaterialTheme.colorScheme.primaryContainer
-                                                } else {
-                                                    incomingAttachmentBackgroundColor
-                                                }
-                                            ) {
-                                                Row(
-                                                    modifier = Modifier
-                                                        .fillMaxSize()
-                                                        .padding(horizontal = 12.dp),
-                                                    verticalAlignment = Alignment.CenterVertically
-                                                ) {
-                                                    Icon(
-                                                        imageVector = if (isPlaying) AppIcons.Pause else AppIcons.PlayArrow,
-                                                        contentDescription = if (isPlaying) "暂停语音" else "播放语音",
-                                                        modifier = Modifier.size(24.dp),
-                                                        tint = MaterialTheme.colorScheme.onSurface
-                                                    )
-                                                    Spacer(modifier = Modifier.width(8.dp))
-
-                                                    Text(
-                                                        text = durationText,
-                                                        style = MaterialTheme.typography.bodyMedium,
-                                                        color = MaterialTheme.colorScheme.onSurface,
-                                                        maxLines = 1
+                                                        },
+                                                        backgroundColor = if (isMine)
+                                                            MaterialTheme.colorScheme.primaryContainer
+                                                        else
+                                                            incomingAttachmentBackgroundColor
                                                     )
                                                 }
-                                            }
-                                        }
-
-                                        MessageItem.CONTENT_TYPE_IMAGE,
-                                        MessageItem.CONTENT_TYPE_STICKER,
-                                        MessageItem.CONTENT_TYPE_VIDEO -> {
-                                            if (hideImages) {
-                                                Surface(
-                                                    modifier = Modifier
-                                                        .fillMaxWidth()
-                                                        .height(120.dp),
-                                                    color = incomingAttachmentBackgroundColor,
-                                                    shape = RoundedCornerShape(
-                                                        topStart = if (isLastFromSender) bubbleCornerRadius.dp else (bubbleCornerRadius / 4).dp,
-                                                        topEnd = if (isLastFromSender) bubbleCornerRadius.dp else (bubbleCornerRadius / 4).dp
-                                                    )
-                                                ) {
-                                                    Column(
-                                                        modifier = Modifier.fillMaxSize(),
-                                                        horizontalAlignment = Alignment.CenterHorizontally,
-                                                        verticalArrangement = Arrangement.Center
-                                                    ) {
-                                                        Icon(
-                                                            AppIcons.ImageNotSupported,
-                                                            contentDescription = null,
-                                                            modifier = Modifier.size(48.dp),
-                                                            tint = MaterialTheme.colorScheme.onSurface
-                                                        )
-                                                        Spacer(modifier = Modifier.height(8.dp))
-                                                        Text(
-                                                            text = when (message.contentType) {
-                                                                MessageItem.CONTENT_TYPE_STICKER -> "表情包已隐藏"
-                                                                MessageItem.CONTENT_TYPE_VIDEO -> "视频已隐藏"
-                                                                else -> "图片已隐藏"
-                                                            },
-                                                            style = MaterialTheme.typography.bodySmall,
-                                                            color = MaterialTheme.colorScheme.onSurface
-                                                        )
-                                                    }
-                                                }
-                                            } else {
-                                                val isImageMessage = message.contentType == MessageItem.CONTENT_TYPE_IMAGE
-                                                val isVideoMessage = message.contentType == MessageItem.CONTENT_TYPE_VIDEO
-                                                val mediaUrl = when (message.contentType) {
-                                                    MessageItem.CONTENT_TYPE_STICKER -> resolveStickerMessageUrl(
-                                                        imageUrl = message.imageUrl,
-                                                        stickerUrl = message.stickerUrl
-                                                    )
-                                                    MessageItem.CONTENT_TYPE_VIDEO -> message.videoUrl
-                                                    else -> message.imageUrl
-                                                }
-                                                mediaUrl?.let { url ->
-                                                    val videoDuration = if (isVideoMessage) {
-                                                        formatVideoDuration(message.videoTime)
-                                                    } else {
-                                                        null
-                                                    }
-                                                    val imageRatio = if (isVideoMessage) {
-                                                        videoAspectRatio(
-                                                            message.imageWidth,
-                                                            message.imageHeight
-                                                        )
-                                                    } else {
-                                                        imageAspectRatio(
-                                                            message.imageWidth,
-                                                            message.imageHeight
-                                                        )
-                                                    }
-                                                    val imageMaxWidth = if (imageRatio >= 1f) {
-                                                        240.dp
-                                                    } else {
-                                                        160.dp
-                                                    }
-                                                    val displayUrl = if (isImageMessage) imageThumbnailUrl(url) else url
-                                                    var retryCount by remember(url) { mutableIntStateOf(0) }
-                                                    var loadState by remember(url, retryCount) { mutableIntStateOf(0) }
-                                                    val imageRequest = remember(displayUrl, message.contentType, retryCount) {
-                                                        val request = ImageRequest.Builder(context)
-                                                            .data(displayUrl)
-                                                            .setParameter("retry", retryCount)
-                                                            .allowHardware(
-                                                                chatMediaAllowsHardwareBitmaps(message.contentType)
-                                                            )
-                                                        if (isVideoMessage) request.videoFrameMillis(0)
-                                                        request.build()
-                                                    }
-
-                                                    val imageShape = RoundedCornerShape(
-                                                        topStart = if (!isMine && !isLastFromSender && message.quoteMsgText == null) (bubbleCornerRadius / 4).dp else bubbleCornerRadius.dp,
-                                                        topEnd = if (isMine && !isLastFromSender && message.quoteMsgText == null) (bubbleCornerRadius / 4).dp else bubbleCornerRadius.dp,
-                                                        bottomStart = if (!isMine && !isFirstFromSender) (bubbleCornerRadius / 4).dp else bubbleCornerRadius.dp,
-                                                        bottomEnd = if (isMine && !isFirstFromSender) (bubbleCornerRadius / 4).dp else bubbleCornerRadius.dp
-                                                    )
-                                                    val sourceCoordinates = remember(message.msgId, url) {
-                                                        ImageSourceCoordinates()
-                                                    }
-
-                                                    Box(
-                                                        modifier = Modifier
-                                                            .then(
-                                                                if (isVideoMessage) {
-                                                                    Modifier
-                                                                        .width(200.dp)
-                                                                        .aspectRatio(imageRatio)
-                                                                } else {
-                                                                    Modifier
-                                                                        .widthIn(min = 100.dp, max = imageMaxWidth)
-                                                                        .aspectRatio(imageRatio)
-                                                                }
-                                                            )
-                                                            .onGloballyPositioned { coordinates ->
-                                                                sourceCoordinates.value = coordinates
-                                                            }
-                                                            .clip(imageShape)
-                                                            .background(
-                                                                if (isImageMessage || isVideoMessage) {
-                                                                incomingAttachmentBackgroundColor
-                                                                } else {
-                                                                    Color.Transparent
-                                                                }
-                                                            )
-                                                            .combinedClickable(
-                                                                onClick = {
-                                                                    val sourceBounds = sourceCoordinates.value
-                                                                        ?.takeIf { it.isAttached }
-                                                                        ?.toImageViewerSourceBounds(
-                                                                            isCropped = isImageMessage || isVideoMessage
-                                                                        )
-                                                                    onImageClick(message, sourceBounds)
-                                                                },
-                                                                onLongClick = { onLongPress(message) }
-                                                            )
-                                                    ) {
-                                                        AsyncImage(
-                                                            model = imageRequest,
-                                                            contentDescription = if (isVideoMessage) "视频缩略图" else null,
-                                                            contentScale = ContentScale.Crop,
-                                                            modifier = Modifier.fillMaxSize(),
-                                                            onLoading = { loadState = 0 },
-                                                            onSuccess = { loadState = 1 },
-                                                            onError = { loadState = 2 }
-                                                        )
-
-                                                        if (loadState == 0) {
-                                                            Icon(
-                                                                imageVector = when {
-                                                                    isVideoMessage -> AppIcons.VideoFile
-                                                                    isImageMessage -> AppIcons.Image
-                                                                    else -> AppIcons.Mood
-                                                                },
-                                                                contentDescription = null,
-                                                                modifier = Modifier
-                                                                    .align(Alignment.Center)
-                                                                    .size(28.dp),
-                                                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f)
-                                                            )
-                                                        } else if (loadState == 2) {
-                                                            IconButton(
-                                                                onClick = { retryCount++ },
-                                                                modifier = Modifier.align(Alignment.Center)
-                                                            ) {
-                                                                Icon(
-                                                                    imageVector = AppIcons.Refresh,
-                                                                    contentDescription = if (isVideoMessage) {
-                                                                        "重试加载视频缩略图"
-                                                                    } else {
-                                                                        "重试加载图片"
-                                                                    }
-                                                                )
-                                                            }
-                                                        }
-
-                                                        if (isVideoMessage && loadState == 1) {
-                                                            Surface(
-                                                                modifier = Modifier
-                                                                    .align(Alignment.Center)
-                                                                    .size(48.dp),
-                                                                shape = CircleShape,
-                                                                color = Color.Black.copy(alpha = 0.5f)
-                                                            ) {
-                                                                Icon(
-                                                                    imageVector = AppIcons.PlayArrow,
-                                                                    contentDescription = "播放视频",
-                                                                    modifier = Modifier.padding(8.dp),
-                                                                    tint = Color.White
-                                                                )
-                                                            }
-                                                        }
-
-                                                        videoDuration?.let { duration ->
-                                                            Row(
-                                                                verticalAlignment = Alignment.CenterVertically,
-                                                                horizontalArrangement = Arrangement.spacedBy(3.dp),
-                                                                modifier = Modifier
-                                                                    .align(Alignment.BottomStart)
-                                                                    .padding(start = 6.dp, bottom = 6.dp)
-                                                                    .background(
-                                                                        color = Color.Black.copy(alpha = 0.45f),
-                                                                        shape = RoundedCornerShape(50.dp)
-                                                                    )
-                                                                    .padding(horizontal = 6.dp, vertical = 2.dp)
-                                                            ) {
-                                                                Icon(
-                                                                    imageVector = AppIcons.PlayCircle,
-                                                                    contentDescription = null,
-                                                                    modifier = Modifier.size(12.dp),
-                                                                    tint = Color.White
-                                                                )
-                                                                Text(
-                                                                    text = duration,
-                                                                    fontSize = 10.sp,
-                                                                    lineHeight = 16.sp,
-                                                                    maxLines = 1,
-                                                                    color = Color.White
-                                                                )
-                                                            }
-                                                        }
-
-                                                        Row(
-                                                            verticalAlignment = Alignment.CenterVertically,
-                                                            horizontalArrangement = Arrangement.spacedBy(3.dp),
-                                                            modifier = Modifier
-                                                                .align(Alignment.BottomEnd)
-                                                                .padding(end = 6.dp, bottom = 6.dp)
-                                                                .background(
-                                                                    color = Color.Black.copy(alpha = 0.3f),
-                                                                    shape = RoundedCornerShape(50.dp)
-                                                                )
-                                                                .padding(horizontal = 6.dp, vertical = 2.dp)
-                                                        ) {
-                                                            if (message.contentType == MessageItem.CONTENT_TYPE_STICKER) {
-                                                                Icon(
-                                                                    imageVector = AppIcons.Mood,
-                                                                    contentDescription = null,
-                                                                    modifier = Modifier.size(12.dp),
-                                                                    tint = Color.White
-                                                                )
-                                                            }
-                                                            Text(
-                                                                text = timestampDisplay,
-                                                                fontSize = 10.sp,
-                                                                lineHeight = 16.sp,
-                                                                maxLines = 1,
-                                                                color = Color.White
-                                                            )
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
     
-                                        MessageItem.CONTENT_TYPE_FILE -> {
-                                            message.fileName?.let { fileName ->
-                                                val progress = downloadProgress ?: 0f
-                                                val isDownloading = downloadProgress != null && downloadProgress < 1f
-                                                val isIndeterminate = downloadProgress != null && downloadProgress < 0f
-                                                val isComplete = isDownloaded || (downloadProgress != null && progress >= 1f)
+                                                MessageItem.CONTENT_TYPE_AUDIO -> {
+                                                    val audioUrl = message.audioUrl
+                                                    val audioDuration = message.audioTime?.coerceAtLeast(0) ?: 0
+                                                    val isPlaying = audioPlaybackState.messageId == message.msgId &&
+                                                        audioPlaybackState.isPlaying
+                                                    val durationText = formatAudioDuration(audioDuration)
+                                                    val audioWidth = (120 + audioDuration * 4).coerceIn(120, 240).dp
     
-                                                Row(
-                                                    modifier = Modifier
-                                                        .width(IntrinsicSize.Max)
-                                                        .then(
-                                                            if (isLastFromSender || message.quoteMsgText != null)
-                                                                Modifier.clip(
-                                                                    RoundedCornerShape(
-                                                                        topStart = bubbleCornerRadius.dp,
-                                                                        topEnd = bubbleCornerRadius.dp
-                                                                    )
-                                                                )
-                                                            else Modifier
-                                                        )
-                                                        .background(
-                                                            if (isMine)
-                                                                MaterialTheme.colorScheme.primaryContainer.copy(alpha = bubbleOpacity)
-                                                            else
-                                                                incomingBubbleColor
-                                                        )
-                                                        .combinedClickable(
-                                                            onClick = {
-                                                                if (!isDownloading) {
-                                                                    onDownloadClick(message)
-                                                                }
-                                                            },
-                                                            onLongClick = { onLongPress(message) }
-                                                        )
-                                                        .padding(12.dp),
-                                                    verticalAlignment = Alignment.CenterVertically
-                                                ) {
                                                     Surface(
-                                                        shape = CircleShape,
-                                                        color = MaterialTheme.colorScheme.primary,
-                                                        modifier = Modifier.size(40.dp)
-                                                    ) {
-                                                        Box(contentAlignment = Alignment.Center) {
-                                                            if (isDownloading) {
-                                                                if (isIndeterminate) {
-                                                                    CircularProgressIndicator(
-                                                                        modifier = Modifier.size(30.dp),
-                                                                        color = MaterialTheme.colorScheme.onPrimary,
-                                                                        strokeWidth = 2.dp
-                                                                    )
-                                                                } else {
-                                                                    CircularProgressIndicator(
-                                                                        progress = { progress },
-                                                                        modifier = Modifier.size(30.dp),
-                                                                        color = MaterialTheme.colorScheme.onPrimary,
-                                                                        strokeWidth = 2.dp
+                                                        modifier = Modifier
+                                                            .width(audioWidth)
+                                                            .height(48.dp)
+                                                            .clip(RoundedCornerShape(16.dp))
+                                                            .clickable(
+                                                                enabled = !isSelectionMode && !message.isRecalled && audioUrl != null
+                                                            ) {
+                                                                audioUrl?.let {
+                                                                    AudioPlaybackManager.toggle(
+                                                                        context = context,
+                                                                        messageId = message.msgId,
+                                                                        url = it
                                                                     )
                                                                 }
+                                                            },
+                                                        shape = RoundedCornerShape(16.dp),
+                                                        color = if (isMine) {
+                                                            MaterialTheme.colorScheme.primaryContainer
+                                                        } else {
+                                                            incomingAttachmentBackgroundColor
+                                                        }
+                                                    ) {
+                                                        Row(
+                                                            modifier = Modifier
+                                                                .fillMaxSize()
+                                                                .padding(horizontal = 12.dp),
+                                                            verticalAlignment = Alignment.CenterVertically
+                                                        ) {
+                                                            Icon(
+                                                                imageVector = if (isPlaying) AppIcons.Pause else AppIcons.PlayArrow,
+                                                                contentDescription = if (isPlaying) "暂停语音" else "播放语音",
+                                                                modifier = Modifier.size(24.dp),
+                                                                tint = MaterialTheme.colorScheme.onSurface
+                                                            )
+                                                            Spacer(modifier = Modifier.width(8.dp))
+    
+                                                            Text(
+                                                                text = durationText,
+                                                                style = MaterialTheme.typography.bodyMedium,
+                                                                color = MaterialTheme.colorScheme.onSurface,
+                                                                maxLines = 1
+                                                            )
+                                                        }
+                                                    }
+                                                }
+    
+                                                MessageItem.CONTENT_TYPE_IMAGE,
+                                                MessageItem.CONTENT_TYPE_STICKER,
+                                                MessageItem.CONTENT_TYPE_VIDEO -> {
+                                                    if (hideImages) {
+                                                        Surface(
+                                                            modifier = Modifier
+                                                                .fillMaxWidth()
+                                                                .height(120.dp),
+                                                            color = incomingAttachmentBackgroundColor,
+                                                            shape = cardShape
+                                                        ) {
+                                                            Column(
+                                                                modifier = Modifier.fillMaxSize(),
+                                                                horizontalAlignment = Alignment.CenterHorizontally,
+                                                                verticalArrangement = Arrangement.Center
+                                                            ) {
+                                                                Icon(
+                                                                    AppIcons.ImageNotSupported,
+                                                                    contentDescription = null,
+                                                                    modifier = Modifier.size(48.dp),
+                                                                    tint = MaterialTheme.colorScheme.onSurface
+                                                                )
+                                                                Spacer(modifier = Modifier.height(8.dp))
+                                                                Text(
+                                                                    text = when (message.contentType) {
+                                                                        MessageItem.CONTENT_TYPE_STICKER -> "表情包已隐藏"
+                                                                        MessageItem.CONTENT_TYPE_VIDEO -> "视频已隐藏"
+                                                                        else -> "图片已隐藏"
+                                                                    },
+                                                                    style = MaterialTheme.typography.bodySmall,
+                                                                    color = MaterialTheme.colorScheme.onSurface
+                                                                )
+                                                            }
+                                                        }
+                                                    } else {
+                                                        val isImageMessage = message.contentType == MessageItem.CONTENT_TYPE_IMAGE
+                                                        val isVideoMessage = message.contentType == MessageItem.CONTENT_TYPE_VIDEO
+                                                        val mediaUrl = when (message.contentType) {
+                                                            MessageItem.CONTENT_TYPE_STICKER -> resolveStickerMessageUrl(
+                                                                imageUrl = message.imageUrl,
+                                                                stickerUrl = message.stickerUrl
+                                                            )
+                                                            MessageItem.CONTENT_TYPE_VIDEO -> message.videoUrl
+                                                            else -> message.imageUrl
+                                                        }
+                                                        mediaUrl?.let { url ->
+                                                            val videoDuration = if (isVideoMessage) {
+                                                                formatVideoDuration(message.videoTime)
+                                                            } else {
+                                                                null
+                                                            }
+                                                            val imageRatio = if (isVideoMessage) {
+                                                                videoAspectRatio(
+                                                                    message.imageWidth,
+                                                                    message.imageHeight
+                                                                )
+                                                            } else {
+                                                                imageAspectRatio(
+                                                                    message.imageWidth,
+                                                                    message.imageHeight
+                                                                )
+                                                            }
+                                                            val imageMaxWidth = if (imageRatio >= 1f) {
+                                                                240.dp
+                                                            } else {
+                                                                160.dp
+                                                            }
+                                                            val displayUrl = if (isImageMessage) imageThumbnailUrl(url) else url
+                                                            var retryCount by remember(url) { mutableIntStateOf(0) }
+                                                            var loadState by remember(url, retryCount) { mutableIntStateOf(0) }
+                                                            val imageRequest = remember(displayUrl, message.contentType, retryCount) {
+                                                                val request = ImageRequest.Builder(context)
+                                                                    .data(displayUrl)
+                                                                    .setParameter("retry", retryCount)
+                                                                    .allowHardware(
+                                                                        chatMediaAllowsHardwareBitmaps(message.contentType)
+                                                                    )
+                                                                if (isVideoMessage) request.videoFrameMillis(0)
+                                                                request.build()
+                                                            }
+    
+                                                            val sourceCoordinates = remember(message.msgId, url) {
+                                                                ImageSourceCoordinates()
+                                                            }
+    
+                                                            Box(
+                                                                modifier = Modifier
+                                                                    .then(
+                                                                        if (isVideoMessage) {
+                                                                            Modifier
+                                                                                .width(200.dp)
+                                                                                .aspectRatio(imageRatio)
+                                                                        } else {
+                                                                            Modifier
+                                                                                .widthIn(min = 100.dp, max = imageMaxWidth)
+                                                                                .aspectRatio(imageRatio)
+                                                                        }
+                                                                    )
+                                                                    .onGloballyPositioned { coordinates ->
+                                                                        sourceCoordinates.value = coordinates
+                                                                    }
+                                                                    .clip(cardShape)
+                                                                    .background(
+                                                                        if (isImageMessage || isVideoMessage) {
+                                                                            incomingAttachmentBackgroundColor
+                                                                        } else {
+                                                                            Color.Transparent
+                                                                        }
+                                                                    )
+                                                                    .combinedClickable(
+                                                                        onClick = {
+                                                                            val sourceBounds = sourceCoordinates.value
+                                                                                ?.takeIf { it.isAttached }
+                                                                                ?.toImageViewerSourceBounds(
+                                                                                    isCropped = isImageMessage || isVideoMessage
+                                                                                )
+                                                                            onImageClick(message, sourceBounds)
+                                                                        },
+                                                                        onLongClick = { onLongPress(message) }
+                                                                    )
+                                                            ) {
+                                                                AsyncImage(
+                                                                    model = imageRequest,
+                                                                    contentDescription = if (isVideoMessage) "视频缩略图" else null,
+                                                                    contentScale = ContentScale.Crop,
+                                                                    modifier = Modifier.fillMaxSize(),
+                                                                    onLoading = { loadState = 0 },
+                                                                    onSuccess = { loadState = 1 },
+                                                                    onError = { loadState = 2 }
+                                                                )
+    
+                                                                if (loadState == 0) {
+                                                                    Icon(
+                                                                        imageVector = when {
+                                                                            isVideoMessage -> AppIcons.VideoFile
+                                                                            isImageMessage -> AppIcons.Image
+                                                                            else -> AppIcons.Mood
+                                                                        },
+                                                                        contentDescription = null,
+                                                                        modifier = Modifier
+                                                                            .align(Alignment.Center)
+                                                                            .size(28.dp),
+                                                                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f)
+                                                                    )
+                                                                } else if (loadState == 2) {
+                                                                    IconButton(
+                                                                        onClick = { retryCount++ },
+                                                                        modifier = Modifier.align(Alignment.Center)
+                                                                    ) {
+                                                                        Icon(
+                                                                            imageVector = AppIcons.Refresh,
+                                                                            contentDescription = if (isVideoMessage) {
+                                                                                "重试加载视频缩略图"
+                                                                            } else {
+                                                                                "重试加载图片"
+                                                                            }
+                                                                        )
+                                                                    }
+                                                                }
+    
+                                                                if (isVideoMessage && loadState == 1) {
+                                                                    Surface(
+                                                                        modifier = Modifier
+                                                                            .align(Alignment.Center)
+                                                                            .size(48.dp),
+                                                                        shape = CircleShape,
+                                                                        color = Color.Black.copy(alpha = 0.5f)
+                                                                    ) {
+                                                                        Icon(
+                                                                            imageVector = AppIcons.PlayArrow,
+                                                                            contentDescription = "播放视频",
+                                                                            modifier = Modifier.padding(8.dp),
+                                                                            tint = Color.White
+                                                                        )
+                                                                    }
+                                                                }
+    
+                                                                videoDuration?.let { duration ->
+                                                                    Row(
+                                                                        verticalAlignment = Alignment.CenterVertically,
+                                                                        horizontalArrangement = Arrangement.spacedBy(3.dp),
+                                                                        modifier = Modifier
+                                                                            .align(Alignment.BottomStart)
+                                                                            .padding(start = 6.dp, bottom = 6.dp)
+                                                                            .background(
+                                                                                color = Color.Black.copy(alpha = 0.45f),
+                                                                                shape = RoundedCornerShape(50.dp)
+                                                                            )
+                                                                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                                                                    ) {
+                                                                        Icon(
+                                                                            imageVector = AppIcons.PlayCircle,
+                                                                            contentDescription = null,
+                                                                            modifier = Modifier.size(12.dp),
+                                                                            tint = Color.White
+                                                                        )
+                                                                        Text(
+                                                                            text = duration,
+                                                                            fontSize = 10.sp,
+                                                                            lineHeight = 16.sp,
+                                                                            maxLines = 1,
+                                                                            color = Color.White
+                                                                        )
+                                                                    }
+                                                                }
+    
+                                                                Row(
+                                                                    verticalAlignment = Alignment.CenterVertically,
+                                                                    horizontalArrangement = Arrangement.spacedBy(3.dp),
+                                                                    modifier = Modifier
+                                                                        .align(Alignment.BottomEnd)
+                                                                        .padding(end = 6.dp, bottom = 6.dp)
+                                                                        .background(
+                                                                            color = Color.Black.copy(alpha = 0.3f),
+                                                                            shape = RoundedCornerShape(50.dp)
+                                                                        )
+                                                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                                                ) {
+                                                                    if (message.contentType == MessageItem.CONTENT_TYPE_STICKER) {
+                                                                        Icon(
+                                                                            imageVector = AppIcons.Mood,
+                                                                            contentDescription = null,
+                                                                            modifier = Modifier.size(12.dp),
+                                                                            tint = Color.White
+                                                                        )
+                                                                    }
+                                                                    Text(
+                                                                        text = timestampDisplay,
+                                                                        fontSize = 10.sp,
+                                                                        lineHeight = 16.sp,
+                                                                        maxLines = 1,
+                                                                        color = Color.White
+                                                                    )
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+    
+                                                MessageItem.CONTENT_TYPE_FILE -> {
+                                                    message.fileName?.let { fileName ->
+                                                        val progress = downloadProgress ?: 0f
+                                                        val isDownloading = downloadProgress != null && downloadProgress < 1f
+                                                        val isIndeterminate = downloadProgress != null && downloadProgress < 0f
+                                                        val isComplete = isDownloaded || (downloadProgress != null && progress >= 1f)
+    
+                                                        Row(
+                                                            modifier = Modifier
+                                                                .width(IntrinsicSize.Max)
+                                                                .then(
+                                                                    if (isLastFromSender || message.quoteMsgText != null)
+                                                                        Modifier.clip(
+                                                                            RoundedCornerShape(
+                                                                                topStart = bubbleCornerRadius.dp,
+                                                                                topEnd = bubbleCornerRadius.dp
+                                                                            )
+                                                                        )
+                                                                    else Modifier
+                                                                )
+                                                                .background(
+                                                                    if (isMine)
+                                                                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = bubbleOpacity)
+                                                                    else
+                                                                        incomingBubbleColor
+                                                                )
+                                                                .combinedClickable(
+                                                                    onClick = {
+                                                                        if (!isDownloading) {
+                                                                            onDownloadClick(message)
+                                                                        }
+                                                                    },
+                                                                    onLongClick = { onLongPress(message) }
+                                                                )
+                                                                .padding(12.dp),
+                                                            verticalAlignment = Alignment.CenterVertically
+                                                        ) {
+                                                            Surface(
+                                                                shape = CircleShape,
+                                                                color = MaterialTheme.colorScheme.primary,
+                                                                modifier = Modifier.size(40.dp)
+                                                            ) {
+                                                                Box(contentAlignment = Alignment.Center) {
+                                                                    if (isDownloading) {
+                                                                        if (isIndeterminate) {
+                                                                            CircularProgressIndicator(
+                                                                                modifier = Modifier.size(30.dp),
+                                                                                color = MaterialTheme.colorScheme.onPrimary,
+                                                                                strokeWidth = 2.dp
+                                                                            )
+                                                                        } else {
+                                                                            CircularProgressIndicator(
+                                                                                progress = { progress },
+                                                                                modifier = Modifier.size(30.dp),
+                                                                                color = MaterialTheme.colorScheme.onPrimary,
+                                                                                strokeWidth = 2.dp
+                                                                            )
+                                                                        }
+                                                                    } else {
+                                                                        Icon(
+                                                                            imageVector = if (isComplete) AppIcons.Check else getFileIcon(fileName),
+                                                                            contentDescription = null,
+                                                                            modifier = Modifier.size(24.dp),
+                                                                            tint = MaterialTheme.colorScheme.onPrimary
+                                                                        )
+                                                                    }
+                                                                }
+                                                            }
+    
+                                                            Spacer(modifier = Modifier.width(12.dp))
+    
+                                                            Column(modifier = Modifier.weight(1f)) {
+                                                                Text(
+                                                                    text = fileName,
+                                                                    fontSize = 14.sp,
+                                                                    lineHeight = 20.sp,
+                                                                    fontWeight = FontWeight.Bold,
+                                                                    maxLines = 1,
+                                                                    overflow = TextOverflow.Ellipsis,
+                                                                    color = MaterialTheme.colorScheme.onSurface
+                                                                )
+    
+                                                                Row(modifier = Modifier.padding(top = 2.dp)) {
+                                                                    message.fileSize?.let { size ->
+                                                                        Text(
+                                                                            text = formatFileSize(size),
+                                                                            fontSize = 12.sp,
+                                                                            lineHeight = 18.sp,
+                                                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                                                                            modifier = Modifier.padding(end = 4.dp)
+                                                                        )
+                                                                    }
+                                                                    Text(
+                                                                        text = timestampDisplay,
+                                                                        fontSize = 12.sp,
+                                                                        lineHeight = 18.sp,
+                                                                        maxLines = 1,
+                                                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                                                                    )
+    
+                                                                    if (isDownloading) {
+                                                                        Text(
+                                                                            text = " ${(progress * 100).toInt()}%",
+                                                                            fontSize = 12.sp,
+                                                                            lineHeight = 18.sp,
+                                                                            color = MaterialTheme.colorScheme.primary
+                                                                        )
+                                                                    } else if (isComplete) {
+                                                                        Text(
+                                                                            text = " 已下载",
+                                                                            fontSize = 12.sp,
+                                                                            lineHeight = 18.sp,
+                                                                            color = MaterialTheme.colorScheme.primary
+                                                                        )
+                                                                    }
+                                                                }
+                                                            }
+    
+                                                            Spacer(modifier = Modifier.width(24.dp))
+    
+                                                            if (isComplete) {
+                                                                Icon(
+                                                                    imageVector = AppIcons.CheckCircle,
+                                                                    contentDescription = "已下载",
+                                                                    modifier = Modifier.size(20.dp),
+                                                                    tint = MaterialTheme.colorScheme.primary
+                                                                )
+                                                            } else if (isDownloading) {
+                                                                Icon(
+                                                                    imageVector = AppIcons.Close,
+                                                                    contentDescription = "取消下载",
+                                                                    modifier = Modifier
+                                                                        .size(20.dp)
+                                                                        .clickable { },
+                                                                    tint = MaterialTheme.colorScheme.error
+                                                                )
                                                             } else {
                                                                 Icon(
-                                                                    imageVector = if (isComplete) AppIcons.Check else getFileIcon(fileName),
-                                                                    contentDescription = null,
-                                                                    modifier = Modifier.size(24.dp),
-                                                                    tint = MaterialTheme.colorScheme.onPrimary
+                                                                    imageVector = AppIcons.Download,
+                                                                    contentDescription = "下载",
+                                                                    modifier = Modifier
+                                                                        .size(20.dp)
+                                                                        .clickable { onDownloadClick(message) },
+                                                                    tint = MaterialTheme.colorScheme.primary
                                                                 )
                                                             }
                                                         }
                                                     }
+                                                }
     
-                                                    Spacer(modifier = Modifier.width(12.dp))
+                                                MessageItem.CONTENT_TYPE_POST -> {
+                                                    PostCard(
+                                                        message.postId?.toIntOrNull() ?: 0,
+                                                        message.postTitle ?: "文章",
+                                                        message.postContent ?: "内容"
+                                                    )
+                                                }
     
-                                                    Column(modifier = Modifier.weight(1f)) {
-                                                        Text(
-                                                            text = fileName,
-                                                            fontSize = 14.sp,
-                                                            lineHeight = 20.sp,
-                                                            fontWeight = FontWeight.Bold,
-                                                            maxLines = 1,
-                                                            overflow = TextOverflow.Ellipsis,
-                                                            color = MaterialTheme.colorScheme.onSurface
-                                                        )
-    
-                                                        Row(modifier = Modifier.padding(top = 2.dp)) {
-                                                            message.fileSize?.let { size ->
-                                                                Text(
-                                                                    text = formatFileSize(size),
-                                                                    fontSize = 12.sp,
-                                                                    lineHeight = 18.sp,
-                                                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-                                                                    modifier = Modifier.padding(end = 4.dp)
-                                                                )
-                                                            }
-                                                            Text(
-                                                                text = timestampDisplay,
-                                                                fontSize = 12.sp,
-                                                                lineHeight = 18.sp,
-                                                                maxLines = 1,
-                                                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                                                            )
-    
-                                                            if (isDownloading) {
-                                                                Text(
-                                                                    text = " ${(progress * 100).toInt()}%",
-                                                                    fontSize = 12.sp,
-                                                                    lineHeight = 18.sp,
-                                                                    color = MaterialTheme.colorScheme.primary
-                                                                )
-                                                            } else if (isComplete) {
-                                                                Text(
-                                                                    text = " 已下载",
-                                                                    fontSize = 12.sp,
-                                                                    lineHeight = 18.sp,
-                                                                    color = MaterialTheme.colorScheme.primary
-                                                                )
-                                                            }
-                                                        }
-                                                    }
-                                                    
-                                                    Spacer(modifier = Modifier.width(24.dp))
-    
-                                                    if (isComplete) {
-                                                        Icon(
-                                                            imageVector = AppIcons.CheckCircle,
-                                                            contentDescription = "已下载",
-                                                            modifier = Modifier.size(20.dp),
-                                                            tint = MaterialTheme.colorScheme.primary
-                                                        )
-                                                    } else if (isDownloading) {
-                                                        Icon(
-                                                            imageVector = AppIcons.Close,
-                                                            contentDescription = "取消下载",
-                                                            modifier = Modifier
-                                                                .size(20.dp)
-                                                                .clickable { /* 取消下载逻辑 */ },
-                                                            tint = MaterialTheme.colorScheme.error
-                                                        )
-                                                    } else {
-                                                        Icon(
-                                                            imageVector = AppIcons.Download,
-                                                            contentDescription = "下载",
-                                                            modifier = Modifier
-                                                                .size(20.dp)
-                                                                .clickable { onDownloadClick(message) },
-                                                            tint = MaterialTheme.colorScheme.primary
-                                                        )
-                                                    }
+                                                else -> {
+                                                    Text(
+                                                        text = "暂不支持解析此消息：${message.contentType}",
+                                                        style = MaterialTheme.typography.bodyMedium,
+                                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
+                                                    )
                                                 }
                                             }
                                         }
-
-                                        MessageItem.CONTENT_TYPE_POST -> {
-                                            PostCard(
-                                                message.postId?.toIntOrNull() ?: 0,
-                                                message.postTitle ?: "文章",
-                                                message.postContent ?: "内容"
-                                            )
-                                        }
-        
-                                        else -> {
-                                            Text(
-                                                text = "暂不支持解析此消息：${message.contentType}",
-                                                style = MaterialTheme.typography.bodyMedium,
-                                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
-                                            )
-                                        }
-                                    }
-                                }
-
-                                if (!message.isRecalled && message.buttons.isNotEmpty()) {
-                                    MessageButtons(
-                                        buttons = message.buttons,
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(
-                                                top = if (hideCard) 4.dp else 6.dp,
-                                                start = if (hideCard) 8.dp else 0.dp,
-                                                end = if (hideCard) 8.dp else 0.dp,
-                                                bottom = if (hideCard) 4.dp else 0.dp
-                                            ),
-                                        onButtonClick = { button -> onButtonClick(message, button) }
-                                    )
-                                }
-
-                                if ((!hideCard && message.contentType != MessageItem.CONTENT_TYPE_TEXT) || message.isRecalled) {
-                                    Row(
-                                        modifier = Modifier.align(if (isMine) Alignment.End else Alignment.Start).padding(top = 2.dp)
-                                    ) {
-                                        Text(
-                                            text = timestampDisplay,
-                                            fontSize = 10.sp,
-                                            lineHeight = 16.sp,
-                                            maxLines = 1,
-                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                                        )
-                                        if (message.isEdited && !message.isRecalled) {
-                                            Text(
-                                                text = "已编辑",
-                                                fontSize = 10.sp,
-                                                lineHeight = 16.sp,
-                                                maxLines = 1,
-                                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-                                                modifier = Modifier.padding(start = 4.dp)
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        if (isMine && isFirstFromSender && !hideCard) {
-                            QuarterCircleCorner(isMine = true, color = cardColor)
-                            Spacer(Modifier.size(4.dp))
-                        } else {
-                            Spacer(Modifier.size(12.dp))
-                        }
-                    }
     
-                    DropdownMenu(
-                        expanded = showMenu,
-                        onDismissRequest = { showMenuChanged(null) },
-                        modifier = Modifier.align(if (isMine) Alignment.TopStart else Alignment.TopEnd),
-                        shape = MenuDefaults.standaloneGroupShape
-                    ) {
-                        if (message.content.isNotBlank()) {
-                            DropdownMenuItem(
-                                text = { Text("复制") },
-                                onClick = {
-                                    scope.launch {
-                                        clipboardManager.setClipEntry(ClipEntry(ClipData.newPlainText("msg", message.content)))
+                                        if (!message.isRecalled && message.buttons.isNotEmpty()) {
+                                            MessageButtons(
+                                                buttons = message.buttons,
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(
+                                                        top = if (hideCard) 4.dp else 6.dp,
+                                                        start = if (hideCard) 8.dp else 0.dp,
+                                                        end = if (hideCard) 8.dp else 0.dp,
+                                                        bottom = if (hideCard) 4.dp else 0.dp
+                                                    ),
+                                                onButtonClick = { button -> onButtonClick(message, button) }
+                                            )
+                                        }
+    
+                                        if ((!hideCard && message.contentType != MessageItem.CONTENT_TYPE_TEXT) || message.isRecalled) {
+                                            Row(
+                                                modifier = Modifier.padding(top = 2.dp)
+                                            ) {
+                                                Text(
+                                                    text = timestampDisplay,
+                                                    fontSize = 10.sp,
+                                                    lineHeight = 16.sp,
+                                                    maxLines = 1,
+                                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                                                )
+                                                if (message.isEdited && !message.isRecalled) {
+                                                    Text(
+                                                        text = "已编辑",
+                                                        fontSize = 10.sp,
+                                                        lineHeight = 16.sp,
+                                                        maxLines = 1,
+                                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                                                        modifier = Modifier.padding(start = 4.dp)
+                                                    )
+                                                }
+                                            }
+                                        }
                                     }
-                                    Toast.makeText(context, "复制成功", Toast.LENGTH_SHORT).show()
-                                    showMenuChanged(null)
-                                },
-                                leadingIcon = {
-                                    Icon(
-                                        AppIcons.ContentCopy,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(18.dp)
-                                    )
                                 }
-                            )
-                        }
-
-                        DropdownMenuItem(
-                            text = { Text("引用") },
-                            onClick = {
-                                showMenuChanged(null)
-                                onReply()
-                            },
-                            leadingIcon = {
-                                Icon(AppIcons.FormatQuote, contentDescription = null, modifier = Modifier.size(18.dp))
                             }
-                        )
 
-                        DropdownMenuItem(
-                            text = { Text("转发") },
-                            onClick = {
-                                showMenuChanged(null)
-                                onForward()
-                            },
-                            leadingIcon = {
-                                AutoMirroredIcon(
-                                    AppIcons.Redo,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(18.dp)
+                            if (hideCard && hasQuote) {
+                                Spacer(modifier = Modifier.width(8.dp))
+                                QuoteCard(
+                                    message = message,
+                                    hideSenderInfo = hideSenderInfo,
+                                    hideImages = hideImages,
+                                    isSelectionMode = isSelectionMode,
+                                    onQuoteClick = onQuoteClick,
+                                    modifier = Modifier.weight(1f, fill = false)
                                 )
                             }
-                        )
-
-                        if (isMine || isAdmin) {
-                            DropdownMenuItem(
-                                text = { Text("撤回") },
-                                onClick = {
-                                    showMenuChanged(null)
-                                    onRecall()
-                                },
-                                leadingIcon = {
-                                    AutoMirroredIcon(AppIcons.Undo, contentDescription = null, modifier = Modifier.size(18.dp))
-                                }
-                            )
-                        }
-
-                        if (isMine && message.content.isNotBlank()) {
-                            DropdownMenuItem(
-                                text = { Text("编辑") },
-                                onClick = {
-                                    showMenuChanged(null)
-                                    onEdit()
-                                },
-                                leadingIcon = {
-                                    Icon(
-                                        AppIcons.Edit,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                }
-                            )
-                        }
-
-                        if (message.isEdited) {
-                            DropdownMenuItem(
-                                text = { Text("编辑历史") },
-                                onClick = {
-                                    onEditIconClick(message.msgId)
-                                },
-                                leadingIcon = {
-                                    Icon(
-                                        AppIcons.History,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                }
-                            )
                         }
                     }
+                    Spacer(modifier = Modifier.width(32.dp))
                 }
-    
-                if (isMine && needAvatar) {
-                    Avatar(
-                        url = message.senderAvatar,
+            }
+        }
+    }
+}
+
+private fun LayoutDirection.opposite(): LayoutDirection = when (this) {
+    LayoutDirection.Ltr -> LayoutDirection.Rtl
+    LayoutDirection.Rtl -> LayoutDirection.Ltr
+}
+
+@Composable
+private fun QuoteCard(
+    message: MessageItem,
+    hideSenderInfo: Boolean,
+    hideImages: Boolean,
+    isSelectionMode: Boolean,
+    onQuoteClick: ((MessageItem) -> Unit)?,
+    modifier: Modifier = Modifier
+) {
+    val quoteText = message.quoteMsgText ?: return
+    val context = LocalContext.current
+
+    Surface(
+        modifier = modifier.padding(bottom = 4.dp),
+        onClick = {
+            if (
+                !isSelectionMode &&
+                !message.quoteMsgId.isNullOrBlank() &&
+                onQuoteClick != null
+            ) {
+                onQuoteClick(message)
+            }
+        },
+        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+        shape = RoundedCornerShape(6.dp)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.height(IntrinsicSize.Max)
+        ) {
+            Box(
+                modifier = Modifier
+                    .width(3.dp)
+                    .fillMaxHeight()
+                    .background(MaterialTheme.colorScheme.primary)
+            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(8.dp)
+            ) {
+                if (message.quoteImageUrl != null && !hideImages) {
+                    val builder = ImageRequest.Builder(context)
+                        .data(message.quoteImageUrl)
+
+                    if (isYunhuImageUrl(message.quoteImageUrl)) {
+                        builder.setHeader("Referer", "https://myapp.jwznb.com")
+                    }
+
+                    AsyncImage(
+                        model = builder.build(),
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
                         modifier = Modifier
-                            .clickable {
-                                onAvatarClick()
-                            },
-                        size = 36.dp
+                            .size(40.dp)
+                            .clip(RoundedCornerShape(8.dp))
                     )
-                } else if ((isMine && showMyBubbleAvatarSetting) || !isMine) {
-                    Spacer(modifier = Modifier.width(36.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
                 }
+                Text(
+                    text = if (hideSenderInfo) processQuoteText(quoteText) else quoteText,
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
             }
         }
     }
@@ -1172,8 +1199,8 @@ private fun TagChip(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Spacer(Modifier.width(6.dp))
-            
-            type?.let{
+
+            type?.let {
                 if (type == 0) {
                     Icon(
                         imageVector = AppIcons.Person,
@@ -1189,10 +1216,10 @@ private fun TagChip(
                         tint = contentColor
                     )
                 }
-                
+
                 Spacer(Modifier.width(2.dp))
             }
-            
+
             Text(
                 text = text,
                 style = MaterialTheme.typography.labelSmall,
@@ -1200,7 +1227,7 @@ private fun TagChip(
                 maxLines = 1,
                 modifier = Modifier.padding(vertical = 2.dp)
             )
-            
+
             Spacer(Modifier.width(6.dp))
         }
     }
@@ -1260,36 +1287,39 @@ fun QuarterCircleCorner(
     modifier: Modifier = Modifier,
     color: Color = MaterialTheme.colorScheme.primaryContainer,
     size: Dp = 16.dp,
-    isMine: Boolean = false
+    isMine: Boolean,
+    defaultLayoutDirection: LayoutDirection = LayoutDirection.Ltr
 ) {
     val halfWidth = size / 2
 
-    Canvas(modifier = modifier.size(width = halfWidth, height = size)) {
-        val w = this.size.width
-        val h = this.size.height
+    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+        Canvas(modifier = modifier.size(width = halfWidth, height = size)) {
+            val w = this.size.width
+            val h = this.size.height
 
-        val cx = if (isMine) w else 0f
-        val cy = 0f
+            val cx = if (isMine) w else 0f
+            val cy = 0f
 
-        val left = cx - w
-        val top = cy - h
-        val right = cx + w
-        val bottom = cy + h
+            val left = cx - w
+            val top = cy - h
+            val right = cx + w
+            val bottom = cy + h
 
-        val rectPath = Path().apply {
-            addRect(Rect(left, top, right, bottom))
-        }
+            val rectPath = Path().apply {
+                addRect(Rect(left, top, right, bottom))
+            }
 
-        val ovalPath = Path().apply {
-            addOval(Rect(left, top, right, bottom))
-        }
+            val ovalPath = Path().apply {
+                addOval(Rect(left, top, right, bottom))
+            }
 
-        val diffPath = Path().apply {
-            op(rectPath, ovalPath, PathOperation.Difference)
-        }
+            val diffPath = Path().apply {
+                op(rectPath, ovalPath, PathOperation.Difference)
+            }
 
-        clipRect(left = 0f, top = 0f, right = w, bottom = h) {
-            drawPath(path = diffPath, color = color)
+            clipRect(left = 0f, top = 0f, right = w, bottom = h) {
+                drawPath(path = diffPath, color = color)
+            }
         }
     }
 }
@@ -1366,10 +1396,10 @@ private fun extractImageUrls(html: String): List<String> {
 
 private fun processQuoteText(quoteText: String): String {
     if (quoteText.isBlank()) return quoteText
-    
+
     val pattern = Regex("^[^:：]+[:：]\\s*(.*)$")
     val matchResult = pattern.find(quoteText)
-    
+
     return if (matchResult != null) {
         val content = matchResult.groupValues.getOrNull(1)
         if (!content.isNullOrBlank()) {

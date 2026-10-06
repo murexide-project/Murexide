@@ -13,6 +13,9 @@ import androidx.compose.foundation.lazy.*
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.text.input.clearText
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -86,6 +89,7 @@ fun ConversationListScreen(
 
     val listState = rememberLazyListState()
     val stickyIds by viewModel.stickyIds.collectAsState()
+    val pullToRefreshState = rememberPullToRefreshState()
 
     LaunchedEffect(uiState) {
         if (uiState is ConversationUiState.Success) {
@@ -195,7 +199,7 @@ fun ConversationListScreen(
                             Brush.verticalGradient(
                                 colors = listOf(
                                     topBarColor,
-                                    topBarColor.copy(alpha = 0.6f),
+                                    topBarColor.copy(alpha = 0.8f),
                                     Color.Transparent
                                 )
                             )
@@ -203,7 +207,14 @@ fun ConversationListScreen(
                 )
 
                 SearchBar(
-                    modifier = Modifier.statusBarsPadding().padding(12.dp).fillMaxWidth(),
+                    modifier = Modifier
+                        .statusBarsPadding()
+                        .padding(
+                            start = 12.dp,
+                            end = 12.dp,
+                            top = 12.dp
+                        )
+                        .fillMaxWidth(),
                     state = searchBarState,
                     inputField = inputField
                 )
@@ -214,50 +225,40 @@ fun ConversationListScreen(
                 if (hide) return@Crossfade
                 Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(bottom = innerPadding.calculateBottomPadding())) {
                     FloatingActionButton(
-                        onClick = { viewModel.refresh() },
-                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                        modifier = Modifier.size(36.dp)
+                        onClick = { showCreateMenu = true },
+                        containerColor = MaterialTheme.colorScheme.primary
                     ) {
-                        Icon(AppIcons.Refresh, contentDescription = "刷新")
+                        Icon(AppIcons.Add, contentDescription = "添加")
                     }
-                    Spacer(Modifier.height(12.dp))
-                    Box {
-                        FloatingActionButton(
-                            onClick = { showCreateMenu = true },
-                            containerColor = MaterialTheme.colorScheme.primary
-                        ) {
-                            Icon(AppIcons.Add, contentDescription = "添加")
-                        }
-                        DropdownMenu(
-                            expanded = showCreateMenu,
-                            onDismissRequest = { showCreateMenu = false },
-                            shape = MenuDefaults.standaloneGroupShape
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text("创建群聊") },
-                                onClick = {
-                                    showCreateMenu = false; onCreateClick(CreationKind.GROUP)
-                                },
-                                leadingIcon = {
-                                    Icon(
-                                        AppIcons.Group,
-                                        contentDescription = null
-                                    )
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("创建机器人") },
-                                onClick = {
-                                    showCreateMenu = false; onCreateClick(CreationKind.BOT)
-                                },
-                                leadingIcon = {
-                                    Icon(
-                                        AppIcons.SmartToy,
-                                        contentDescription = null
-                                    )
-                                }
-                            )
-                        }
+                    DropdownMenu(
+                        expanded = showCreateMenu,
+                        onDismissRequest = { showCreateMenu = false },
+                        shape = MenuDefaults.standaloneGroupShape
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("创建群聊") },
+                            onClick = {
+                                showCreateMenu = false; onCreateClick(CreationKind.GROUP)
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    AppIcons.Group,
+                                    contentDescription = null
+                                )
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("创建机器人") },
+                            onClick = {
+                                showCreateMenu = false; onCreateClick(CreationKind.BOT)
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    AppIcons.SmartToy,
+                                    contentDescription = null
+                                )
+                            }
+                        )
                     }
                 }
             }
@@ -296,94 +297,139 @@ fun ConversationListScreen(
                     ConversationFilter.BOT -> 4
                 }
 
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize().padding(bottom = contentPadding.calculateBottomPadding()),
-                    state = listState,
-                    contentPadding = PaddingValues(top = contentPadding.calculateTopPadding(), bottom = innerPadding.calculateBottomPadding())
-                ) {
-                    item(key = "tabBar") {
-                        CapsuleTabBar(
-                            tabs = tabs,
-                            selectedTabIndex = selectedTabIndex,
-                            scrollable = true,
-                            onTabSelected = { index ->
-                                val newFilter = when (index) {
-                                    0 -> ConversationFilter.ALL
-                                    1 -> ConversationFilter.UNREAD
-                                    2 -> ConversationFilter.GROUP
-                                    3 -> ConversationFilter.USER
-                                    4 -> ConversationFilter.BOT
-                                    else -> ConversationFilter.ALL
-                                }
-                                viewModel.setFilter(newFilter)
-                            },
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                PullToRefreshBox(
+                    isRefreshing = isRefreshing,
+                    onRefresh = { viewModel.refresh() },
+                    state = pullToRefreshState,
+                    modifier = Modifier.fillMaxSize(),
+                    indicator = {
+                        PullToRefreshDefaults.Indicator(
+                            modifier = Modifier
+                                .align(Alignment.TopCenter)
+                                .padding(top = contentPadding.calculateTopPadding() + 4.dp),
+                            isRefreshing = isRefreshing,
+                            state = pullToRefreshState
                         )
                     }
-
-                    val totalItems = stickyConvs.size + normalConvs.size
-
-                    if (totalItems == 0) {
-                        item {
-                            Box(
-                                modifier = Modifier.fillParentMaxSize(),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text("暂无会话")
-                            }
+                ) {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(bottom = contentPadding.calculateBottomPadding()),
+                        state = listState,
+                        contentPadding = PaddingValues(
+                            top = contentPadding.calculateTopPadding(),
+                            bottom = innerPadding.calculateBottomPadding()
+                        )
+                    ) {
+                        item(key = "tabBar") {
+                            CapsuleTabBar(
+                                tabs = tabs,
+                                selectedTabIndex = selectedTabIndex,
+                                scrollable = true,
+                                onTabSelected = { index ->
+                                    val newFilter = when (index) {
+                                        0 -> ConversationFilter.ALL
+                                        1 -> ConversationFilter.UNREAD
+                                        2 -> ConversationFilter.GROUP
+                                        3 -> ConversationFilter.USER
+                                        4 -> ConversationFilter.BOT
+                                        else -> ConversationFilter.ALL
+                                    }
+                                    viewModel.setFilter(newFilter)
+                                },
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                            )
                         }
-                    } else {
-                        item(key = "divider") {
-                            HorizontalDivider()
-                        }
 
-                        if (allowCollapseSticky) {
-                            item(key = "collapseStickyButton") {
-                                val bkgolor = if (themeColor != "WHITE") {
-                                    MaterialTheme.colorScheme.surfaceContainer
-                                } else {
-                                    MaterialTheme.colorScheme.surface
-                                }
-                                ListItem(
-                                    onClick = {
-                                        scope.launch {
-                                            settingsStorage.setShowSticky(!isStickyExpanded)
-                                        }
-                                    },
-                                    leadingContent = {
-                                        Icon(
-                                            imageVector = if (isStickyCollapsed) AppIcons.KeyboardArrowDown else AppIcons.KeyboardArrowUp,
-                                            contentDescription = null
-                                        )
-                                    },
-                                    colors = ListItemDefaults.colors(
-                                        containerColor = bkgolor
-                                    )
+                        val totalItems = stickyConvs.size + normalConvs.size
+
+                        if (totalItems == 0) {
+                            item {
+                                Box(
+                                    modifier = Modifier.fillParentMaxSize(),
+                                    contentAlignment = Alignment.Center
                                 ) {
-                                    Text(
-                                        if (isStickyCollapsed) "${stickyConvs.size}个置顶会话" else "折叠置顶会话",
-                                        style = MaterialTheme.typography.bodyMedium
+                                    Text("暂无会话")
+                                }
+                            }
+                        } else {
+                            item(key = "divider") {
+                                HorizontalDivider()
+                            }
+
+                            if (allowCollapseSticky) {
+                                item(key = "collapseStickyButton") {
+                                    val bkgolor = if (themeColor != "WHITE") {
+                                        MaterialTheme.colorScheme.surfaceContainer
+                                    } else {
+                                        MaterialTheme.colorScheme.surface
+                                    }
+                                    ListItem(
+                                        onClick = {
+                                            scope.launch {
+                                                settingsStorage.setShowSticky(!isStickyExpanded)
+                                            }
+                                        },
+                                        leadingContent = {
+                                            Icon(
+                                                imageVector = if (isStickyCollapsed) AppIcons.KeyboardArrowDown else AppIcons.KeyboardArrowUp,
+                                                contentDescription = null
+                                            )
+                                        },
+                                        colors = ListItemDefaults.colors(
+                                            containerColor = bkgolor
+                                        )
+                                    ) {
+                                        Text(
+                                            if (isStickyCollapsed) "${stickyConvs.size}个置顶会话" else "折叠置顶会话",
+                                            style = MaterialTheme.typography.bodyMedium
+                                        )
+                                    }
+                                }
+                            }
+
+                            items(
+                                items = stickyConvs,
+                                key = { item -> "sticky_${item.chatType}:${item.chatId}" }
+                            ) { conversation ->
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .animateContentSize()
+                                ) {
+                                    if (isStickyCollapsed) return@Box
+                                    ConversationItem(
+                                        conversation = conversation,
+                                        isSelected = currentConversation?.chatId == conversation.chatId &&
+                                                currentConversation.chatType == conversation.chatType &&
+                                                bigScreenMode,
+                                        isSticky = true,
+                                        onClick = {
+                                            viewModel.clearUnread(
+                                                conversation.chatId,
+                                                conversation.chatType
+                                            )
+                                            onConversationClick(conversation)
+                                        }
                                     )
                                 }
                             }
-                        }
 
-                        items(
-                            items = stickyConvs,
-                            key = { item -> "sticky_${item.chatType}:${item.chatId}" }
-                        ) { conversation ->
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .animateContentSize()
-                            ) {
-                                if (isStickyCollapsed) return@Box
+                            item(key = "divider2") {
+                                HorizontalDivider()
+                            }
+
+                            items(
+                                items = normalConvs,
+                                key = { item -> "normal_${item.chatType}:${item.chatId}" }
+                            ) { conversation ->
                                 ConversationItem(
                                     conversation = conversation,
                                     isSelected = currentConversation?.chatId == conversation.chatId &&
                                             currentConversation.chatType == conversation.chatType &&
                                             bigScreenMode,
-                                    isSticky = true,
+                                    isSticky = false,
                                     onClick = {
                                         viewModel.clearUnread(
                                             conversation.chatId,
@@ -393,30 +439,6 @@ fun ConversationListScreen(
                                     }
                                 )
                             }
-                        }
-
-                        item(key = "divider2") {
-                            HorizontalDivider()
-                        }
-
-                        items(
-                            items = normalConvs,
-                            key = { item -> "normal_${item.chatType}:${item.chatId}" }
-                        ) { conversation ->
-                            ConversationItem(
-                                conversation = conversation,
-                                isSelected = currentConversation?.chatId == conversation.chatId &&
-                                        currentConversation.chatType == conversation.chatType &&
-                                        bigScreenMode,
-                                isSticky = false,
-                                onClick = {
-                                    viewModel.clearUnread(
-                                        conversation.chatId,
-                                        conversation.chatType
-                                    )
-                                    onConversationClick(conversation)
-                                }
-                            )
                         }
                     }
                 }
@@ -436,8 +458,6 @@ fun ConversationListScreen(
                     }
                 }
             }
-
-            if (isRefreshing) { LinearProgressIndicator(modifier = Modifier.fillMaxWidth().padding(contentPadding)) }
         }
     }
 
