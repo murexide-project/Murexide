@@ -32,14 +32,15 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.material3.*
@@ -55,7 +56,6 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
@@ -346,6 +346,8 @@ fun ChatScreen(
     onOpenConversation: (ForwardTarget) -> Unit = {},
     bigScreenMode: Boolean = false,
     backUnreadCount: Int = 0,
+    searchTargetMsgSeq: Long? = null,
+    searchTargetMsgId: String? = null,
     viewModel: ChatViewModel
 ) {
     val density = LocalDensity.current
@@ -530,8 +532,9 @@ fun ChatScreen(
     var showDeleteConfirm by remember { mutableStateOf(false) }
 
     val recallDialog by viewModel.recallDialog.collectAsState()
-
+    
     val listState = rememberLazyListState()
+
     var composerHeightPx by remember { mutableIntStateOf(0) }
     var listHeightPx by remember { mutableIntStateOf(0) }
     var showScrollToBottom by remember { mutableStateOf(false) }
@@ -701,7 +704,7 @@ fun ChatScreen(
             )
         }
     }
-
+    
     LaunchedEffect(Unit) {
         NotificationHelper.clearNotification(context, chatId)
     }
@@ -728,6 +731,7 @@ fun ChatScreen(
             }
         }
     }
+    
     LaunchedEffect(
         listState,
         uiState.hasMore,
@@ -737,21 +741,24 @@ fun ChatScreen(
         snapshotFlow {
             val layoutInfo = listState.layoutInfo
             val visibleItems = layoutInfo.visibleItemsInfo
-
+    
             val shouldLoadMore = if (visibleItems.isNotEmpty()) {
                 val lastVisibleIndex = visibleItems.last().index
                 val totalItems = layoutInfo.totalItemsCount
-                lastVisibleIndex >= totalItems - 5 && uiState.hasMore && !uiState.isLoadingMore && !uiState.isRefreshing
+                lastVisibleIndex >= totalItems - 5 &&
+                    uiState.hasMore &&
+                    !uiState.isLoadingMore &&
+                    !uiState.isRefreshing
             } else {
                 false
             }
-
+    
             val atBottom = if (visibleItems.isNotEmpty()) {
                 !listState.canScrollBackward
             } else {
                 true
             }
-
+    
             Pair(shouldLoadMore, atBottom)
         }
             .collect { (shouldLoadMore, atBottom) ->
@@ -765,7 +772,32 @@ fun ChatScreen(
                 }
             }
     }
-
+    
+    LaunchedEffect(searchTargetMsgId, searchTargetMsgSeq) {
+        val target = searchTargetMsgId ?: return@LaunchedEffect
+        if (target.isBlank()) return@LaunchedEffect
+        delay(500)
+        if (viewModel.loadQuotedMessage(target, searchTargetMsgSeq)) {
+            val targetIndex = withTimeoutOrNull(2_000.milliseconds) {
+                snapshotFlow {
+                    displayItems.indexOfFirst { it.message.msgId == target }
+                }.first { it >= 0 }
+            }
+            if (targetIndex != null) {
+                listState.animateScrollToCenteredItem(targetIndex)
+                highlightedMessageId = target
+                highlightRequest++
+            }
+        }
+    }
+    
+    LaunchedEffect(uiState.locatingMessageError) {
+        uiState.locatingMessageError?.let { msg ->
+            Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+            viewModel.clearLocatingMessageError()
+        }
+    }
+    
     LaunchedEffect(Unit) {
         var lastMsgId: String? = null
         var pendingCount = 0
@@ -793,6 +825,8 @@ fun ChatScreen(
                 val isAtBottom = !listState.canScrollBackward
 
                 firstMessageId = msgId
+                
+                if (uiState.hasNewer) return@collect
 
                 if (isAtBottom && !listState.isScrollInProgress) {
                     listState.animateScrollToItem(0)
@@ -1165,49 +1199,50 @@ fun ChatScreen(
                             }
                         }
                     )
+                    
+                    val panelShape = RoundedCornerShape(28.dp)
+                    val panelGlassColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.8f)
+                    val panelModifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 6.dp, vertical = 4.dp)
+                        .then(
+                            if (liquidGlassEnabled && liquidBackdrop != null) {
+                                Modifier.drawBackdrop(
+                                    backdrop = liquidBackdrop,
+                                    shape = { panelShape },
+                                    effects = {
+                                        vibrancy()
+                                        blur(1.dp.toPx() * liquidGlassBlur)
+                                        lens(16.dp.toPx(), 32.dp.toPx())
+                                    },
+                                    onDrawSurface = {
+                                        drawRect(
+                                            panelGlassColor
+                                        )
+                                    }
+                                )
+                            } else {
+                                Modifier.shadow(2.dp, panelShape)
+                                    .clip(panelShape)
+                                    .hazeEffect(
+                                        state = hazeState,
+                                        style = HazeMaterials.regular().copy(
+                                            blurRadius = 32.dp,
+                                            noiseFactor = 0f
+                                        ),
+                                        block = null
+                                    )
+                            }
+                        )
 
                     AnimatedVisibility(
                         visible = !selectionMode && uiState.boardPanel.isExpanded && uiState.boardPanel.boards.isNotEmpty(),
                         enter = fadeIn() + expandVertically(),
                         exit = fadeOut() + shrinkVertically()
                     ) {
-                        val boardShape = RoundedCornerShape(28.dp)
-                        val boardGlassColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.50f)
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 6.dp, vertical = 4.dp)
-                                .shadow(4.dp, boardShape)
-                                .then(
-                                    if (liquidGlassEnabled) {
-                                        Modifier.liquidGlass(
-                                            enabled = true,
-                                            backdrop = liquidBackdrop,
-                                            shape = boardShape,
-                                            surfaceColor = boardGlassColor,
-                                            blurRadius = 5.dp * liquidGlassBlur,
-                                            lensHeight = 6.dp,
-                                            lensAmount = 12.dp,
-                                            showHighlight = showGlassHighlight
-                                        )
-                                    } else {
-                                        Modifier
-                                            .clip(boardShape)
-                                            .hazeEffect(
-                                                state = hazeState,
-                                                style = HazeMaterials.thin(
-                                                    containerColor = MaterialTheme.colorScheme.surface
-                                                ).copy(
-                                                    blurRadius = 32.dp,
-                                                    noiseFactor = 0f
-                                                ),
-                                                block = null
-                                            )
-                                    }
-                                )
-                        ) {
+                        Box(modifier = panelModifier) {
                             ProvideLiquidGlassContentColor(
-                                glassColor = boardGlassColor,
+                                glassColor = panelGlassColor,
                                 preferredColor = MaterialTheme.colorScheme.onSurface,
                             ) {
                                 BoardPanel(
@@ -1222,6 +1257,35 @@ fun ChatScreen(
                             }
                         }
                     }
+                    
+                    AnimatedVisibility(
+                        visible = uiState.locatingMessage,
+                        enter = fadeIn() + expandVertically(),
+                        exit = fadeOut() + shrinkVertically()
+                    ) {
+                        Box(modifier = panelModifier) {
+                            ProvideLiquidGlassContentColor(
+                                glassColor = panelGlassColor,
+                                preferredColor = MaterialTheme.colorScheme.onSurface,
+                            ) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Text(
+                                        text = "正在定位消息…",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    LinearProgressIndicator(
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
             },
             bottomBar = {
@@ -1229,6 +1293,10 @@ fun ChatScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .onSizeChanged { composerHeightPx = it.height }
+                        .clickable(
+                            indication = null,
+                            interactionSource = remember { MutableInteractionSource() }
+                        ) {}
                 ) {
                     Box(
                         modifier = Modifier
@@ -1254,7 +1322,7 @@ fun ChatScreen(
                                     val surfaceColor = MaterialTheme.colorScheme.surfaceContainer
                                     Modifier.drawBackdrop(
                                         backdrop = liquidBackdrop,
-                                        shape = { RoundedCornerShape(32.dp) },
+                                        shape = { RoundedCornerShape(24.dp) },
                                         effects = {
                                             vibrancy()
                                             blur(1.dp.toPx() * liquidGlassBlur)
@@ -1267,7 +1335,7 @@ fun ChatScreen(
                                         }
                                     )
                                 } else {
-                                    val shape = RoundedCornerShape(32.dp)
+                                    val shape = RoundedCornerShape(24.dp)
                                     Modifier.shadow(2.dp, shape)
                                         .clip(shape)
                                         .hazeEffect(
@@ -1873,9 +1941,16 @@ fun ChatScreen(
                     )
 
                     AnimatedScrollToBottomButton(
-                        visible = showScrollToBottom,
+                        visible = showScrollToBottom || uiState.hasNewer,
                         unreadCount = unreadCount,
-                        onClick = scrollToBottom,
+                        loadNewerMode = uiState.hasNewer && !showScrollToBottom,
+                        onClick = {
+                            if (showScrollToBottom) {
+                                scrollToBottom()
+                            } else if (uiState.hasNewer) {
+                                viewModel.loadNewer()
+                            }
+                        },
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
                             .padding(
@@ -2120,12 +2195,12 @@ private fun FloatingAvatarsLayer(
                         .align(if (isMine) Alignment.TopEnd else Alignment.TopStart)
                         .offset(y = with(density) { avatarTopPx.toDp() })
                         .padding(horizontal = 8.dp)
-                        .pointerInput(message.msgId) {
-                            detectTapGestures(
-                                onTap = { onAvatarClick(message) },
-                                onLongPress = { onAvatarLongClick(message) }
-                            )
-                        }
+                        .combinedClickable(
+                            onClick = { onAvatarClick(message) },
+                            onLongClick = { onAvatarLongClick(message) },
+                            indication = null,
+                            interactionSource = remember { MutableInteractionSource() }
+                        )
                 ) {
                     Avatar(
                         url = message.senderAvatar,
@@ -2141,6 +2216,7 @@ private fun FloatingAvatarsLayer(
 fun AnimatedScrollToBottomButton(
     visible: Boolean,
     unreadCount: Int,
+    loadNewerMode: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -2193,7 +2269,7 @@ fun AnimatedScrollToBottomButton(
                 contentColor = MaterialTheme.colorScheme.onSurface
             ) {
                 Icon(
-                    imageVector = AppIcons.KeyboardArrowDown,
+                    imageVector = if (loadNewerMode) AppIcons.Refresh else AppIcons.KeyboardArrowDown,
                     contentDescription = "滚动到底部",
                     modifier = Modifier.size(18.dp)
                 )

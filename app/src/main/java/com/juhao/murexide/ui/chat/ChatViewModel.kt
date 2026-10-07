@@ -150,6 +150,7 @@ class ChatViewModel(
     private var isUsingCachedHistory = false
     private var historyLoadGeneration = 0L
     private var isLoadingMore = false
+    private var isLoadingNewer = false
     private val historyLoadMutex = Mutex()
 
     init {
@@ -324,9 +325,10 @@ class ChatViewModel(
                 Log.d(TAG, "Received WS event: ${event::class.simpleName}")
                 when (event) {
                     is WebSocketManager.WsEvent.NewMessage -> {
+                        val state = _uiState.value
                         val match = event.message.chatId == chatId || (event.message.chatType == 1 && event.message.senderId == chatId)
                         Log.d(TAG, "New message: chatId=${event.message.chatId}, expected=$chatId, match=${match}")
-                        if (match) {
+                        if (match && !state.hasNewer) {
                             addReceivedMessage(event.message)
                         }
                     }
@@ -460,29 +462,183 @@ class ChatViewModel(
             }
         }
     }
+    
+    fun loadNewer() {
+        if (isLoadingNewer) return
+    
+        val state = _uiState.value
+        if (!state.hasNewer || state.messages.isEmpty()) return
+        if (token.isBlank()) return
+    
+        viewModelScope.launch {
+            if (isLoadingNewer) return@launch
+    
+            isLoadingNewer = true
+            _uiState.update { it.copy(isLoadingNewer = true) }
+    
+            try {
+                val currentMessages = _uiState.value.messages
+                if (currentMessages.isEmpty()) return@launch
+    
+                val newestMessage = currentMessages.maxByOrNull { it.msgSeq }
+                    ?: return@launch
+    
+                val result = repository.getMessagesAroundMsgId(
+                    token = token,
+                    chatId = chatId,
+                    chatType = chatType,
+                    msgId = newestMessage.msgId,
+                    msgSeq = newestMessage.msgSeq
+                )
+    
+                result.onSuccess { page ->
+                    val current = _uiState.value.messages
+    
+                    val fresh = page
+                        .map(::withCurrentUserProfileFallback)
+                        .filter { it.msgId !in msgIdCache }
+    
+                    if (fresh.isEmpty()) {
+                        _uiState.update {
+                            it.copy(
+                                hasNewer = false
+                            )
+                        }
+                        return@onSuccess
+                    }
+    
+                    msgIdCache.addAll(fresh.map { it.msgId })
+    
+                    val merged = (current + fresh)
+                        .distinctBy { it.msgId }
+                        .sortedByDescending { it.timestamp }
+    
+                    _uiState.update {
+                        it.copy(
+                            messages = merged,
+                            hasNewer = fresh.size >= HISTORY_PAGE_SIZE
+                        )
+                    }
+                }
+            } finally {
+                isLoadingNewer = false
+                _uiState.update {
+                    it.copy(isLoadingNewer = false)
+                }
+            }
+        }
+    }
+    
+    fun clearLocatingMessageError() {
+        _uiState.update { it.copy(locatingMessageError = null) }
+    }
 
     override fun onCleared() {
         ActiveConversationRegistry.deactivate(this)
         super.onCleared()
     }
 
-    /**
-     * Ensures that a quoted message is present in the contiguous history currently shown.
-     *
-     * The history endpoint returns messages before the supplied ID, so older pages are loaded
-     * sequentially instead of inserting an isolated message and breaking the timeline order.
-     */
-    suspend fun loadQuotedMessage(messageId: String): Boolean {
+    suspend fun loadQuotedMessage(messageId: String, messageSeq: Long? = null): Boolean {
         if (messageId.isBlank()) return false
         if (_uiState.value.messages.any { it.msgId == messageId }) return true
-
-        return historyLoadMutex.withLock {
-            if (_uiState.value.messages.any { it.msgId == messageId }) {
-                true
-            } else {
-                loadOlderMessagesUntil(targetMessageId = messageId)
+    
+        _uiState.update { it.copy(locatingMessage = true, locatingMessageError = null) }
+    
+        return try {
+            historyLoadMutex.withLock {
+                if (_uiState.value.messages.any { it.msgId == messageId }) return@withLock true
+                if (token.isBlank()) return@withLock false
+    
+                loadQuotedMessageByChain(messageId, messageSeq)
+            }
+        } finally {
+            _uiState.update {
+                it.copy(
+                    locatingMessage = false,
+                    locatingMessageError = if (it.messages.any { m -> m.msgId == messageId }) {
+                        null
+                    } else {
+                        "未找到目标消息"
+                    }
+                )
             }
         }
+    }
+    
+    private suspend fun loadQuotedMessageByChain(targetMessageId: String, targetMessageSeq: Long?): Boolean {
+        val current = _uiState.value.messages
+        val minExistingSendTime = current.minOfOrNull { it.timestamp }
+        val timeGapThresholdMs = 4 * 60 * 60 * 1000L
+        val maxChainIterations = 10
+    
+        val accumulated = mutableListOf<MessageItem>()
+        val fetchedIds = mutableSetOf<String>()
+    
+        var nextMsgId: String? = targetMessageId
+        var nextMsgSeq: Long = targetMessageSeq ?: -1L
+        var iteration = 0
+    
+        while (nextMsgId != null && iteration < maxChainIterations) {
+            iteration++
+    
+            val page = repository.getMessagesAroundMsgId(
+                token = token,
+                chatId = chatId,
+                chatType = chatType,
+                msgId = nextMsgId,
+                msgSeq = nextMsgSeq,
+                msgCount = 30
+            ).getOrElse { emptyList() }
+    
+            if (page.isEmpty()) break
+    
+            val fresh = page.filter { it.msgId !in fetchedIds }
+            if (fresh.isEmpty()) break
+    
+            fresh.forEach {
+                fetchedIds.add(it.msgId)
+                accumulated.add(it)
+            }
+    
+            val newest = accumulated.maxByOrNull { it.timestamp }
+            if (minExistingSendTime == null || newest == null) break
+    
+            val timeDiff = minExistingSendTime - newest.timestamp
+            if (timeDiff <= timeGapThresholdMs) break
+    
+            if (newest.msgId == nextMsgId) break
+    
+            nextMsgId = newest.msgId
+            nextMsgSeq = newest.msgSeq.takeIf { it > 0L } ?: -1L
+        }
+    
+        if (accumulated.isEmpty()) return false
+        
+        historyLoadGeneration++
+    
+        val combined = accumulated
+            .distinctBy { it.msgId }
+            .sortedByDescending { it.timestamp }
+    
+        msgIdCache.clear()
+        msgIdCache.addAll(combined.map { it.msgId })
+    
+        val oldest = combined.minByOrNull { it.timestamp }
+        historyCursorMessageId = oldest?.msgId
+        cachedHistoryCursor = null
+        isUsingCachedHistory = false
+        
+        _uiState.update {
+            it.copy(
+                messages = combined,
+                hasMore = oldest != null,
+                hasNewer = true,
+                isLoading = false,
+                error = null
+            )
+        }
+    
+        return _uiState.value.messages.any { it.msgId == targetMessageId }
     }
 
     private suspend fun loadOlderMessagesUntil(targetMessageId: String? = null): Boolean {
@@ -517,7 +673,8 @@ class ChatViewModel(
                     token = token,
                     chatId = chatId,
                     chatType = chatType,
-                    msgId = anchorMessageId
+                    msgId = anchorMessageId,
+                    size = 50
                 )
                 if (loadGeneration != historyLoadGeneration) return false
                 val error = result.exceptionOrNull()

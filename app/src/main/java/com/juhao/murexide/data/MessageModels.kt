@@ -196,6 +196,10 @@ data class ChatUiState(
     val pendingCommandHint: String? = null,
     val editingMessage: MessageItem? = null,
     val boardPanel: BoardPanelState = BoardPanelState(),
+    val isLoadingNewer: Boolean = false,
+    val hasNewer: Boolean = false,
+    val locatingMessage: Boolean = false,
+    val locatingMessageError: String? = null,
     
     // -----群聊专属-----
     val isAdmin: Boolean = false,

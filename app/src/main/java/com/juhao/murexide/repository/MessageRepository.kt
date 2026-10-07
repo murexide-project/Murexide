@@ -6,6 +6,10 @@ import com.juhao.murexide.network.NetworkClient
 import com.juhao.murexide.proto.Msg
 import com.juhao.murexide.proto.list_message
 import com.juhao.murexide.proto.list_message_send
+import com.juhao.murexide.proto.list_message_by_seq
+import com.juhao.murexide.proto.list_message_by_seq_send
+import com.juhao.murexide.proto.list_message_by_mid_seq
+import com.juhao.murexide.proto.list_message_by_mid_seq_send
 import com.juhao.murexide.proto.send_message_send
 import com.juhao.murexide.proto.send_message
 import com.juhao.murexide.proto.edit_message_send
@@ -169,11 +173,12 @@ class MessageRepository(
         chatId: String,
         chatType: Int,
         msgId: String? = null,
+        size: Int = 20
     ): Result<List<MessageItem>> {
         return withContext(Dispatchers.IO) {
             try {
                 val requestBody = list_message_send(
-                    msg_count = 20.toLong(),
+                    msg_count = size.toLong(),
                     msg_id = msgId ?: "",
                     chat_type = chatType.toLong(),
                     chat_id = chatId
@@ -190,6 +195,56 @@ class MessageRepository(
                         val responseBody = response.body.bytes()
                         val messageList = list_message.ADAPTER.decode(responseBody)
 
+                        if (messageList.status?.code == 1) {
+                            val messages = messageList.msg.map { msg ->
+                                msg.toMessageItem(chatId = chatId, chatType = chatType)
+                            }
+                            LocalCache.currentAccountId()?.let { accountId ->
+                                LocalCache.cacheMessages(accountId, messages)
+                            }
+                            Result.success(messages)
+                        } else {
+                            Result.failure(Exception(messageList.status?.msg ?: "获取消息失败"))
+                        }
+                    } else {
+                        Result.failure(Exception("HTTP error: ${response.code}"))
+                    }
+                }
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+        }
+    }
+    
+    suspend fun getMessagesAroundMsgId(
+        token: String,
+        chatId: String,
+        chatType: Int,
+        msgId: String,
+        msgSeq: Long,
+        msgCount: Int = 20
+    ): Result<List<MessageItem>> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val requestBody = list_message_by_mid_seq_send(
+                    msg_seq = msgSeq,
+                    chat_type = chatType.toLong(),
+                    chat_id = chatId,
+                    unknown = 0L,
+                    msg_count = msgCount.toLong(),
+                    msg_id = msgId
+                ).encode().toRequestBody("application/octet-stream".toMediaType())
+    
+                val httpRequest = Request.Builder()
+                    .url("$baseUrl/v1/msg/list-message-by-mid-seq")
+                    .post(requestBody)
+                    .header("token", token)
+                    .build()
+    
+                client.newCall(httpRequest).execute().use { response ->
+                    if (response.isSuccessful) {
+                        val responseBody = response.body.bytes()
+                        val messageList = list_message_by_mid_seq.ADAPTER.decode(responseBody)
                         if (messageList.status?.code == 1) {
                             val messages = messageList.msg.map { msg ->
                                 msg.toMessageItem(chatId = chatId, chatType = chatType)
@@ -480,6 +535,59 @@ class MessageRepository(
             }
         }
     }
+    
+    internal suspend fun searchMessages(
+        token: String,
+        chatId: String,
+        chatType: Int,
+        keyword: String,
+        pageSize: Int = 30,
+        timeCursor: Long = Long.MAX_VALUE
+    ): Result<List<SearchMessageItem>> {
+        if (keyword.isBlank()) return Result.success(emptyList())
+        return withContext(Dispatchers.IO) {
+            try {
+                val json = buildJsonObject {
+                    put("keyword", keyword)
+                    put("word", keyword)
+                    put("chatId", chatId)
+                    put("chatType", chatType)
+                    put("type", "all")
+                    put("size", pageSize)
+                    put("time", timeCursor)
+                    put("direction", 1)
+                }
+                val requestBody = forwardJson.encodeToString(json)
+                    .toRequestBody("application/json; charset=utf-8".toMediaType())
+    
+                val httpRequest = Request.Builder()
+                    .url("$baseUrl/v1/search/chat-search")
+                    .post(requestBody)
+                    .header("token", token)
+                    .build()
+    
+                client.newCall(httpRequest).execute().use { response ->
+                    if (!response.isSuccessful) {
+                        return@use Result.failure(
+                            Exception("HTTP error: ${response.code}")
+                        )
+                    }
+                    val bodyStr = response.body.string()
+                    if (bodyStr.isBlank()) {
+                        return@use Result.failure(Exception("搜索响应为空"))
+                    }
+                    val parsed = forwardJson.decodeFromString<SearchMessageResponse>(bodyStr)
+                    if (parsed.code == 1) {
+                        Result.success(parsed.data?.list.orEmpty())
+                    } else {
+                        Result.failure(Exception(parsed.msg.ifBlank { "搜索失败" }))
+                    }
+                }
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+        }
+    }
 }
 
 internal fun Msg.toMessageItem(chatId: String, chatType: Int): MessageItem {
@@ -529,5 +637,53 @@ internal fun Msg.toMessageItem(chatId: String, chatType: Int): MessageItem {
             )
         } ?: emptyList(),
         updateTimestamp = maxOf(send_time, edit_time, msg_delete_time)
+    )
+}
+
+// ==================== 聊天记录搜索 ====================
+
+@Serializable
+internal data class SearchMessageResponse(
+    val code: Int = 0,
+    val msg: String = "",
+    val data: SearchMessageData
+)
+
+@Serializable
+internal data class SearchMessageData(
+    val total: Int = 0,
+    val list: List<SearchMessageItem>? = emptyList()
+)
+
+@Serializable
+internal data class SearchMessageItem(
+    val id: String = "",
+    val chatId: String = "",
+    val chatType: Int = 1,
+    val name: String = "",
+    val avatarUrl: String? = null,
+    val content: String = "",
+    val type: String = "1",
+    val time: Long = 0,
+    val sequence: Long = 0
+)
+
+internal fun SearchMessageItem.toMessageItem(
+    fallbackChatId: String,
+    fallbackChatType: Int
+): MessageItem {
+    return MessageItem(
+        msgId = id,
+        senderId = chatId,
+        senderName = name.ifBlank { "未知用户" },
+        senderAvatar = avatarUrl.orEmpty(),
+        senderType = if (fallbackChatType == 3) 3 else 1,
+        chatId = this.chatId.ifBlank { fallbackChatId },
+        chatType = this.chatType.takeIf { it > 0 } ?: fallbackChatType,
+        content = content,
+        contentType = type.toIntOrNull() ?: 1,
+        timestamp = time,
+        msgSeq = sequence,
+        direction = "left"
     )
 }

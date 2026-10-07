@@ -30,6 +30,11 @@
             </intent-filter>
         </activity>
         <activity
+            android:name=".ui.chatsearch.ChatSearchActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Murexide"
+            android:windowSoftInputMode="adjustResize" />
+        <activity
             android:name=".ui.community.detail.PostDetailActivity"
             android:exported="true"
             android:theme="@style/Theme.Murexide">

@@ -69,6 +69,7 @@ import com.juhao.murexide.ui.icons.AppIcons
 import com.juhao.murexide.ui.icons.AppFilledIcons
 import com.juhao.murexide.ui.icons.AutoMirroredIcon
 import com.juhao.murexide.ui.chat.components.formatVideoDuration
+import com.juhao.murexide.ui.chatsearch.ChatSearchActivity
 import com.juhao.murexide.ui.theme.LiquidGlassSurface
 import com.juhao.murexide.ui.theme.LocalLiquidGlassBackdrop
 import com.juhao.murexide.ui.theme.LocalLiquidGlassEnabled
@@ -169,7 +170,8 @@ fun ConversationDetailScreen(
                 },
                 scrollBehavior = scrollBehavior,
                 actions = {
-                    val group = state.detail?.takeIf { it.chatType == 2 }
+                    val currentDetail = state.detail
+                    val group = currentDetail?.takeIf { it.chatType == 2 }
                     if ((group?.permissionLevel ?: 0) >= 2) {
                         IconButton(onClick = { onEditGroup(group!!) }) {
                             Icon(AppIcons.Edit, "编辑群聊")
@@ -186,6 +188,21 @@ fun ConversationDetailScreen(
                             expanded = showMore,
                             onDismissRequest = { showMore = false }
                         ) {
+                            DropdownMenuItem(
+                                text = { Text("搜索聊天记录") },
+                                leadingIcon = { Icon(AppIcons.Search, null) },
+                                onClick = {
+                                    showMore = false
+                                    currentDetail?.let { d ->
+                                        ChatSearchActivity.start(
+                                            context = context,
+                                            chatId = d.chatId,
+                                            chatType = d.chatType,
+                                            chatName = d.name
+                                        )
+                                    }
+                                }
+                            )
                             DropdownMenuItem(
                                 text = { Text("刷新") },
                                 leadingIcon = { Icon(AppIcons.Refresh, null) },

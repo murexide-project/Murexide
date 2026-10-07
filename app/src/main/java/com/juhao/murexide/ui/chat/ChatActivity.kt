@@ -1,6 +1,7 @@
 package com.juhao.murexide.ui.chat
 
 import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -14,6 +15,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -29,6 +31,10 @@ import com.juhao.murexide.ui.theme.MurexideTheme
 import kotlinx.coroutines.launch
 
 class ChatActivity : ComponentActivity() {
+
+    private var searchTargetMsgId by mutableStateOf<String?>(null)
+    private var searchTargetMsgSeq by mutableStateOf<Long?>(null)
+
     @OptIn(ExperimentalMaterial3ExpressiveApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -38,6 +44,7 @@ class ChatActivity : ComponentActivity() {
         val chatType = intent.getIntExtra("chat_type", 1)
         val chatName = intent.getStringExtra("chat_name") ?: ""
         val chatAvatar = intent.getStringExtra("chat_avatar") ?: ""
+        readSearchTarget(intent)
 
         val accountStorage = AccountStorage.getInstance(this)
         val accountState = mutableStateOf<UserAccount?>(null)
@@ -79,6 +86,8 @@ class ChatActivity : ComponentActivity() {
                             }
                         },
                         backUnreadCount = conversations.unreadTotal(ConversationKey(chatId, chatType)),
+                        searchTargetMsgId = searchTargetMsgId,
+                        searchTargetMsgSeq = searchTargetMsgSeq,
                         viewModel = viewModel(
                             factory = object : androidx.lifecycle.ViewModelProvider.Factory {
                                 @Suppress("UNCHECKED_CAST")
@@ -111,6 +120,17 @@ class ChatActivity : ComponentActivity() {
         }
     }
 
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        readSearchTarget(intent)
+    }
+
+    private fun readSearchTarget(intent: Intent) {
+        searchTargetMsgId = intent.getStringExtra("search_target_msg_id")
+        searchTargetMsgSeq = intent.getLongExtra("search_target_msg_seq", -1L)
+    }
+
     companion object {
         fun start(
             context: Context,
@@ -119,11 +139,32 @@ class ChatActivity : ComponentActivity() {
             chatName: String,
             chatAvatar: String
         ) {
-            val intent = android.content.Intent(context, ChatActivity::class.java).apply {
+            val intent = Intent(context, ChatActivity::class.java).apply {
                 putExtra("chat_id", chatId)
                 putExtra("chat_type", chatType)
                 putExtra("chat_name", chatName)
                 putExtra("chat_avatar", chatAvatar)
+            }
+            context.startActivity(intent)
+        }
+
+        fun startWithSearchTarget(
+            context: Context,
+            chatId: String,
+            chatType: Int,
+            chatName: String,
+            chatAvatar: String = "",
+            targetMsgId: String,
+            targetMsgSeq: Long
+        ) {
+            val intent = Intent(context, ChatActivity::class.java).apply {
+                putExtra("chat_id", chatId)
+                putExtra("chat_type", chatType)
+                putExtra("chat_name", chatName)
+                putExtra("chat_avatar", chatAvatar)
+                putExtra("search_target_msg_id", targetMsgId)
+                putExtra("search_target_msg_seq", targetMsgSeq)
+                flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
             }
             context.startActivity(intent)
         }
