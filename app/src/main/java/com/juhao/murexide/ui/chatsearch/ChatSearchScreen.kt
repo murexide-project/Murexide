@@ -1,6 +1,5 @@
 package com.juhao.murexide.ui.chatsearch
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,21 +11,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.ListItemDefaults
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.snapshotFlow
+import androidx.compose.foundation.shape.RoundedCornerShape+
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -36,6 +23,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.juhao.murexide.data.MessageItem
 import com.juhao.murexide.ui.components.Avatar
 import com.juhao.murexide.ui.icons.AppIcons
+import com.juhao.murexide.ui.icons.AutoMirroredIcon
+
 import kotlinx.coroutines.flow.distinctUntilChanged
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -65,37 +54,40 @@ fun ChatSearchScreen(
             }
     }
 
-    Column(Modifier.fillMaxSize()) {
-        TopAppBar(
-            title = { Text("搜索聊天记录") },
-            navigationIcon = {
-                IconButton(onClick = onBack) {
-                    Icon(AppIcons.ArrowBack, contentDescription = "返回")
-                }
-            }
-        )
-
-        OutlinedTextField(
-            value = state.keyword,
-            onValueChange = viewModel::onKeywordChange,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            placeholder = { Text("搜索 $chatName 中的消息…") },
-            singleLine = true,
-            leadingIcon = {
-                Icon(AppIcons.Search, contentDescription = null)
-            },
-            trailingIcon = {
-                if (state.keyword.isNotEmpty()) {
-                    IconButton(onClick = { viewModel.onKeywordChange("") }) {
-                        Icon(AppIcons.Close, contentDescription = "清除")
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("搜索聊天记录") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        AutoMirroredIcon(AppIcons.ArrowBack, contentDescription = "返回")
                     }
                 }
-            }
-        )
-
-        Box(Modifier.fillMaxSize()) {
+            )
+        }
+    ) { padding ->
+        Column(Modifier.fillMaxSize().padding(padding)) {
+            OutlinedTextField(
+                value = state.keyword,
+                onValueChange = viewModel::onKeywordChange,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                placeholder = { Text("搜索 $chatName 中的消息…") },
+                singleLine = true,
+                shape = RoundedCornerShape(12.dp),
+                leadingIcon = {
+                    Icon(AppIcons.Search, contentDescription = null)
+                },
+                trailingIcon = {
+                    if (state.keyword.isNotEmpty()) {
+                        IconButton(onClick = { viewModel.onKeywordChange("") }) {
+                            Icon(AppIcons.Close, contentDescription = "清除")
+                        }
+                    }
+                }
+            )
+    
             when {
                 state.isLoading -> CenterLoading()
                 state.error != null -> CenterError(state.error!!, viewModel::retry)
@@ -137,7 +129,7 @@ private fun SearchResultItem(
     onClick: () -> Unit
 ) {
     ListItem(
-        modifier = Modifier.clickable(onClick = onClick),
+        onClick = onClick,
         leadingContent = {
             Avatar(url = message.senderAvatar, size = 44.dp)
         },
@@ -189,9 +181,10 @@ private fun formatTime(ts: Long): String {
     return SimpleDateFormat("MM-dd HH:mm", Locale.getDefault()).format(Date(ts))
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun CenterLoading() = Box(Modifier.fillMaxSize(), Alignment.Center) {
-    CircularProgressIndicator()
+    ContainedLoadingIndicator()
 }
 
 @Composable
