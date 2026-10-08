@@ -61,7 +61,6 @@ import com.juhao.murexide.data.BotBanner
 import com.juhao.murexide.data.BotStoreItem
 import com.juhao.murexide.data.GroupCategoryItem
 import com.juhao.murexide.data.GroupRecommendItem
-import com.juhao.murexide.ui.chat.ChatActivity
 import com.juhao.murexide.ui.components.Avatar
 import com.juhao.murexide.ui.conversationdetail.ConversationDetailActivity
 import com.juhao.murexide.ui.icons.AppIcons
@@ -126,7 +125,7 @@ fun DiscoverScreen(
                     onRefresh = viewModel::refreshBots,
                     onBannerClick = { banner -> openBanner(context, banner) },
                     onBotClick = { bot ->
-                        ChatActivity.start(
+                        ConversationDetailActivity.start(
                             context = context,
                             chatId = bot.chatId,
                             chatType = bot.chatTypeValue,

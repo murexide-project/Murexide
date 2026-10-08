@@ -104,6 +104,7 @@ import com.juhao.murexide.repository.ConversationDetailRepository
 import com.juhao.murexide.ui.chat.components.EditHistoryDialog
 import com.juhao.murexide.ui.conversationdetail.ConversationDetailActivity
 import com.juhao.murexide.ui.components.handleStaticHtmlLink
+import com.juhao.murexide.ui.chatsearch.ChatSearchActivity
 import com.juhao.murexide.ui.theme.UiState
 import com.juhao.murexide.utils.NotificationHelper
 import dev.chrisbanes.haze.HazeState
@@ -1165,6 +1166,19 @@ fun ChatScreen(
                                                     Icon(
                                                         AppIcons.Refresh,
                                                         contentDescription = null
+                                                    )
+                                                }
+                                            )
+                                            DropdownMenuItem(
+                                                text = { Text("搜索聊天记录") },
+                                                leadingIcon = { Icon(AppIcons.Search, null) },
+                                                onClick = {
+                                                    showMoreMenu = false
+                                                    ChatSearchActivity.start(
+                                                        context = context,
+                                                        chatId = chatId,
+                                                        chatType = chatType,
+                                                        chatName = chatName
                                                     )
                                                 }
                                             )

@@ -188,21 +188,23 @@ fun ConversationDetailScreen(
                             expanded = showMore,
                             onDismissRequest = { showMore = false }
                         ) {
-                            DropdownMenuItem(
-                                text = { Text("搜索聊天记录") },
-                                leadingIcon = { Icon(AppIcons.Search, null) },
-                                onClick = {
-                                    showMore = false
-                                    currentDetail?.let { d ->
-                                        ChatSearchActivity.start(
-                                            context = context,
-                                            chatId = d.chatId,
-                                            chatType = d.chatType,
-                                            chatName = d.name
-                                        )
+                            if (state.isAdded) {
+                                DropdownMenuItem(
+                                    text = { Text("搜索聊天记录") },
+                                    leadingIcon = { Icon(AppIcons.Search, null) },
+                                    onClick = {
+                                        showMore = false
+                                        currentDetail?.let { d ->
+                                            ChatSearchActivity.start(
+                                                context = context,
+                                                chatId = d.chatId,
+                                                chatType = d.chatType,
+                                                chatName = d.name
+                                            )
+                                        }
                                     }
-                                }
-                            )
+                                )
+                            }
                             DropdownMenuItem(
                                 text = { Text("刷新") },
                                 leadingIcon = { Icon(AppIcons.Refresh, null) },

@@ -800,6 +800,11 @@ class ChatViewModel(
     }
 
     fun refresh() {
+        _uiState.update {
+            it.copy(
+                hasNewer = false
+            )
+        }
         loadMessages()
     }
 
@@ -1775,7 +1780,8 @@ class ChatViewModel(
         commandId: Long? = null,
         commandName: String? = null
     ) {
-        if (msgId in msgIdCache) return
+        val state = _uiState.value
+        if (msgId in msgIdCache || state.hasNewer) return
 
         val ownMessage = _uiState.value.messages.firstOrNull { it.isMine }
         val message = createOutgoingMessage(
