@@ -178,6 +178,7 @@ private fun FloatingTopBar(
                 .hazeEffect(
                     state = hazeState,
                     style = buttonHazeStyle,
+                    blurEnabled = true,
                     block = null
                 )
         }
@@ -1358,6 +1359,7 @@ fun ChatScreen(
                                                 blurRadius = 32.dp,
                                                 noiseFactor = 0f
                                             ),
+                                            blurEnabled = true,
                                             block = null
                                         )
                                 }
