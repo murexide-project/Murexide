@@ -188,7 +188,7 @@ fun ConversationDetailScreen(
                             expanded = showMore,
                             onDismissRequest = { showMore = false }
                         ) {
-                            if (state.isAdded) {
+                            if (state.isAdded == true) {
                                 DropdownMenuItem(
                                     text = { Text("搜索聊天记录") },
                                     leadingIcon = { Icon(AppIcons.Search, null) },
