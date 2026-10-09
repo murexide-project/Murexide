@@ -21,6 +21,7 @@ data class ConversationDetail(
     val categoryId: Long? = null,
     val myGroupNickname: String? = null,
     val isPrivate: Boolean = false,
+    val isGag: Boolean = false,
     val doNotDisturb: Boolean = false,
     // 群聊设置（权限与开关）
     val permissionLevel: Int = 0,      // 群主 100 / 管理员 2 / 普通 0

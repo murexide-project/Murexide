@@ -228,6 +228,7 @@ class ConversationDetailRepository(
                             categoryId = d?.category_id,
                             myGroupNickname = d?.my_group_nickname?.takeIf { it.isNotEmpty() },
                             isPrivate = (d?.private_ ?: 0) == 1,
+                            isGag = d?.is_gag ?: false,
                             doNotDisturb = (d?.do_not_disturb ?: 0) == 1,
                             permissionLevel = d?.permisson_level ?: 0,
                             directJoin = (d?.direct_join ?: 0) == 1,

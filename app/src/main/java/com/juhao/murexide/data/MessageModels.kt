@@ -203,6 +203,7 @@ data class ChatUiState(
     
     // -----群聊专属-----
     val isAdmin: Boolean = false,
+    val isGag: Boolean = false,
     val memberCount: Long? = null,
     val myGroupNickname: String? = null,
     val ownerId: String? = null,

@@ -1413,7 +1413,7 @@ fun ChatScreen(
                             Column(
                                 modifier = Modifier.fillMaxWidth()
                             ) {
-                                if (uiState.error != null && uiState.messages.isEmpty()) {
+                                if (uiState.isGag || uiState.error != null && uiState.messages.isEmpty()) {
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
                                         verticalAlignment = Alignment.CenterVertically
@@ -1425,7 +1425,7 @@ fun ChatScreen(
                                         )
                                         Spacer(modifier = Modifier.width(8.dp))
                                         Text(
-                                            text = uiState.error ?: "未知错误",
+                                            text = if (uiState.isGag) "你已被禁言" else uiState.error ?: "未知错误",
                                             color = MaterialTheme.colorScheme.error.copy(alpha = 0.7f),
                                             fontSize = 14.sp
                                         )

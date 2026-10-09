@@ -263,7 +263,8 @@ class ChatViewModel(
                                     adminIds = adminIds,
                                     myGroupNickname = data?.my_group_nickname,
                                     permissionLevel = permissionLevel,
-                                    isAdmin = permissionLevel >= 2
+                                    isAdmin = permissionLevel >= 2,
+                                    isGag = data?.is_gag ?: false
                                 )
                             }
                         }
