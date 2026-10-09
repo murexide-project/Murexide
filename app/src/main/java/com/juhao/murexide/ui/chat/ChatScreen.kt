@@ -1415,18 +1415,18 @@ fun ChatScreen(
                             ) {
                                 if (uiState.isGag || uiState.error != null && uiState.messages.isEmpty()) {
                                     Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        verticalAlignment = Alignment.CenterVertically
+                                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.Center
                                     ) {
                                         Icon(
                                             AppIcons.Warning,
                                             contentDescription = null,
-                                            modifier = Modifier.size(16.dp)
+                                            modifier = Modifier.size(24.dp)
                                         )
                                         Spacer(modifier = Modifier.width(8.dp))
                                         Text(
                                             text = if (uiState.isGag) "你已被禁言" else uiState.error ?: "未知错误",
-                                            color = MaterialTheme.colorScheme.error.copy(alpha = 0.7f),
                                             fontSize = 14.sp
                                         )
                                     }
