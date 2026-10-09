@@ -81,8 +81,8 @@ import com.juhao.murexide.ui.settings.SettingsActivity
 import androidx.compose.foundation.combinedClickable
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
-import dev.chrisbanes.haze.blur.HazeBlurStyle
-import dev.chrisbanes.haze.blur.HazeInput
+import dev.chrisbanes.haze.blur.materials.HazeMaterials
+import dev.chrisbanes.haze.HazeInput
 import dev.chrisbanes.haze.blur.hazeBlur
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.backdrops.layerBackdrop
@@ -247,7 +247,7 @@ private fun TelegramFloatingNavigationBar(
             .clip(shape)
             .hazeBlur(
                 input = HazeInput.Sources(hazeState),
-                style = HazeBlurStyle {
+                style = HazeMaterials.thin().then {
                     blurEnabled(true)
                     blurRadius(28.dp)
                     noiseFactor(0f)

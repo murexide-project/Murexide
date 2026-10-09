@@ -31,8 +31,8 @@ import com.juhao.murexide.ui.components.Avatar
 import com.juhao.murexide.ui.components.MarkdownText
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
-import dev.chrisbanes.haze.blur.HazeBlurStyle
-import dev.chrisbanes.haze.blur.HazeInput
+import dev.chrisbanes.haze.blur.materials.HazeMaterials
+import dev.chrisbanes.haze.HazeInput
 import dev.chrisbanes.haze.blur.hazeBlur
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
@@ -101,7 +101,7 @@ fun PostDetailScreen(
                         .matchParentSize()
                         .hazeBlur(
                             input = HazeInput.Sources(hazeState),
-                            style = HazeBlurStyle {
+                            style = HazeMaterials.thin().then {
                                 blurEnabled(true)
                                 noiseFactor(0f)
                             }
