@@ -1413,20 +1413,20 @@ fun ChatScreen(
                             Column(
                                 modifier = Modifier.fillMaxWidth()
                             ) {
-                                if (uiState.isGag || uiState.error != null && uiState.messages.isEmpty()) {
+                                if (uiState.isGag) {
                                     Row(
-                                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                                        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                                         verticalAlignment = Alignment.CenterVertically,
                                         horizontalArrangement = Arrangement.Center
                                     ) {
                                         Icon(
-                                            AppIcons.Warning,
+                                            AppIcons.MicOff,
                                             contentDescription = null,
                                             modifier = Modifier.size(24.dp)
                                         )
                                         Spacer(modifier = Modifier.width(8.dp))
                                         Text(
-                                            text = if (uiState.isGag) "你已被禁言" else uiState.error ?: "未知错误",
+                                            text = "群管理员限制了你发言",
                                             fontSize = 14.sp
                                         )
                                     }
