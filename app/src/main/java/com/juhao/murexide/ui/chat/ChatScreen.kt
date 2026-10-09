@@ -1415,7 +1415,7 @@ fun ChatScreen(
                             ) {
                                 if (uiState.isGag) {
                                     Row(
-                                        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                                        modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
                                         verticalAlignment = Alignment.CenterVertically,
                                         horizontalArrangement = Arrangement.Center
                                     ) {
