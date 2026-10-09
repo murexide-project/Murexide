@@ -80,10 +80,10 @@ import com.juhao.murexide.ui.discover.DiscoverScreen
 import com.juhao.murexide.ui.settings.SettingsActivity
 import androidx.compose.foundation.combinedClickable
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
-import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
-import dev.chrisbanes.haze.materials.HazeMaterials
+import dev.chrisbanes.haze.blur.HazeBlurStyle
+import dev.chrisbanes.haze.blur.HazeInput
+import dev.chrisbanes.haze.blur.hazeBlur
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
@@ -201,7 +201,6 @@ private fun HomeNavigationLabel(
 }
 
 @Composable
-@OptIn(ExperimentalHazeMaterialsApi::class)
 private fun TelegramFloatingNavigationBar(
     currentRoute: String?,
     unreadCount: Int,
@@ -246,15 +245,13 @@ private fun TelegramFloatingNavigationBar(
     } else {
         Modifier
             .clip(shape)
-            .hazeEffect(
-                state = hazeState,
-                style = HazeMaterials.thin(
-                    containerColor = navigationSurfaceColor
-                ).copy(
-                    blurRadius = 28.dp,
-                    noiseFactor = 0f
-                ),
-                block = null
+            .hazeBlur(
+                input = HazeInput.Sources(hazeState),
+                style = HazeBlurStyle {
+                    blurEnabled(true)
+                    blurRadius(28.dp)
+                    noiseFactor(0f)
+                }
             )
     }
 
@@ -415,8 +412,6 @@ class MainActivity : ComponentActivity() {
                 return@launch
             }
 
-            // Main content and its ViewModels may be created before the Application-level
-            // DataStore collector emits. Bind the already validated account synchronously.
             LocalCache.setActiveAccount(account.id)
 
             setContent {
@@ -430,7 +425,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalHazeMaterialsApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(account: UserAccount) {
     val themeColor by UiState.themeColor

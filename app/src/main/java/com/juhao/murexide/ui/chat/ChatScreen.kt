@@ -108,10 +108,10 @@ import com.juhao.murexide.ui.chatsearch.ChatSearchActivity
 import com.juhao.murexide.ui.theme.UiState
 import com.juhao.murexide.utils.NotificationHelper
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
-import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
-import dev.chrisbanes.haze.materials.HazeMaterials
+import dev.chrisbanes.haze.blur.HazeBlurStyle
+import dev.chrisbanes.haze.blur.HazeInput
+import dev.chrisbanes.haze.blur.hazeBlur
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
@@ -136,7 +136,6 @@ private enum class ChatInputPanel {
 
 private val DefaultInputPanelHeight = 280.dp
 
-@OptIn(ExperimentalHazeMaterialsApi::class)
 @Composable
 private fun FloatingTopBar(
     hazeState: HazeState,
@@ -151,10 +150,6 @@ private fun FloatingTopBar(
     val controlSize = 48.dp
     val buttonShape = CircleShape
     val topBarColor = MaterialTheme.colorScheme.surfaceContainer
-    val buttonHazeStyle = HazeMaterials.thin().copy(
-        blurRadius = 32.dp,
-        noiseFactor = 0f
-    )
     val useGlassBar = liquidGlassEnabled && liquidBackdrop != null
     val glassSurfaceColor = topBarColor.copy(alpha = 0.8f)
 
@@ -175,11 +170,13 @@ private fun FloatingTopBar(
         } else {
             shadow(2.dp, shape)
                 .clip(shape)
-                .hazeEffect(
-                    state = hazeState,
-                    style = buttonHazeStyle,
-                    blurEnabled = true,
-                    block = null
+                .hazeBlur(
+                    input = HazeInput.Sources(hazeState),
+                    style = HazeBlurStyle {
+                        blurEnabled(true)
+                        blurRadius(32.dp)
+                        noiseFactor(0f)
+                    }
                 )
         }
 
@@ -334,8 +331,7 @@ private fun ChatComposer(
 
 @OptIn(
     ExperimentalMaterial3Api::class, FlowPreview::class, ExperimentalComposeUiApi::class,
-    ExperimentalLayoutApi::class, ExperimentalHazeMaterialsApi::class,
-    ExperimentalMaterial3ExpressiveApi::class
+    ExperimentalLayoutApi::class, ExperimentalMaterial3ExpressiveApi::class
 )
 @Composable
 fun ChatScreen(
@@ -1239,13 +1235,13 @@ fun ChatScreen(
                             } else {
                                 Modifier.shadow(2.dp, panelShape)
                                     .clip(panelShape)
-                                    .hazeEffect(
-                                        state = hazeState,
-                                        style = HazeMaterials.regular().copy(
-                                            blurRadius = 32.dp,
-                                            noiseFactor = 0f
-                                        ),
-                                        block = null
+                                    .hazeBlur(
+                                        input = HazeInput.Sources(hazeState),
+                                        style = HazeBlurStyle {
+                                            blurEnabled(true)
+                                            blurRadius(32.dp)
+                                            noiseFactor(0f)
+                                        }
                                     )
                             }
                         )
@@ -1353,14 +1349,13 @@ fun ChatScreen(
                                     val shape = RoundedCornerShape(24.dp)
                                     Modifier.shadow(2.dp, shape)
                                         .clip(shape)
-                                        .hazeEffect(
-                                            state = hazeState,
-                                            style = HazeMaterials.regular().copy(
-                                                blurRadius = 32.dp,
-                                                noiseFactor = 0f
-                                            ),
-                                            blurEnabled = true,
-                                            block = null
+                                        .hazeBlur(
+                                            input = HazeInput.Sources(hazeState),
+                                            style = HazeBlurStyle {
+                                                blurEnabled(true)
+                                                blurRadius(32.dp)
+                                                noiseFactor(0f)
+                                            }
                                         )
                                 }
                             ),

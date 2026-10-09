@@ -134,7 +134,9 @@ dependencies {
     androidTestImplementation(libs.androidx.room.testing)
 
     implementation(libs.haze)
-    implementation(libs.haze.materials)
+    implementation(libs.haze.blur)
+    implementation(libs.haze.blur.materials)
+    
     implementation(libs.backdrop)
     implementation(libs.kyant.shapes)
 

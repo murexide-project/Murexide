@@ -30,12 +30,12 @@ import com.juhao.murexide.ui.community.ba.CreatePostActivity
 import com.juhao.murexide.ui.components.Avatar
 import com.juhao.murexide.ui.components.MarkdownText
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
-import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
-import dev.chrisbanes.haze.materials.HazeMaterials
+import dev.chrisbanes.haze.blur.HazeBlurStyle
+import dev.chrisbanes.haze.blur.HazeInput
+import dev.chrisbanes.haze.blur.hazeBlur
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalHazeMaterialsApi::class, ExperimentalMaterial3ExpressiveApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun PostDetailScreen(
     onBackClick: () -> Unit,
@@ -99,12 +99,12 @@ fun PostDetailScreen(
                 Box(
                     modifier = Modifier
                         .matchParentSize()
-                        .hazeEffect(
-                            state = hazeState,
-                            style = HazeMaterials.thin().copy(
-                                noiseFactor = 0f
-                            ),
-                            block = null
+                        .hazeBlur(
+                            input = HazeInput.Sources(hazeState),
+                            style = HazeBlurStyle {
+                                blurEnabled(true)
+                                noiseFactor(0f)
+                            }
                         )
                 )
 

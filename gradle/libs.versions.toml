@@ -1,7 +1,6 @@
 [versions]
 agp = "9.3.3"
 coreKtx = "1.19.0"
-hazeMaterials = "1.7.2"
 lifecycleRuntimeKtx = "2.11.0"
 lifecycleViewmodelCompose = "2.11.0"
 activityCompose = "1.13.0"
@@ -23,7 +22,7 @@ multiplatformMarkdownRenderer = "0.43.0"
 multiplatformMarkdownRendererM3 = "0.43.0"
 multiplatformMarkdownRendererCoil2 = "0.43.0"
 navigation = "2.9.8"
-haze = "1.7.2"
+haze = "2.0.1"
 backdrop = "2.0.0"
 kyantShapes = "1.2.0"
 junit = "4.13.2"
@@ -91,7 +90,8 @@ androidx-room-testing = { group = "androidx.room", name = "room-testing", versio
 
 # Haze
 haze = { group = "dev.chrisbanes.haze", name = "haze", version.ref = "haze" }
-haze-materials = { module = "dev.chrisbanes.haze:haze-materials", version.ref = "hazeMaterials" }
+haze-blur = { module = "dev.chrisbanes.haze:haze-blur", version.ref = "haze" }
+haze-blur-materials = { module = "dev.chrisbanes.haze:haze-blur-materials", version.ref = "haze" }
 
 # Liquid glass rendering
 backdrop = { module = "io.github.kyant0:backdrop", version.ref = "backdrop" }
