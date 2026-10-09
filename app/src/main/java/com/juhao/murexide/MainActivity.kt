@@ -248,7 +248,6 @@ private fun TelegramFloatingNavigationBar(
             .hazeBlur(
                 input = HazeInput.Sources(hazeState),
                 style = HazeMaterials.thin().then {
-                    blurEnabled(true)
                     blurRadius(28.dp)
                     noiseFactor(0f)
                 }

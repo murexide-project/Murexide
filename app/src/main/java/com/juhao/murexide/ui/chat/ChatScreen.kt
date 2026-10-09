@@ -151,7 +151,6 @@ private fun FloatingTopBar(
     val buttonShape = CircleShape
     val topBarColor = MaterialTheme.colorScheme.surfaceContainer
     val topBarStyle = HazeMaterials.thin().then {
-        blurEnabled(true)
         blurRadius(32.dp)
         noiseFactor(0f)
     }
@@ -1239,7 +1238,6 @@ fun ChatScreen(
                                     .hazeBlur(
                                         input = HazeInput.Sources(hazeState),
                                         style = HazeMaterials.thin().then {
-                                            blurEnabled(true)
                                             blurRadius(32.dp)
                                             noiseFactor(0f)
                                         }
@@ -1353,7 +1351,6 @@ fun ChatScreen(
                                         .hazeBlur(
                                             input = HazeInput.Sources(hazeState),
                                             style = HazeMaterials.thin().then {
-                                                blurEnabled(true)
                                                 blurRadius(32.dp)
                                                 noiseFactor(0f)
                                             }

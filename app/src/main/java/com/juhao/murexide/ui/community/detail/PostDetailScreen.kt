@@ -102,7 +102,6 @@ fun PostDetailScreen(
                         .hazeBlur(
                             input = HazeInput.Sources(hazeState),
                             style = HazeMaterials.thin().then {
-                                blurEnabled(true)
                                 noiseFactor(0f)
                             }
                         )
