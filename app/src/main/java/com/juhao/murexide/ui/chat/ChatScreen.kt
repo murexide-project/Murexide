@@ -150,6 +150,11 @@ private fun FloatingTopBar(
     val controlSize = 48.dp
     val buttonShape = CircleShape
     val topBarColor = MaterialTheme.colorScheme.surfaceContainer
+    val topBarStyle = HazeMaterials.thin().then {
+        blurEnabled(true)
+        blurRadius(32.dp)
+        noiseFactor(0f)
+    }
     val useGlassBar = liquidGlassEnabled && liquidBackdrop != null
     val glassSurfaceColor = topBarColor.copy(alpha = 0.8f)
 
@@ -172,11 +177,7 @@ private fun FloatingTopBar(
                 .clip(shape)
                 .hazeBlur(
                     input = HazeInput.Sources(hazeState),
-                    style = HazeMaterials.thin().then {
-                        blurEnabled(true)
-                        blurRadius(32.dp)
-                        noiseFactor(0f)
-                    }
+                    style = topBarStyle
                 )
         }
 
