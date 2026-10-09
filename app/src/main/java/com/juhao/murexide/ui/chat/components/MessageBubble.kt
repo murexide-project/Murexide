@@ -143,19 +143,15 @@ fun MessageBubble(
     val isWhiteLightTheme = themeColor == "WHITE" && !usesDarkTheme(themeMode, isSystemDark)
     val isWhiteDarkTheme = themeColor == "WHITE" && themeMode != "oled" && usesDarkTheme(themeMode, isSystemDark)
 
-    val incomingBubbleColor = remember(isWhiteLightTheme, isWhiteDarkTheme, bubbleOpacity, isSystemDark) {
-        when {
-            isWhiteLightTheme -> WhiteThemeIncomingBubbleColor
-            isWhiteDarkTheme -> MaterialTheme.colorScheme.surfaceContainerHigh
-            else -> MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp).copy(alpha = bubbleOpacity)
-        }
+    val incomingBubbleColor = when {
+        isWhiteLightTheme -> WhiteThemeIncomingBubbleColor
+        isWhiteDarkTheme -> MaterialTheme.colorScheme.surfaceContainerHigh
+        else -> MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp).copy(alpha = bubbleOpacity)
     }
-    val incomingAttachmentBackgroundColor = remember(isWhiteLightTheme, isWhiteDarkTheme, isSystemDark) {
-        when {
-            isWhiteLightTheme -> WhiteThemeIncomingBubbleColor
-            isWhiteDarkTheme -> MaterialTheme.colorScheme.surfaceContainerHigh
-            else -> MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp)
-        }
+    val incomingAttachmentBackgroundColor = when {
+        isWhiteLightTheme -> WhiteThemeIncomingBubbleColor
+        isWhiteDarkTheme -> MaterialTheme.colorScheme.surfaceContainerHigh
+        else -> MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp)
     }
 
     val context = LocalContext.current
