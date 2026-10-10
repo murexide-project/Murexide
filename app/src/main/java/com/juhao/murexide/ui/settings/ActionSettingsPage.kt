@@ -130,7 +130,6 @@ fun ActionPage() {
         SettingsItem(
             icon = AppIcons.Screenshot,
             title = "截图设置",
-            subtitle = "隐藏信息等",
             onClick = {
                 val intent = Intent(context, SettingsActivity::class.java).apply{
                     putExtra("page", 6)

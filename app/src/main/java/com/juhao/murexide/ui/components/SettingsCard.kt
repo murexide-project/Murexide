@@ -106,7 +106,7 @@ fun SettingsItem(
                     style = MaterialTheme.typography.bodySmall,
                     color = if (isDestructive) MaterialTheme.colorScheme.error.copy(alpha = 0.9f)
                     else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f),
-                    maxLines = 1,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
             }
@@ -175,7 +175,7 @@ fun SettingsItemCell(
                     style = MaterialTheme.typography.bodySmall,
                     color = if (isDestructive) MaterialTheme.colorScheme.error.copy(alpha = 0.9f)
                     else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f),
-                    maxLines = 1,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
             }
@@ -238,7 +238,7 @@ fun SettingsSwitchItem(
                     style = MaterialTheme.typography.bodySmall,
                     color = if (isDestructive) MaterialTheme.colorScheme.error.copy(alpha = 0.9f)
                     else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f),
-                    maxLines = 1,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
             }
@@ -322,7 +322,7 @@ fun SettingsDropdownItem(
                     text = subtitle,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f),
-                    maxLines = 1,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
             }

@@ -75,16 +75,14 @@ fun LiquidGlassToggle(
             enabled = enabled,
             modifier = modifier,
             thumbContent = {
-                Icon(
-                    imageVector = if (checked) AppIcons.Check else AppIcons.Close,
-                    contentDescription = null,
-                    modifier = Modifier.size(SwitchDefaults.IconSize),
-                    tint = if (checked) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.surfaceContainerHighest
-                    },
-                )
+                if (checked) {
+                    Icon(
+                        imageVector = AppIcons.Check,
+                        contentDescription = null,
+                        modifier = Modifier.size(SwitchDefaults.IconSize),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
             },
         )
         return
