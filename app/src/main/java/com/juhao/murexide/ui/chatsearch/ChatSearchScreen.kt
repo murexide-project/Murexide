@@ -24,11 +24,9 @@ import com.juhao.murexide.data.MessageItem
 import com.juhao.murexide.ui.components.Avatar
 import com.juhao.murexide.ui.icons.AppIcons
 import com.juhao.murexide.ui.icons.AutoMirroredIcon
+import com.juhao.murexide.utils.formatTimestamp
 
 import kotlinx.coroutines.flow.distinctUntilChanged
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -135,7 +133,7 @@ private fun SearchResultItem(
         },
         trailingContent = {
             Text(
-                text = formatTime(message.timestamp),
+                text = formatTimestamp(message.timestamp),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -174,11 +172,6 @@ private fun previewText(message: MessageItem): String = when (message.contentTyp
     MessageItem.CONTENT_TYPE_STICKER -> "[表情]"
     MessageItem.CONTENT_TYPE_POST -> "[文章] ${message.postTitle.orEmpty()}".trim()
     else -> message.getDisplayContent()
-}
-
-private fun formatTime(ts: Long): String {
-    if (ts <= 0) return ""
-    return SimpleDateFormat("MM-dd HH:mm", Locale.getDefault()).format(Date(ts))
 }
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)

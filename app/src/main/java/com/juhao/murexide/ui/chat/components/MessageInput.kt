@@ -58,6 +58,8 @@ import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import com.juhao.murexide.R
 import com.juhao.murexide.data.MentionToken
+import com.juhao.murexide.data.MessageItem
+import kotlin.math.abs
 import kotlin.math.roundToInt
 
 private val SendButtonSize = 36.dp
@@ -76,6 +78,13 @@ private val SendFormatOptions = listOf(
     SendFormatOption(type = "html", label = "HTML"),
     SendFormatOption(type = "markdown", label = "Markdown")
 )
+
+private fun sendTypeToContentType(type: String): Int? = when (type) {
+    "text" -> MessageItem.CONTENT_TYPE_TEXT
+    "markdown" -> MessageItem.CONTENT_TYPE_MARKDOWN
+    "html" -> MessageItem.CONTENT_TYPE_HTML
+    else -> null
+}
 
 internal fun sendFormatOptionIndex(
     horizontalDrag: Float,
@@ -110,7 +119,8 @@ fun MessageInput(
     mentions: List<MentionToken> = emptyList(),
     onMentionTriggered: (Int) -> Unit = {},
     focusRequester: FocusRequester,
-    onInputFocused: () -> Unit = {}
+    onInputFocused: () -> Unit = {},
+    limitedMsgType: List<Int> = emptyList()
 ) {
     val fieldValue = TextFieldValue(
         text = inputText,
@@ -129,22 +139,25 @@ fun MessageInput(
     ) {
         MoreActionsButton(
             onAddAlbumClick = onAddAlbumClick,
-            onAddFileClick = onAddFileClick
+            onAddFileClick = onAddFileClick,
+            limitedMsgType = limitedMsgType
         )
-        
-        IconButton(
-            onClick = onEmojiClick,
-            modifier = Modifier.size(36.dp)
-        ) {
-            Icon(
-                imageVector = if (isEmojiPanelVisible) {
-                    AppIcons.Keyboard
-                } else {
-                    AppIcons.Mood
-                },
-                contentDescription = if (isEmojiPanelVisible) "切换到键盘" else "表情",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+
+        if (MessageItem.CONTENT_TYPE_STICKER !in limitedMsgType) {
+            IconButton(
+                onClick = onEmojiClick,
+                modifier = Modifier.size(36.dp)
+            ) {
+                Icon(
+                    imageVector = if (isEmojiPanelVisible) {
+                        AppIcons.Keyboard
+                    } else {
+                        AppIcons.Mood
+                    },
+                    contentDescription = if (isEmojiPanelVisible) "切换到键盘" else "表情",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
 
         MessageTextField(
@@ -182,6 +195,7 @@ fun MessageInput(
             if (showSendButton) {
                 FormatSendButton(
                     isSending = isSending,
+                    limitedMsgType = limitedMsgType,
                     onSendClick = onSendClick,
                     onSendWithType = onSendWithType
                 )
@@ -209,6 +223,7 @@ fun MessageInput(
 @Composable
 private fun FormatSendButton(
     isSending: Boolean,
+    limitedMsgType: List<Int>,
     onSendClick: () -> Unit,
     onSendWithType: (String) -> Unit
 ) {
@@ -224,6 +239,26 @@ private fun FormatSendButton(
     val optionWidthPx = with(density) { SendFormatOptionWidth.toPx() }
     val pickerOffsetPx = with(density) {
         (SendFormatPickerHeight + SendFormatPickerGap).roundToPx()
+    }
+
+    fun isFormatAllowed(type: String?): Boolean {
+        if (type == null) return true
+        val ct = sendTypeToContentType(type) ?: return true
+        return ct !in limitedMsgType
+    }
+
+    val selectableIndices = remember(limitedMsgType) {
+        SendFormatOptions.indices.filter { i ->
+            isFormatAllowed(SendFormatOptions[i].type)
+        }
+    }
+
+    val defaultType = remember(limitedMsgType) {
+        SendFormatOptions.firstOrNull {
+            it.type == "markdown" && isFormatAllowed(it.type)
+        }?.type ?: SendFormatOptions.firstOrNull {
+            it.type != null && isFormatAllowed(it.type)
+        }?.type
     }
 
     Box(
@@ -255,6 +290,7 @@ private fun FormatSendButton(
                     customActions = if (!isSending) {
                         SendFormatOptions.mapNotNull { option ->
                             val type = option.type ?: return@mapNotNull null
+                            if (!isFormatAllowed(type)) return@mapNotNull null
                             CustomAccessibilityAction(
                                 label = "以${option.label}格式发送",
                                 action = {
@@ -289,7 +325,7 @@ private fun FormatSendButton(
                         },
                         onLongPress = { pressPosition ->
                             if (!isSending) {
-                                selectedType = "markdown"
+                                selectedType = defaultType
                                 dragOrigin = pressPosition
                                 showFormatPicker = true
                                 hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -297,19 +333,21 @@ private fun FormatSendButton(
                         }
                     )
                 }
-                .pointerInput(optionWidthPx) {
+                .pointerInput(optionWidthPx, selectableIndices) {
                     awaitPointerEventScope {
                         while (true) {
                             val event = awaitPointerEvent(PointerEventPass.Initial)
                             if (!showFormatPicker) continue
 
                             val pointer = event.changes.firstOrNull { it.pressed } ?: continue
-                            val optionIndex = sendFormatOptionIndex(
+                            val rawIndex = sendFormatOptionIndex(
                                 horizontalDrag = pointer.position.x - dragOrigin.x,
                                 initialIndex = SendFormatOptions.lastIndex,
                                 optionWidth = optionWidthPx,
                                 optionCount = SendFormatOptions.size
                             )
+                            val optionIndex = selectableIndices.minByOrNull { abs(it - rawIndex) }
+                                ?: continue
                             val nextType = SendFormatOptions[optionIndex].type
                             if (nextType != selectedType) {
                                 selectedType = nextType
@@ -358,7 +396,8 @@ private fun FormatSendButton(
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         SendFormatOptions.forEach { option ->
-                            val selected = option.type == selectedType
+                            val allowed = isFormatAllowed(option.type)
+                            val selected = allowed && option.type == selectedType
                             Box(
                                 modifier = Modifier
                                     .width(SendFormatOptionWidth)
@@ -374,25 +413,34 @@ private fun FormatSendButton(
                                     ),
                                 contentAlignment = Alignment.Center
                             ) {
+                                val iconTint = if (allowed) {
+                                    MaterialTheme.colorScheme.onSurface
+                                } else {
+                                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
+                                }
                                 when (option.type) {
                                     "text" -> Icon(
                                         imageVector = AppIcons.TextFields,
                                         contentDescription = null,
+                                        tint = iconTint,
                                         modifier = Modifier.size(16.dp)
                                     )
                                     "html" -> Icon(
                                         imageVector = AppIcons.Code,
                                         contentDescription = null,
+                                        tint = iconTint,
                                         modifier = Modifier.size(16.dp)
                                     )
                                     "markdown" -> Icon(
                                         painter = painterResource(R.drawable.markdown),
                                         contentDescription = null,
+                                        tint = iconTint,
                                         modifier = Modifier.size(16.dp)
                                     )
                                     else -> Icon(
                                         imageVector = AppIcons.Close,
                                         contentDescription = null,
+                                        tint = iconTint,
                                         modifier = Modifier.size(16.dp)
                                     )
                                 }
@@ -408,7 +456,8 @@ private fun FormatSendButton(
 @Composable
 private fun MoreActionsButton(
     onAddAlbumClick: () -> Unit,
-    onAddFileClick: () -> Unit
+    onAddFileClick: () -> Unit,
+    limitedMsgType: List<Int> = emptyList()
 ) {
     var showMenu by remember { mutableStateOf(false) }
 
@@ -436,7 +485,9 @@ private fun MoreActionsButton(
                 },
                 leadingIcon = {
                     Icon(AppIcons.Image, contentDescription = null)
-                }
+                },
+                enabled = MessageItem.CONTENT_TYPE_IMAGE !in limitedMsgType &&
+                        MessageItem.CONTENT_TYPE_VIDEO !in limitedMsgType
             )
             DropdownMenuItem(
                 text = { Text("文件") },
@@ -446,7 +497,8 @@ private fun MoreActionsButton(
                 },
                 leadingIcon = {
                     Icon(AppIcons.AttachFile, contentDescription = null)
-                }
+                },
+                enabled = MessageItem.CONTENT_TYPE_FILE !in limitedMsgType
             )
         }
     }

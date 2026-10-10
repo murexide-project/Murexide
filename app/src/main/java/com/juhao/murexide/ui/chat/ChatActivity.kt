@@ -16,9 +16,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.juhao.murexide.datastore.AccountStorage
@@ -68,6 +71,27 @@ class ChatActivity : ComponentActivity() {
                 } else {
                     val conversations by LocalCache.observeConversations(account.id)
                         .collectAsState(initial = emptyList())
+
+                    val chatViewModel: ChatViewModel = viewModel(
+                        key = "chat_${chatId}_$chatType",
+                        factory = remember(account.id, account.token, chatId, chatType) {
+                            object : ViewModelProvider.Factory {
+                                @Suppress("UNCHECKED_CAST")
+                                override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                                    return ChatViewModel(
+                                        token = account.token,
+                                        chatId = chatId,
+                                        chatType = chatType,
+                                        accountStorage = accountStorage,
+                                        currentUserId = account.id,
+                                        currentUserName = account.username,
+                                        currentUserAvatar = account.avatar
+                                    ) as T
+                                }
+                            }
+                        }
+                    )
+
                     ChatScreen(
                         chatType = chatType,
                         chatName = chatName,
@@ -88,21 +112,7 @@ class ChatActivity : ComponentActivity() {
                         backUnreadCount = conversations.unreadTotal(ConversationKey(chatId, chatType)),
                         searchTargetMsgId = searchTargetMsgId,
                         searchTargetMsgSeq = searchTargetMsgSeq,
-                        viewModel = viewModel(
-                            factory = object : androidx.lifecycle.ViewModelProvider.Factory {
-                                @Suppress("UNCHECKED_CAST")
-                                override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
-                                    return ChatViewModel(
-                                        token = account.token,
-                                        chatId = chatId,
-                                        chatType = chatType,
-                                        currentUserId = account.id,
-                                        currentUserName = account.username,
-                                        currentUserAvatar = account.avatar
-                                    ) as T
-                                }
-                            }
-                        )
+                        viewModel = chatViewModel
                     )
                 }
             }

@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.juhao.murexide.R
 import com.juhao.murexide.datastore.SettingsStorage
+import com.juhao.murexide.datastore.AccountStorage
 import com.juhao.murexide.data.ConversationItem
 import com.juhao.murexide.data.HomeSearchResult
 import com.juhao.murexide.ui.components.*
@@ -46,7 +47,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.juhao.murexide.ui.conversationdetail.ConversationDetailActivity
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ConversationListScreen(
     modifier: Modifier = Modifier,
@@ -58,15 +58,6 @@ fun ConversationListScreen(
     onConversationClick: (ConversationItem) -> Unit,
     onCreateClick: (CreationKind) -> Unit = {},
     currentConversation: ConversationItem? = null,
-    viewModel: ConversationViewModel = androidx.lifecycle.viewmodel.compose.viewModel(
-        key = "conversation_$accountId",
-        factory = object : ViewModelProvider.Factory {
-            @Suppress("UNCHECKED_CAST")
-            override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                return ConversationViewModel(token, accountId) as T
-            }
-        }
-    ),
     searchViewModel: HomeSearchViewModel = androidx.lifecycle.viewmodel.compose.viewModel(factory = object : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>) =
@@ -74,6 +65,19 @@ fun ConversationListScreen(
     })
 ) {
     val context = LocalContext.current
+    val viewModel: ConversationViewModel = androidx.lifecycle.viewmodel.compose.viewModel(
+        key = "conversation_$accountId",
+        factory = object : ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                val storage = AccountStorage.getInstance(context)
+                return ConversationViewModel(token, accountId, storage) as T
+            }
+        }
+    )
+    
+    val drafts by viewModel.drafts.collectAsState()
+
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
     val uiState by viewModel.uiState.collectAsState()
     val isWsConnected by viewModel.isWsConnected.collectAsState()
@@ -401,6 +405,7 @@ fun ConversationListScreen(
                                     if (isStickyCollapsed) return@Box
                                     ConversationItem(
                                         conversation = conversation,
+                                        draft = drafts["${conversation.chatType}_${conversation.chatId}"],
                                         isSelected = currentConversation?.chatId == conversation.chatId &&
                                                 currentConversation.chatType == conversation.chatType &&
                                                 bigScreenMode,
@@ -426,6 +431,7 @@ fun ConversationListScreen(
                             ) { conversation ->
                                 ConversationItem(
                                     conversation = conversation,
+                                    draft = drafts["${conversation.chatType}_${conversation.chatId}"],
                                     isSelected = currentConversation?.chatId == conversation.chatId &&
                                             currentConversation.chatType == conversation.chatType &&
                                             bigScreenMode,
@@ -524,6 +530,7 @@ fun ConversationListScreen(
 @Composable
 fun ConversationItem(
     conversation: ConversationItem,
+    draft: String? = null,
     isSelected: Boolean = false,
     isSticky: Boolean = false,
     onClick: () -> Unit
@@ -597,14 +604,32 @@ fun ConversationItem(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.Top
             ) {
-                Text(
-                    text = conversation.chatContent,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f)
-                )
+                if (!draft.isNullOrBlank()) {
+                    Row(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "[草稿]",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = draft,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                } else {
+                    Text(
+                        text = conversation.chatContent,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
 
                 Spacer(modifier = Modifier.width(8.dp))
 

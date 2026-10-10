@@ -74,6 +74,7 @@ message info {
         string community_name = 16;
         int32 top = 19; // 会话置顶
         repeated string admin = 20;
+        int64 gag_until_timestamp = 21; // 禁言截止时间,时区 UTC+8,永久禁言为 -1
         string limited_msg_type = 22; // 被限制的消息类型,例如 1,2,3
         string owner = 23;
         int32 recommandation = 24; // 是否加入群推荐

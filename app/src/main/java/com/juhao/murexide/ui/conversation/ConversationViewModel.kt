@@ -16,6 +16,7 @@ import com.juhao.murexide.data.withLatestMessageIdentity
 import com.juhao.murexide.data.withRecalledLatestMessage
 import com.juhao.murexide.data.withStreamedLatestMessage
 import com.juhao.murexide.data.local.LocalCache
+import com.juhao.murexide.datastore.AccountStorage
 import com.juhao.murexide.network.WebSocketManager
 import com.juhao.murexide.repository.ConversationRepository
 import kotlinx.coroutines.flow.asStateFlow
@@ -48,6 +49,7 @@ sealed class ConversationUiState {
 class ConversationViewModel(
     private val token: String,
     private val accountId: String,
+    private val accountStorage: AccountStorage,
     private val repository: ConversationRepository = ConversationRepository(),
     private val wsManager: WebSocketManager = WebSocketManager.getInstance()
 ) : ViewModel() {
@@ -71,12 +73,21 @@ class ConversationViewModel(
     private var loadGeneration = 0
     private val resolvingLatestMutations = mutableSetOf<String>()
     private var foregroundSyncEnabled = false
+    
+    private val _drafts = MutableStateFlow<Map<String, String>>(emptyMap())
+    val drafts: StateFlow<Map<String, String>> = _drafts.asStateFlow()
 
     init {
         observeCachedConversations()
         observeWebSocket()
         observeWsConnection()
         observeAppForeground()
+    
+        viewModelScope.launch {
+            accountStorage.currentDraftsFlow.collect { draftMap ->
+                _drafts.value = draftMap
+            }
+        }
     }
 
     fun setFilter(filter: ConversationFilter) {

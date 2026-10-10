@@ -30,7 +30,8 @@ data class UserAccount(
     val avatar: String = "",
     val id: String = "1",
     val token: String = "",
-    val isValidated: Boolean = false
+    val isValidated: Boolean = false,
+    val drafts: Map<String, String> = emptyMap()
 )
 
 internal fun upsertAccountInList(
@@ -413,4 +414,36 @@ class AccountStorage private constructor(context: Context) {
     suspend fun getCurrentAvatar(): String? = getCurrentAccount()?.avatar
 
     suspend fun getCurrentUserInfo(): UserAccount? = getCurrentAccount()
+    
+    suspend fun saveDraft(chatId: String, chatType: Int, draft: String) {
+        updateStoredAccounts { stored ->
+            val currentId = stored.currentUserId ?: return@updateStoredAccounts stored
+            stored.copy(
+                accounts = stored.accounts.map { account ->
+                    if (account.id == currentId) {
+                        val key = "${chatType}_$chatId"
+                        val newDrafts = if (draft.isBlank()) {
+                            account.drafts - key
+                        } else {
+                            account.drafts + (key to draft)
+                        }
+                        account.copy(drafts = newDrafts)
+                    } else account
+                }
+            )
+        }
+    }
+    
+    suspend fun getDraft(chatId: String, chatType: Int): String {
+        val account = getCurrentAccount() ?: return ""
+        return account.drafts["${chatType}_$chatId"] ?: ""
+    }
+    
+    suspend fun clearDraft(chatId: String, chatType: Int) {
+        saveDraft(chatId, chatType, "")
+    }
+    
+    val currentDraftsFlow: Flow<Map<String, String>> = currentAccountFlow
+        .map { it?.drafts ?: emptyMap() }
+        .distinctUntilChanged()
 }

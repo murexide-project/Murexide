@@ -736,6 +736,7 @@ fun MainScreen(account: UserAccount) {
                                                             token = token,
                                                             chatId = currentConversation!!.chatId,
                                                             chatType = currentConversation!!.chatType,
+                                                            accountStorage = accountStorage,
                                                             currentUserId = account.id,
                                                             currentUserName = account.username,
                                                             currentUserAvatar = account.avatar

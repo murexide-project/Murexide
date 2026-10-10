@@ -160,10 +160,18 @@ fun MarkdownText(
                         alt = segment.alt,
                         imageReferer = imageReferer,
                         onClick = { url ->
-                            onImageClick?.invoke(url) ?: showImageViewer(
-                                context = context,
-                                images = listOf(fullImagePreviewItem(url))
-                            )
+                            val link = segment.linkUrl
+                            if (link != null) {
+                                try {
+                                    openMarkdownLink(context, link)
+                                } catch (_: Exception) {
+                                }
+                            } else {
+                                onImageClick?.invoke(url) ?: showImageViewer(
+                                    context = context,
+                                    images = listOf(fullImagePreviewItem(url))
+                                )
+                            }
                         }
                     )
                 }
@@ -191,7 +199,6 @@ fun MarkdownText(
             }
         }
     }
-
 }
 
 @Composable
@@ -614,7 +621,11 @@ private fun CodeBlockComponent(
 
 private sealed interface MarkdownSegment {
     data class Text(val content: String) : MarkdownSegment
-    data class Image(val url: String, val alt: String?) : MarkdownSegment
+    data class Image(
+        val url: String,
+        val alt: String?,
+        val linkUrl: String? = null
+    ) : MarkdownSegment
     data class HtmlTable(val content: String) : MarkdownSegment
     data class HtmlBlock(val content: String) : MarkdownSegment
     data class CodeBlock(val code: String, val language: String?) : MarkdownSegment
@@ -752,9 +763,8 @@ private fun parseMarkdownSegments(markdown: String): List<MarkdownSegment> {
         if (lines[i].trim().startsWith("```")) {
             val firstLine = lines[i].trim()
             val language = firstLine.substring(3).trim().ifBlank { null }
-            i++ // 跳过开始标记
+            i++
 
-            // 找到代码块的结束
             val codeLines = mutableListOf<String>()
             while (i < lines.size && !lines[i].trim().startsWith("```")) {
                 codeLines.add(lines[i])
@@ -762,7 +772,7 @@ private fun parseMarkdownSegments(markdown: String): List<MarkdownSegment> {
             }
 
             if (i < lines.size) {
-                i++ // 跳过结束标记
+                i++
             }
 
             val code = codeLines.joinToString("\n")
@@ -822,7 +832,6 @@ private fun parseMarkdownSegments(markdown: String): List<MarkdownSegment> {
 
             val content = lines.subList(contentStart, i).joinToString("\n")
             if (content.isNotBlank()) {
-                // 在非表格、非代码块内容中提取图片
                 extractImagesFromContent(content, segments)
             }
         }
@@ -978,16 +987,16 @@ private fun injectHighlightMark(markdown: String, keyword: String): String {
     if (keyword.isBlank() || markdown.isBlank()) return markdown
     val pattern = Regex(Regex.escape(keyword), RegexOption.IGNORE_CASE)
     return pattern.replace(markdown) { match ->
-        // 使用行内代码包裹，利用现有 codeStyle 背景实现稳定高亮
         "`" + match.value + "`"
     }
 }
 
-/**
- * 从内容中提取图片，将图片和文本分离
- */
 private fun extractImagesFromContent(content: String, segments: MutableList<MarkdownSegment>) {
-    val regex = Regex("!\\[([^]]*)]\\(([^)\\s]+)(?:\\s+\"[^\"]*\")?\\)")
+    val regex = Regex(
+        "\\[!\\[([^]]*)]\\(([^)\\s]+)(?:\\s+\"[^\"]*\")?\\)]\\(([^)\\s]+)(?:\\s+\"[^\"]*\")?\\)" +
+                "|" +
+                "!\\[([^]]*)]\\(([^)\\s]+)(?:\\s+\"[^\"]*\")?\\)"
+    )
     var lastIndex = 0
     var foundAnyImage = false
 
@@ -1001,16 +1010,26 @@ private fun extractImagesFromContent(content: String, segments: MutableList<Mark
             }
         }
 
-        val alt = match.groupValues.getOrNull(1).orEmpty().ifBlank { null }
-        val url = match.groupValues.getOrNull(2).orEmpty()
-        if (url.isNotBlank()) {
-            segments += MarkdownSegment.Image(url = url, alt = alt)
+        val linkedImageUrl = match.groupValues.getOrNull(2).orEmpty()
+        if (linkedImageUrl.isNotBlank()) {
+            segments += MarkdownSegment.Image(
+                url = linkedImageUrl,
+                alt = match.groupValues.getOrNull(1).orEmpty().ifBlank { null },
+                linkUrl = match.groupValues.getOrNull(3).orEmpty().ifBlank { null }
+            )
+        } else {
+            val url = match.groupValues.getOrNull(5).orEmpty()
+            if (url.isNotBlank()) {
+                segments += MarkdownSegment.Image(
+                    url = url,
+                    alt = match.groupValues.getOrNull(4).orEmpty().ifBlank { null }
+                )
+            }
         }
 
         lastIndex = range.last + 1
     }
 
-    // 处理剩余内容
     if (foundAnyImage && lastIndex < content.length) {
         val textContent = content.substring(lastIndex)
         if (textContent.isNotBlank()) {
@@ -1018,7 +1037,6 @@ private fun extractImagesFromContent(content: String, segments: MutableList<Mark
         }
     }
 
-    // 如果没有找到图片，整个内容作为文本
     if (!foundAnyImage && content.isNotBlank()) {
         segments += MarkdownSegment.Text(processLineBreaks(content))
     }
@@ -1113,11 +1131,6 @@ private fun CharSequence.containsHtmlTableEnd(): Boolean {
     return htmlTableEndRegex.containsMatchIn(this)
 }
 
-/**
- * 处理文本换行，支持宽容换行
- * 将单个换行符转换为 Markdown 硬换行（行尾加两个空格）
- * 这样即使不按照严格的 Markdown 格式（双换行或行尾两空格），也能正确显示换行
- */
 private fun processLineBreaks(text: String): String {
     val lines = text.lines()
     val result = mutableListOf<String>()
@@ -1127,25 +1140,22 @@ private fun processLineBreaks(text: String): String {
         val line = lines[i]
         val trimmedLine = line.trim()
 
-        // 空行保持原样，作为段落分隔
         if (trimmedLine.isEmpty()) {
             result.add(line)
             i++
             continue
         }
 
-        // 检查是否是特殊 Markdown 语法行
-        val isSpecialLine = trimmedLine.startsWith("#") ||           // 标题
-                trimmedLine.startsWith("-") ||            // 列表
-                trimmedLine.startsWith("*") ||            // 列表或强调
-                trimmedLine.startsWith("+") ||            // 列表
-                trimmedLine.startsWith(">") ||            // 引用
-                trimmedLine.startsWith("|") ||            // 表格
-                trimmedLine.startsWith("```") ||          // 代码块
-                trimmedLine.matches(Regex("^\\d+\\..*")) || // 有序列表
-                line.trimEnd().endsWith("  ")             // 已有硬换行标记
+        val isSpecialLine = trimmedLine.startsWith("#") ||
+                trimmedLine.startsWith("-") ||
+                trimmedLine.startsWith("*") ||
+                trimmedLine.startsWith("+") ||
+                trimmedLine.startsWith(">") ||
+                trimmedLine.startsWith("|") ||
+                trimmedLine.startsWith("```") ||
+                trimmedLine.matches(Regex("^\\d+\\..*")) ||
+                line.trimEnd().endsWith("  ")
 
-        // 检查下一行是否是特殊语法行或空行
         val nextLineIsSpecial = if (i + 1 < lines.size) {
             val nextTrimmed = lines[i + 1].trim()
             nextTrimmed.isEmpty() ||
@@ -1158,10 +1168,9 @@ private fun processLineBreaks(text: String): String {
                     nextTrimmed.startsWith("```") ||
                     nextTrimmed.matches(Regex("^\\d+\\..*"))
         } else {
-            true // 最后一行
+            true
         }
 
-        // 如果当前行不是特殊语法，且下一行也不是特殊语法或空行，添加硬换行标记
         if (!isSpecialLine && !nextLineIsSpecial) {
             result.add("$line  ")
         } else {

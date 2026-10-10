@@ -61,15 +61,13 @@ import com.juhao.murexide.ui.components.MarkdownText
 import com.juhao.murexide.ui.components.showImageViewer
 import com.juhao.murexide.ui.theme.UiState
 import com.juhao.murexide.ui.theme.usesDarkTheme
+import com.juhao.murexide.utils.formatTimestamp
 import com.juhao.murexide.utils.isYunhuImageUrl
 import com.juhao.murexide.utils.imageAspectRatio
 import com.juhao.murexide.utils.imageThumbnailUrl
 import com.juhao.murexide.utils.videoAspectRatio
 
 import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
-import java.util.Calendar
-import java.util.Date
 import java.util.Locale
 import kotlin.math.roundToInt
 import androidx.core.graphics.toColorInt
@@ -83,7 +81,6 @@ private const val QUOTE_PREVIEW_SIZE_DP = 40
 private const val IMAGE_MAX_LANDSCAPE_DP = 240
 private const val IMAGE_MAX_PORTRAIT_DP = 160
 private const val VIDEO_WIDTH_DP = 200
-private const val DAY_MILLIS = 86_400_000L
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -125,12 +122,6 @@ fun MessageBubble(
     roleLabel: String? = null,
     isHighlighted: Boolean = false
 ) {
-    LaunchedEffect(Unit) {
-        if (showMenuMsgId != null) {
-            showMenuChanged(null)
-        }
-    }
-
     val clipboardManager = LocalClipboard.current
     val scope = rememberCoroutineScope()
 
@@ -1036,7 +1027,7 @@ private fun HiddenMediaPlaceholder(
 }
 
 @Composable
-private fun MediaLoadingIcon(isVideoMessage: Boolean, isImageMessage: Boolean) {
+private fun BoxScope.MediaLoadingIcon(isVideoMessage: Boolean, isImageMessage: Boolean) {
     Icon(
         imageVector = when {
             isVideoMessage -> AppIcons.VideoFile
@@ -1044,15 +1035,15 @@ private fun MediaLoadingIcon(isVideoMessage: Boolean, isImageMessage: Boolean) {
             else -> AppIcons.Mood
         },
         contentDescription = null,
-        modifier = Modifier.size(28.dp),
+        modifier = Modifier.size(28.dp).align(Alignment.Center),
         tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f)
     )
 }
 
 @Composable
-private fun VideoPlayOverlay() {
+private fun BoxScope.VideoPlayOverlay() {
     Surface(
-        modifier = Modifier.size(48.dp),
+        modifier = Modifier.size(48.dp).align(Alignment.Center),
         shape = CircleShape,
         color = Color.Black.copy(alpha = 0.5f)
     ) {
@@ -1543,35 +1534,7 @@ fun QuarterCircleCorner(
             }
         }
     }
-}
-
-private fun formatTimestamp(timestamp: Long): String {
-    return try {
-        val date = Date(timestamp)
-        val now = Date()
-        val todayCalendar = Calendar.getInstance().apply {
-            time = now
-            set(Calendar.HOUR_OF_DAY, 0)
-            set(Calendar.MINUTE, 0)
-            set(Calendar.SECOND, 0)
-            set(Calendar.MILLISECOND, 0)
-        }
-        val dateCalendar = Calendar.getInstance().apply { time = date }
-
-        when {
-            date.after(todayCalendar.time) ->
-                SimpleDateFormat("HH:mm", Locale.getDefault()).format(date)
-            date.after(Date(todayCalendar.timeInMillis - DAY_MILLIS)) ->
-                "昨天 " + SimpleDateFormat("HH:mm", Locale.getDefault()).format(date)
-            dateCalendar.get(Calendar.YEAR) == todayCalendar.get(Calendar.YEAR) ->
-                SimpleDateFormat("M/d HH:mm", Locale.getDefault()).format(date)
-            else ->
-                SimpleDateFormat("yyyy/M/d HH:mm", Locale.getDefault()).format(date)
-        }
-    } catch (_: Exception) {
-        ""
-    }
-}
+} 
 
 private fun getFileIcon(fileName: String): ImageVector {
     val extension = fileName.substringAfterLast('.', "").lowercase()

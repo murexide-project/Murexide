@@ -578,7 +578,7 @@ class MessageRepository(
                     }
                     val parsed = forwardJson.decodeFromString<SearchMessageResponse>(bodyStr)
                     if (parsed.code == 1) {
-                        Result.success(parsed.data?.list.orEmpty())
+                        Result.success(parsed.data.list.orEmpty())
                     } else {
                         Result.failure(Exception(parsed.msg.ifBlank { "搜索失败" }))
                     }

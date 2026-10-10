@@ -16,6 +16,9 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import android.widget.Toast
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.ui.Alignment
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
@@ -28,14 +31,11 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
@@ -52,7 +52,6 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -69,8 +68,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.juhao.murexide.ui.components.Avatar
 import com.juhao.murexide.ui.components.ExpressiveDropdownMenu
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
 import com.juhao.murexide.ui.components.fullImagePreviewItem
 import com.juhao.murexide.ui.components.imageMessagePreviewItem
 import com.juhao.murexide.ui.components.videoMessagePreviewItem
@@ -80,6 +77,7 @@ import com.juhao.murexide.ui.chat.components.MessageBubble
 import com.juhao.murexide.ui.chat.components.BoardPanel
 import com.juhao.murexide.ui.chat.components.MessageInput
 import com.juhao.murexide.ui.chat.components.EmojiPanel
+import com.juhao.murexide.ui.chat.components.EditHistoryDialog
 import com.juhao.murexide.ui.chat.components.InstructionPanel
 import com.juhao.murexide.ui.chat.components.InstructionFormDialog
 import com.juhao.murexide.ui.chat.components.UploadProgressBar
@@ -90,28 +88,19 @@ import com.juhao.murexide.data.MessageItem
 import com.juhao.murexide.data.MessageDisplayItem
 import com.juhao.murexide.data.ForwardTarget
 import com.juhao.murexide.data.resolveStickerMessageUrl
-import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlinx.coroutines.withTimeoutOrNull
-import androidx.compose.ui.draw.clip
-import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.ui.Alignment
 import com.juhao.murexide.repository.ConversationDetailRepository
-import com.juhao.murexide.ui.chat.components.EditHistoryDialog
 import com.juhao.murexide.ui.conversationdetail.ConversationDetailActivity
 import com.juhao.murexide.ui.components.handleStaticHtmlLink
 import com.juhao.murexide.ui.chatsearch.ChatSearchActivity
 import com.juhao.murexide.ui.theme.UiState
 import com.juhao.murexide.utils.NotificationHelper
-import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.hazeSource
-import dev.chrisbanes.haze.blur.materials.HazeMaterials
-import dev.chrisbanes.haze.HazeInput
-import dev.chrisbanes.haze.blur.hazeBlur
+import com.juhao.murexide.utils.formatTimestamp
+import com.juhao.murexide.ui.theme.LocalLiquidGlassEnabled
+import com.juhao.murexide.ui.theme.LocalLiquidGlassBlur
+import com.juhao.murexide.ui.theme.liquidGlassHighlightEnabled
+import com.juhao.murexide.ui.theme.ProvideLiquidGlassContentColor
+import com.juhao.murexide.ui.theme.liquidglass.LiquidGlassMagnifierHost
+import com.juhao.murexide.utils.requiresLegacyWritePermission
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
@@ -119,13 +108,20 @@ import com.kyant.backdrop.drawBackdrop
 import com.kyant.backdrop.effects.blur
 import com.kyant.backdrop.effects.lens
 import com.kyant.backdrop.effects.vibrancy
-import com.juhao.murexide.ui.theme.LocalLiquidGlassEnabled
-import com.juhao.murexide.ui.theme.LocalLiquidGlassBlur
-import com.juhao.murexide.ui.theme.liquidGlass
-import com.juhao.murexide.ui.theme.liquidGlassHighlightEnabled
-import com.juhao.murexide.ui.theme.ProvideLiquidGlassContentColor
-import com.juhao.murexide.ui.theme.liquidglass.LiquidGlassMagnifierHost
-import com.juhao.murexide.utils.requiresLegacyWritePermission
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.hazeSource
+import dev.chrisbanes.haze.blur.materials.HazeMaterials
+import dev.chrisbanes.haze.HazeInput
+import dev.chrisbanes.haze.blur.hazeBlur
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.coroutines.resume
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -295,7 +291,8 @@ private fun ChatComposer(
     onAddAlbumClick: () -> Unit,
     onAddFileClick: () -> Unit,
     focusRequester: FocusRequester,
-    onInputFocused: () -> Unit
+    onInputFocused: () -> Unit,
+    limitedMsgType: List<Int> = emptyList()
 ) {
     val composerState by viewModel.composerState.collectAsState()
     MessageInput(
@@ -325,7 +322,8 @@ private fun ChatComposer(
             if (chatType == 2) viewModel.showMentionPicker(position)
         },
         focusRequester = focusRequester,
-        onInputFocused = onInputFocused
+        onInputFocused = onInputFocused,
+        limitedMsgType = limitedMsgType
     )
 }
 
@@ -507,10 +505,17 @@ fun ChatScreen(
 
     LaunchedEffect(isReturningToKeyboard) {
         if (!isReturningToKeyboard) return@LaunchedEffect
+        withFrameNanos { }
+        if (pendingInputPanel != null) {
+            isReturningToKeyboard = false
+            return@LaunchedEffect
+        }
         inputFocusRequester.requestFocus()
         keyboardController?.show()
-        delay(1_000.milliseconds)
-        isReturningToKeyboard = false
+        delay(800.milliseconds)
+        if (isReturningToKeyboard) {
+            isReturningToKeyboard = false
+        }
     }
 
     LaunchedEffect(isReturningToKeyboard, imeBottomPx, imeTargetBottomPx) {
@@ -530,8 +535,21 @@ fun ChatScreen(
     var showDeleteConfirm by remember { mutableStateOf(false) }
 
     val recallDialog by viewModel.recallDialog.collectAsState()
-    
+
     val listState = rememberLazyListState()
+
+    LaunchedEffect(showMenuMsgId) {
+        val targetMsgId = showMenuMsgId ?: return@LaunchedEffect
+        snapshotFlow {
+            listState.isScrollInProgress to
+                listState.layoutInfo.visibleItemsInfo.any { it.key == targetMsgId }
+        }.collect { (isScrolling, isVisible) ->
+            if (isScrolling && !isVisible) {
+                showMenuMsgId = null
+                return@collect
+            }
+        }
+    }
 
     var composerHeightPx by remember { mutableIntStateOf(0) }
     var listHeightPx by remember { mutableIntStateOf(0) }
@@ -702,7 +720,14 @@ fun ChatScreen(
             )
         }
     }
-    
+
+    LaunchedEffect(showMenuMsgId, displayItems) {
+        val targetMsgId = showMenuMsgId ?: return@LaunchedEffect
+        if (displayItems.none { it.message.msgId == targetMsgId }) {
+            showMenuMsgId = null
+        }
+    }
+
     LaunchedEffect(Unit) {
         NotificationHelper.clearNotification(context, chatId)
     }
@@ -729,7 +754,7 @@ fun ChatScreen(
             }
         }
     }
-    
+
     LaunchedEffect(
         listState,
         uiState.hasMore,
@@ -739,7 +764,7 @@ fun ChatScreen(
         snapshotFlow {
             val layoutInfo = listState.layoutInfo
             val visibleItems = layoutInfo.visibleItemsInfo
-    
+
             val shouldLoadMore = if (visibleItems.isNotEmpty()) {
                 val lastVisibleIndex = visibleItems.last().index
                 val totalItems = layoutInfo.totalItemsCount
@@ -750,13 +775,13 @@ fun ChatScreen(
             } else {
                 false
             }
-    
+
             val atBottom = if (visibleItems.isNotEmpty()) {
                 !listState.canScrollBackward
             } else {
                 true
             }
-    
+
             Pair(shouldLoadMore, atBottom)
         }
             .collect { (shouldLoadMore, atBottom) ->
@@ -770,7 +795,7 @@ fun ChatScreen(
                 }
             }
     }
-    
+
     LaunchedEffect(searchTargetMsgId, searchTargetMsgSeq) {
         val target = searchTargetMsgId ?: return@LaunchedEffect
         if (target.isBlank()) return@LaunchedEffect
@@ -788,14 +813,14 @@ fun ChatScreen(
             }
         }
     }
-    
+
     LaunchedEffect(uiState.locatingMessageError) {
         uiState.locatingMessageError?.let { msg ->
             Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
             viewModel.clearLocatingMessageError()
         }
     }
-    
+
     LaunchedEffect(Unit) {
         var lastMsgId: String? = null
         var pendingCount = 0
@@ -823,7 +848,7 @@ fun ChatScreen(
                 val isAtBottom = !listState.canScrollBackward
 
                 firstMessageId = msgId
-                
+
                 if (uiState.hasNewer) return@collect
 
                 if (isAtBottom && !listState.isScrollInProgress) {
@@ -892,7 +917,14 @@ fun ChatScreen(
                 )
             },
             topBar = {
-                Column(modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(
+                            indication = null,
+                            interactionSource = remember { MutableInteractionSource() }
+                        ) {}
+                ) {
                     FloatingTopBar(
                         hazeState = hazeState,
                         liquidBackdrop = liquidBackdrop,
@@ -1210,7 +1242,7 @@ fun ChatScreen(
                             }
                         }
                     )
-                    
+
                     val panelShape = RoundedCornerShape(28.dp)
                     val panelGlassColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.8f)
                     val panelModifier = Modifier
@@ -1267,7 +1299,7 @@ fun ChatScreen(
                             }
                         }
                     }
-                    
+
                     AnimatedVisibility(
                         visible = uiState.locatingMessage,
                         enter = fadeIn() + expandVertically(),
@@ -1414,6 +1446,14 @@ fun ChatScreen(
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 if (uiState.isGag) {
+                                    val gagUntilTimestamp = uiState.gagUntilTimestamp
+                                    
+                                    val gagUntilTime = if (gagUntilTimestamp != null) {
+                                        if (gagUntilTimestamp == -1L) "永久" else formatTimestamp(gagUntilTimestamp, true)
+                                    } else {
+                                        "未知时间"
+                                    }
+                                    
                                     Row(
                                         modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
                                         verticalAlignment = Alignment.CenterVertically,
@@ -1426,13 +1466,13 @@ fun ChatScreen(
                                         )
                                         Spacer(modifier = Modifier.width(8.dp))
                                         Text(
-                                            text = "群管理员限制了你发言",
+                                            text = "你已被禁言，直到 " + gagUntilTime,
                                             fontSize = 14.sp
                                         )
                                     }
                                     return@Column
                                 }
-                                
+
                                 if (uiState.isUploading) {
                                     UploadProgressBar(
                                         progress = uiState.uploadProgress,
@@ -1441,7 +1481,6 @@ fun ChatScreen(
                                     )
                                 }
 
-                                // 引用
                                 AnimatedVisibility(
                                     visible = uiState.replyTo != null,
                                     enter = fadeIn() + expandVertically(),
@@ -1492,7 +1531,6 @@ fun ChatScreen(
                                     }
                                 }
 
-                                // 编辑
                                 AnimatedVisibility(
                                     visible = uiState.editingMessage != null,
                                     enter = fadeIn() + expandVertically(),
@@ -1540,7 +1578,6 @@ fun ChatScreen(
                                     }
                                 }
 
-                                // 指令
                                 AnimatedVisibility(
                                     visible = uiState.pendingCommandId != null,
                                     enter = fadeIn() + expandVertically(),
@@ -1599,16 +1636,15 @@ fun ChatScreen(
                                     },
                                     focusRequester = inputFocusRequester,
                                     onInputFocused = {
-                                        if (
-                                            !isMeasuringIme &&
-                                            !isReturningToKeyboard &&
-                                            (pendingInputPanel != null ||
-                                                    expressions.isVisible ||
-                                                    instructionPanel.isVisible)
-                                        ) {
-                                            returnToKeyboard()
-                                        }
-                                    }
+                                        if (pendingInputPanel != null) return@ChatComposer
+                                        if (showMenuMsgId != null) return@ChatComposer
+                                        if (expressions.isVisible) viewModel.hideStickerPanel()
+                                        if (instructionPanel.isVisible) viewModel.hideInstructionPanel()
+                                        pendingInputPanel = null
+                                        isReturningToKeyboard = false
+                                        isMeasuringIme = false
+                                    },
+                                    limitedMsgType = uiState.limitedMsgType
                                 )
 
                                 BackHandler(
@@ -1830,6 +1866,10 @@ fun ChatScreen(
                                 showMenuMsgId = showMenuMsgId,
                                 showMenuChanged = { msgId ->
                                     if (!selectionMode) {
+                                        if (msgId != null) {
+                                            focusManager.clearFocus(force = true)
+                                            keyboardController?.hide()
+                                        }
                                         showMenuMsgId = msgId
                                     }
                                 },
@@ -2114,195 +2154,5 @@ fun ChatScreen(
                 }
             }
         )
-    }
-}
-
-@Composable
-private fun FloatingAvatarsLayer(
-    listState: LazyListState,
-    items: List<MessageDisplayItem>,
-    listHeightPx: Int,
-    composerHeightPx: Int,
-    showMyAvatar: Boolean,
-    onAvatarClick: (MessageItem) -> Unit,
-    onAvatarLongClick: (MessageItem) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val layoutInfo = listState.layoutInfo
-    val density = LocalDensity.current
-    val avatarSize = 36.dp
-    val avatarSizePx = with(density) { avatarSize.toPx() }
-    val bubbleInsetPx = with(density) { 2.dp.toPx() }
-    val maxY = (listHeightPx - composerHeightPx).toFloat()
-
-    Box(modifier = modifier) {
-        val visible = layoutInfo.visibleItemsInfo
-        if (visible.isEmpty()) return@Box
-
-        data class Group(
-            val senderId: String,
-            val isMine: Boolean,
-            val messages: MutableList<MessageItem> = mutableListOf(),
-            var minCellTop: Float = Float.MAX_VALUE,
-            var maxCellBottom: Float = Float.MIN_VALUE,
-        )
-
-        val groups = ArrayList<Group>()
-        var currentGroup: Group? = null
-
-        for (info in visible) {
-            val item = items.getOrNull(info.index) ?: continue
-            val message = item.message
-
-            if (message.contentType == MessageItem.CONTENT_TYPE_TIP) {
-                currentGroup = null
-                continue
-            }
-
-            val bottomInset = if (item.isFirstFromSender) bubbleInsetPx else 0f
-            val topInset = if (item.isLastFromSender) bubbleInsetPx else 0f
-
-            val rawBottom = (listHeightPx - composerHeightPx - info.offset).toFloat()
-            val rawTop = rawBottom - info.size.toFloat()
-            val cellBottom = rawBottom - bottomInset
-            val cellTop = rawTop + topInset
-
-            val isMine = message.isMine
-            val sameSender = currentGroup != null &&
-                    currentGroup.senderId == message.senderId &&
-                    currentGroup.isMine == isMine
-
-            if (!sameSender) {
-                currentGroup = Group(senderId = message.senderId, isMine = isMine)
-                groups.add(currentGroup)
-            }
-
-            currentGroup.messages.add(message)
-            if (cellTop < currentGroup.minCellTop) currentGroup.minCellTop = cellTop
-            if (cellBottom > currentGroup.maxCellBottom) currentGroup.maxCellBottom = cellBottom
-        }
-
-        val drawGroups = groups
-            .filter { it.messages.isNotEmpty() && !(it.isMine && !showMyAvatar) }
-            .sortedByDescending { it.maxCellBottom }
-
-        var maxTopForNext = listHeightPx.toFloat()
-
-        for (group in drawGroups) {
-            val message = group.messages.first()
-
-            var avatarTopPx = group.maxCellBottom - avatarSizePx
-
-            if (avatarTopPx < group.minCellTop) {
-                avatarTopPx = group.minCellTop
-            }
-            if (avatarTopPx + avatarSizePx > maxY) {
-                avatarTopPx = maxY - avatarSizePx
-            }
-            if (avatarTopPx + avatarSizePx > listHeightPx) {
-                avatarTopPx = listHeightPx - avatarSizePx
-            }
-
-            if (avatarTopPx + avatarSizePx > maxTopForNext) {
-                avatarTopPx = maxTopForNext - avatarSizePx
-            }
-
-            if (avatarTopPx < group.minCellTop) {
-                avatarTopPx = group.minCellTop
-            }
-
-            maxTopForNext = avatarTopPx
-
-            if (avatarTopPx + avatarSizePx <= 0f) continue
-            if (avatarTopPx >= listHeightPx) continue
-
-            val isMine = group.isMine
-
-            key(message.msgId) {
-                Box(
-                    modifier = Modifier
-                        .align(if (isMine) Alignment.TopEnd else Alignment.TopStart)
-                        .offset(y = with(density) { avatarTopPx.toDp() })
-                        .padding(horizontal = 8.dp)
-                        .combinedClickable(
-                            onClick = { onAvatarClick(message) },
-                            onLongClick = { onAvatarLongClick(message) },
-                            indication = null,
-                            interactionSource = remember { MutableInteractionSource() }
-                        )
-                ) {
-                    Avatar(
-                        url = message.senderAvatar,
-                        size = avatarSize
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun AnimatedScrollToBottomButton(
-    visible: Boolean,
-    unreadCount: Int,
-    loadNewerMode: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val animatedAlpha by animateFloatAsState(
-        targetValue = if (visible) 1f else 0f,
-        animationSpec = tween(
-            durationMillis = 300,
-            easing = FastOutSlowInEasing
-        ),
-        label = "scroll_button_alpha"
-    )
-
-    val animatedScale by animateFloatAsState(
-        targetValue = if (visible) 1f else 0.5f,
-        animationSpec = tween(
-            durationMillis = 300,
-            easing = FastOutSlowInEasing
-        ),
-        label = "scroll_button_scale"
-    )
-
-    Box(
-        modifier = modifier
-            .wrapContentSize()
-            .graphicsLayer {
-                alpha = animatedAlpha
-                scaleX = animatedScale
-                scaleY = animatedScale
-            }
-    ) {
-        BadgedBox(
-            badge = {
-                if (unreadCount > 0) {
-                    Badge(
-                        containerColor = MaterialTheme.colorScheme.error,
-                        contentColor = MaterialTheme.colorScheme.onError
-                    ) {
-                        Text(
-                            text = if (unreadCount > 99) "99+" else unreadCount.toString(),
-                            fontSize = 10.sp
-                        )
-                    }
-                }
-            }
-        ) {
-            SmallFloatingActionButton(
-                onClick = onClick,
-                shape = CircleShape,
-                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                contentColor = MaterialTheme.colorScheme.onSurface
-            ) {
-                Icon(
-                    imageVector = if (loadNewerMode) AppIcons.Refresh else AppIcons.KeyboardArrowDown,
-                    contentDescription = "滚动到底部",
-                    modifier = Modifier.size(18.dp)
-                )
-            }
-        }
     }
 }

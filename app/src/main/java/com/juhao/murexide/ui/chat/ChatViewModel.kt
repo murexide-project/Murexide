@@ -23,9 +23,11 @@ import com.juhao.murexide.repository.GroupMemberRepository
 import com.juhao.murexide.utils.FileDownloader.downloadFileWithProgress
 import com.juhao.murexide.data.*
 import com.juhao.murexide.data.local.LocalCache
+import com.juhao.murexide.datastore.AccountStorage
 import com.juhao.murexide.utils.MentionUtils
 import com.juhao.murexide.utils.QiniuUploadResponse
 import com.juhao.murexide.utils.QiniuUploader
+import com.juhao.murexide.utils.parseCommaSeparatedInts
 import com.juhao.murexide.network.WebSocketManager
 import com.juhao.murexide.network.RecallActor
 import kotlinx.coroutines.CompletableDeferred
@@ -82,6 +84,7 @@ class ChatViewModel(
     val token: String,
     val chatId: String,
     private val chatType: Int,
+    private val accountStorage: AccountStorage,
     private val repository: MessageRepository = MessageRepository(),
     private val backgroundRepository: ChatBackgroundRepository = ChatBackgroundRepository(),
     private val stickerRepository: StickerRepository = StickerRepository(),
@@ -153,9 +156,26 @@ class ChatViewModel(
     private var isLoadingNewer = false
     private val historyLoadMutex = Mutex()
 
+    private var draftSaveJob: Job? = null
+    private var draftRestored = false
+
     init {
         setupWebSocket()
         loadMessages()
+
+        viewModelScope.launch {
+            val draft = accountStorage.getDraft(chatId, chatType)
+            if (draft.isNotEmpty() && !draftRestored) {
+                draftRestored = true
+                _uiState.update {
+                    it.copy(
+                        inputText = draft,
+                        inputSelectionStart = draft.length,
+                        inputSelectionEnd = draft.length
+                    )
+                }
+            }
+        }
 
         viewModelScope.launch {
             delay(200L.milliseconds)
@@ -250,6 +270,7 @@ class ChatViewModel(
                             val ownerId = data?.owner?.takeIf { it.isNotEmpty() }
                             val adminIds = data?.admin?.filter { it.isNotEmpty() }?.toSet() ?: emptySet()
                             val permissionLevel = data?.permisson_level ?: 0
+                            val limitedMsgType = parseCommaSeparatedInts(data?.limited_msg_type)
                             _uiState.update {
                                 it.copy(
                                     memberCount = memberCount,
@@ -258,7 +279,9 @@ class ChatViewModel(
                                     myGroupNickname = data?.my_group_nickname,
                                     permissionLevel = permissionLevel,
                                     isAdmin = permissionLevel >= 2,
-                                    isGag = data?.is_gag ?: false
+                                    isGag = data?.is_gag ?: false,
+                                    gagUntilTimestamp = data?.gag_until_timestamp ?: 0L,
+                                    limitedMsgType = limitedMsgType
                                 )
                             }
                         }
@@ -515,6 +538,14 @@ class ChatViewModel(
     }
 
     override fun onCleared() {
+        val text = _uiState.value.inputText
+        kotlinx.coroutines.GlobalScope.launch(Dispatchers.IO) {
+            if (text.isNotBlank()) {
+                accountStorage.saveDraft(chatId, chatType, text)
+            } else {
+                accountStorage.clearDraft(chatId, chatType)
+            }
+        }
         ActiveConversationRegistry.deactivate(this)
         super.onCleared()
     }
@@ -804,6 +835,12 @@ class ChatViewModel(
                 inputSelectionEnd = safeEnd
             )
         }
+
+        draftSaveJob?.cancel()
+        draftSaveJob = viewModelScope.launch {
+            delay(500L.milliseconds)
+            accountStorage.saveDraft(chatId, chatType, text)
+        }
     }
 
     fun setReplyTo(message: MessageItem) {
@@ -848,6 +885,7 @@ class ChatViewModel(
                 quoteMsgId = state.replyTo?.msgId,
                 commandId = state.pendingCommandId
             ).onSuccess { msgId ->
+                accountStorage.clearDraft(chatId, chatType)
                 addSentMessage(
                     msgId = msgId,
                     content = content,
@@ -980,6 +1018,7 @@ class ChatViewModel(
                 contentType = MessageItem.CONTENT_TYPE_VIDEO,
                 quoteMsgId = state.replyTo?.msgId
             ).onSuccess { msgId ->
+                accountStorage.clearDraft(chatId, chatType)
                 addSentMessage(
                     msgId = msgId,
                     content = content,
@@ -1022,6 +1061,7 @@ class ChatViewModel(
                 contentType = MessageItem.CONTENT_TYPE_IMAGE,
                 quoteMsgId = state.replyTo?.msgId
             ).onSuccess { msgId ->
+                accountStorage.clearDraft(chatId, chatType)
                 addSentMessage(
                     msgId = msgId,
                     content = content,
@@ -1116,6 +1156,7 @@ class ChatViewModel(
                 contentType = MessageItem.CONTENT_TYPE_FILE,
                 quoteMsgId = state.replyTo?.msgId
             ).onSuccess { msgId ->
+                accountStorage.clearDraft(chatId, chatType)
                 addSentMessage(
                     msgId = msgId,
                     content = content,
@@ -1321,6 +1362,7 @@ class ChatViewModel(
                 content = content,
                 contentType = contentType
             ).onSuccess {
+                accountStorage.clearDraft(chatId, chatType)
                 _uiState.update {
                     it.copy(
                         isSending = false,
@@ -1431,6 +1473,7 @@ class ChatViewModel(
                 contentType = MessageItem.CONTENT_TYPE_STICKER,
                 quoteMsgId = state.replyTo?.msgId
             ).onSuccess { msgId ->
+                accountStorage.clearDraft(chatId, chatType)
                 addSentMessage(
                     msgId = msgId,
                     content = content,
@@ -1523,6 +1566,9 @@ class ChatViewModel(
                         pendingCommandHint = item.hintText
                     )
                 }
+                viewModelScope.launch {
+                    accountStorage.saveDraft(chatId, chatType, item.defaultText)
+                }
             }
         }
     }
@@ -1538,6 +1584,7 @@ class ChatViewModel(
                 contentType = MessageItem.CONTENT_TYPE_TEXT,
                 commandId = item.id
             ).onSuccess { msgId ->
+                accountStorage.clearDraft(chatId, chatType)
                 addSentMessage(
                     msgId = msgId,
                     content = content,
@@ -1564,6 +1611,7 @@ class ChatViewModel(
                 contentType = MessageItem.CONTENT_TYPE_TEXT,
                 commandId = item.id
             ).onSuccess { msgId ->
+                accountStorage.clearDraft(chatId, chatType)
                 addSentMessage(
                     msgId = msgId,
                     content = content,
