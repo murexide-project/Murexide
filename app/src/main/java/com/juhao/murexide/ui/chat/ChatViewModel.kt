@@ -31,7 +31,6 @@ import com.juhao.murexide.network.RecallActor
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.async
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -41,6 +40,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -353,41 +353,33 @@ class ChatViewModel(
         cachedHistoryCursor = null
         isUsingCachedHistory = false
         msgIdCache.clear()
-        _uiState.update { it.copy(isLoading = true, hasMore = false, error = null) }
+        _uiState.update {
+            it.copy(
+                isLoading = true,
+                hasMore = false,
+                error = null
+            )
+        }
 
         viewModelScope.launch {
-            val cacheDeferred = async(Dispatchers.IO) {
-                val accountId = LocalCache.currentAccountId() ?: return@async emptyList()
-                LocalCache.observeMessages(
+            var initialCachedMessages: List<MessageItem> = emptyList()
+            LocalCache.currentAccountId()?.let { accountId ->
+                val cached = LocalCache.observeMessages(
                     accountId = accountId,
                     chatId = chatId,
                     chatType = chatType,
                     limit = HISTORY_PAGE_SIZE
                 ).first()
-            }
-            val networkDeferred = async(Dispatchers.IO) {
-                repository.getMessageList(token = token, chatId = chatId, chatType = chatType)
-            }
-
-            val initialCachedMessages = cacheDeferred.await()
-            if (loadGeneration != historyLoadGeneration) return@launch
-            if (initialCachedMessages.isNotEmpty()) {
-                msgIdCache.clear()
-                msgIdCache.addAll(initialCachedMessages.map { it.msgId })
-                _uiState.update {
-                    it.copy(
-                        messages = initialCachedMessages,
-                        isLoading = false,
-                        hasMore = initialCachedMessages.size >= HISTORY_PAGE_SIZE,
-                        error = null
-                    )
-                }
+                if (loadGeneration != historyLoadGeneration) return@launch
+                initialCachedMessages = cached
             }
 
-            val result = networkDeferred.await()
-            if (loadGeneration != historyLoadGeneration) return@launch
-
-            result.onSuccess { messages ->
+            repository.getMessageList(
+                token = token,
+                chatId = chatId,
+                chatType = chatType
+            ).onSuccess { messages ->
+                if (loadGeneration != historyLoadGeneration) return@onSuccess
                 val loadedMessages = messages.map(::withCurrentUserProfileFallback)
                 val snapshot = resolveServerHistorySnapshot(
                     existingMessages = _uiState.value.messages,
@@ -408,15 +400,28 @@ class ChatViewModel(
                     )
                 }
             }.onFailure { error ->
+                if (loadGeneration != historyLoadGeneration) return@onFailure
                 cachedHistoryCursor = initialCachedMessages.lastOrNull()
                 isUsingCachedHistory = cachedHistoryCursor != null
                 if (initialCachedMessages.isNotEmpty()) {
+                    msgIdCache.clear()
+                    msgIdCache.addAll(initialCachedMessages.map { it.msgId })
+                    _uiState.update {
+                        it.copy(
+                            messages = initialCachedMessages,
+                            isLoading = false,
+                            hasMore = isUsingCachedHistory &&
+                                initialCachedMessages.size >= HISTORY_PAGE_SIZE,
+                            error = null
+                        )
+                    }
                     return@onFailure
                 }
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        hasMore = false,
+                        hasMore = isUsingCachedHistory &&
+                            initialCachedMessages.size >= HISTORY_PAGE_SIZE,
                         error = error.message ?: "加载失败"
                     )
                 }
