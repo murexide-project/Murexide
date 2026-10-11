@@ -563,7 +563,7 @@ private fun SenderHeader(
 
         if (showTags && !hideSenderInfo && message.tags.isNotEmpty()) {
             message.tags.forEach { tag ->
-                val color = Color(tag.color.toColorInt())
+                val color = tag.color.toColorOrNull() ?: return@forEach
                 TagChip(
                     text = tag.text,
                     containerColor = color.copy(alpha = 0.2f),
@@ -1453,6 +1453,11 @@ private fun TagChip(
             Spacer(Modifier.width(6.dp))
         }
     }
+}
+
+private fun String?.toColorOrNull(): Color? {
+    if (this.isNullOrBlank()) return null
+    return runCatching { Color(this.toColorInt()) }.getOrNull()
 }
 
 @Composable
