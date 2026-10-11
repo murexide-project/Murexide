@@ -51,7 +51,17 @@ class PostDetailActivity : ComponentActivity() {
         val extraId = intent.getIntExtra(EXTRA_POST_ID, -1)
         if (extraId > 0) return extraId
 
-        intent.data?.getQueryParameter("id")?.toIntOrNull()?.let { return it }
+        val data = intent.data ?: return -1
+
+        data.getQueryParameter("id")?.toIntOrNull()?.let { return it }
+
+        val pathSegments = data.pathSegments.orEmpty()
+        val pIndex = pathSegments.indexOf("p")
+        if (pIndex >= 0 && pIndex + 1 < pathSegments.size) {
+            pathSegments[pIndex + 1].toIntOrNull()?.let { return it }
+        }
+
+        data.lastPathSegment?.toIntOrNull()?.let { return it }
 
         return -1
     }

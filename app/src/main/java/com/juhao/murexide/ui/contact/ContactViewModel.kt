@@ -40,8 +40,6 @@ class ContactViewModel(
     val uiState: StateFlow<ContactUiState> = _uiState.asStateFlow()
 
     init {
-        loadCachedContacts()
-        loadCachedRequests()
         loadContacts()
         loadRequests()
         observeInvitationUpdates()
@@ -52,24 +50,23 @@ class ContactViewModel(
             _uiState.update { it.copy(isLoading = true, error = null) }
             repository.syncCachedAddressBook(token)
                 .onSuccess {
-                    loadCachedContacts()
+                    loadCachedContactsOrEmpty()
                     _uiState.update { it.copy(isLoading = false, error = null) }
                 }
                 .onFailure { e ->
-                    _uiState.update { it.copy(error = e.message, isLoading = false) }
+                    val restored = loadCachedContactsOrEmpty()
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            error = if (restored) null else (e.message ?: "加载失败")
+                        )
+                    }
                 }
         }
     }
 
     fun loadRequests(showLoading: Boolean = true, forceNetwork: Boolean = false) {
         viewModelScope.launch {
-            val accountId = LocalCache.currentAccountId()
-            if (!forceNetwork && accountId != null &&
-                LocalCache.isPayloadFresh(accountId, LocalCache.KIND_REQUESTS)
-            ) {
-                loadCachedRequests()
-                return@launch
-            }
             if (showLoading) {
                 _uiState.update { it.copy(isRequestsLoading = true, requestsError = null) }
             }
@@ -86,43 +83,42 @@ class ContactViewModel(
                     }
                 }
                 .onFailure { error ->
+                    val restored = loadCachedRequestsOrEmpty()
                     _uiState.update {
                         it.copy(
                             isRequestsLoading = false,
-                            requestsError = error.message ?: "加载新消息失败"
+                            requestsError = if (restored) null else (error.message ?: "加载新消息失败")
                         )
                     }
                 }
         }
     }
 
-    private fun loadCachedContacts() {
-        viewModelScope.launch {
-            val accountId = LocalCache.currentAccountId() ?: return@launch
-            val cached = LocalCache.getPayload(accountId, LocalCache.KIND_CONTACTS) ?: return@launch
-            val groups = runCatching {
-                cacheJson.decodeFromString(ListSerializer(ContactGroup.serializer()), cached.payload)
-            }.getOrNull() ?: return@launch
-            _uiState.update { it.copy(contactGroups = groups, isLoading = false, error = null) }
-        }
+    private suspend fun loadCachedContactsOrEmpty(): Boolean {
+        val accountId = LocalCache.currentAccountId() ?: return false
+        val cached = LocalCache.getPayload(accountId, LocalCache.KIND_CONTACTS) ?: return false
+        val groups = runCatching {
+            cacheJson.decodeFromString(ListSerializer(ContactGroup.serializer()), cached.payload)
+        }.getOrNull() ?: return false
+        _uiState.update { it.copy(contactGroups = groups, isLoading = false, error = null) }
+        return true
     }
 
-    private fun loadCachedRequests() {
-        viewModelScope.launch {
-            val accountId = LocalCache.currentAccountId() ?: return@launch
-            val cached = LocalCache.getPayload(accountId, LocalCache.KIND_REQUESTS) ?: return@launch
-            val requests = runCatching {
-                cacheJson.decodeFromString(ContactRequestList.serializer(), cached.payload)
-            }.getOrNull() ?: return@launch
-            _uiState.update {
-                it.copy(
-                    requests = requests.requests,
-                    pendingRequestCount = requests.pending,
-                    isRequestsLoading = false,
-                    requestsError = null
-                )
-            }
+    private suspend fun loadCachedRequestsOrEmpty(): Boolean {
+        val accountId = LocalCache.currentAccountId() ?: return false
+        val cached = LocalCache.getPayload(accountId, LocalCache.KIND_REQUESTS) ?: return false
+        val requests = runCatching {
+            cacheJson.decodeFromString(ContactRequestList.serializer(), cached.payload)
+        }.getOrNull() ?: return false
+        _uiState.update {
+            it.copy(
+                requests = requests.requests,
+                pendingRequestCount = requests.pending,
+                isRequestsLoading = false,
+                requestsError = null
+            )
         }
+        return true
     }
 
     fun refreshAll() {

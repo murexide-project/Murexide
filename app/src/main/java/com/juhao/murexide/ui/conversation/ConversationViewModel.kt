@@ -73,16 +73,18 @@ class ConversationViewModel(
     private var loadGeneration = 0
     private val resolvingLatestMutations = mutableSetOf<String>()
     private var foregroundSyncEnabled = false
-    
+
     private val _drafts = MutableStateFlow<Map<String, String>>(emptyMap())
     val drafts: StateFlow<Map<String, String>> = _drafts.asStateFlow()
 
     init {
-        observeCachedConversations()
+        if (LocalCache.isCacheEnabled()) {
+            observeCachedConversations()
+        }
         observeWebSocket()
         observeWsConnection()
         observeAppForeground()
-    
+
         viewModelScope.launch {
             accountStorage.currentDraftsFlow.collect { draftMap ->
                 _drafts.value = draftMap
@@ -97,7 +99,14 @@ class ConversationViewModel(
     private fun observeCachedConversations() {
         viewModelScope.launch {
             LocalCache.observeConversations(accountId).collect { cached ->
-                if (cached.isNotEmpty() || _uiState.value is ConversationUiState.Success) {
+                val current = _uiState.value
+                if (current is ConversationUiState.Success &&
+                    current.conversations.isNotEmpty() &&
+                    cached.isEmpty()
+                ) {
+                    return@collect
+                }
+                if (cached.isNotEmpty() || current is ConversationUiState.Success) {
                     val sticky = UiCache.stickyConversations.value
                     _uiState.value = ConversationUiState.Success(cached, sticky)
                     syncConversationCache()
@@ -339,23 +348,31 @@ class ConversationViewModel(
             if (!hadVisibleConversations) {
                 _uiState.value = ConversationUiState.Loading
             }
+
             fetchStickyList()
+
             repository.syncCachedConversations(
                 token = token,
                 accountId = accountId,
                 forceRefresh = refreshPreviews
-            ).onSuccess {
+            ).onSuccess { conversations ->
                 if (generation != loadGeneration) return@onSuccess
                 _isRefreshing.value = false
-                if (_uiState.value is ConversationUiState.Loading) {
+                if (conversations != null) {
                     val sticky = UiCache.stickyConversations.value
-                    _uiState.value = ConversationUiState.Success(emptyList(), sticky)
+                    _uiState.value = ConversationUiState.Success(conversations, sticky)
                     syncConversationCache()
                 }
             }.onFailure { error ->
                 if (generation != loadGeneration) return@onFailure
                 _isRefreshing.value = false
-                if (_uiState.value !is ConversationUiState.Success) {
+                val cached = LocalCache.getCachedConversations(accountId)
+                if (cached.isNotEmpty()) {
+                    val sticky = UiCache.stickyConversations.value
+                    _uiState.value = ConversationUiState.Success(cached, sticky)
+                    syncConversationCache()
+                    Log.w("ConversationViewModel", "Network failed, fallback to cache", error)
+                } else if (_uiState.value !is ConversationUiState.Success) {
                     _uiState.value = ConversationUiState.Error(error.message ?: "加载失败")
                 } else {
                     Log.w("ConversationViewModel", "Conversation refresh failed", error)
@@ -368,22 +385,24 @@ class ConversationViewModel(
         viewModelScope.launch {
             repository.getStickyList(token, accountId)
                 .onSuccess { stickyList ->
-                    val ids = stickyList.map { it.chatId }.toSet()
-                    _stickyIds.value = ids
-
-                    _uiState.update { state ->
-                        if (state is ConversationUiState.Success) {
-                            state.copy(stickyConversations = stickyList)
-                        } else {
-                            state
-                        }
-                    }
-                    UiCache.stickyConversations.value = stickyList
+                    applySticky(stickyList)
                 }
                 .onFailure { error ->
                     Log.w("ConversationViewModel", "Failed to fetch sticky list", error)
                 }
         }
+    }
+
+    private fun applySticky(stickyList: List<StickyItem>) {
+        _stickyIds.value = stickyList.map { it.chatId }.toSet()
+        _uiState.update { state ->
+            if (state is ConversationUiState.Success) {
+                state.copy(stickyConversations = stickyList)
+            } else {
+                state
+            }
+        }
+        UiCache.stickyConversations.value = stickyList
     }
 
     fun refresh() {

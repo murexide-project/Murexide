@@ -14,6 +14,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.LifecycleResumeEffect
+import com.juhao.murexide.data.local.LocalCache
 import com.juhao.murexide.ui.components.*
 import com.juhao.murexide.datastore.SettingsStorage
 import kotlinx.coroutines.launch
@@ -24,11 +25,11 @@ import androidx.activity.result.contract.ActivityResultContracts
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ActionPage() {        
+fun ActionPage() {
     val context = LocalContext.current
     val settingsStorage = remember { SettingsStorage(context) }
     val scope = rememberCoroutineScope()
-    
+
     val (notificationEnabled, onNotificationToggle) = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
         val enabled = ContextCompat.checkSelfPermission(
             context,
@@ -48,13 +49,16 @@ fun ActionPage() {
             }
         }
     }
-    
+
     var bigScreen by remember { mutableStateOf(true) }
-    
+
     LaunchedEffect(Unit) {
         bigScreen = settingsStorage.getBigScreen()
     }
-    
+
+    val cacheEnabled by settingsStorage.cacheEnabledFlow.collectAsState(initial = true)
+    val hideLauncher by settingsStorage.hideLauncherFlow.collectAsState(initial = false)
+
     val legacyStoragePermission = Build.VERSION.SDK_INT <= Build.VERSION_CODES.P
     var storagePermissionGranted by remember {
         mutableStateOf(!legacyStoragePermission || hasLegacyWritePermission(context))
@@ -70,7 +74,7 @@ fun ActionPage() {
             Toast.makeText(context, "需要存储权限才能保存下载内容", Toast.LENGTH_SHORT).show()
         }
     }
-    
+
     fun openApplicationSettings() {
         context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
             data = Uri.fromParts("package", context.packageName, null)
@@ -81,7 +85,7 @@ fun ActionPage() {
         storagePermissionGranted = !legacyStoragePermission || hasLegacyWritePermission(context)
         onPauseOrDispose { }
     }
-    
+
     fun requestStoragePermission() {
         if (!legacyStoragePermission) return
         if (storagePermissionRequestAttempted && !storagePermissionGranted) {
@@ -103,6 +107,20 @@ fun ActionPage() {
             },
             checked = notificationEnabled,
             onCheckedChange = { onNotificationToggle(it) }
+        )
+        SettingsSwitchItem(
+            icon = AppIcons.SaveAlt,
+            title = "本地缓存",
+            subtitle = if (cacheEnabled) "已开启，会话和消息会缓存在本地" else "已关闭，退出后不保留本地数据",
+            checked = cacheEnabled,
+            onCheckedChange = { checked ->
+                scope.launch {
+                    settingsStorage.setCacheEnabled(checked)
+                    if (!checked) {
+                        LocalCache.currentAccountId()?.let { LocalCache.purgeAccount(it) }
+                    }
+                }
+            }
         )
         if (legacyStoragePermission) {
             SettingsItem(
@@ -127,11 +145,22 @@ fun ActionPage() {
                 }
             }
         )
+        SettingsSwitchItem(
+            icon = AppIcons.VisibilityOff,
+            title = "隐藏应用入口",
+            subtitle = if (hideLauncher) "已隐藏，拨号 *#*#2468#*#* 启动" else "显示在桌面启动器中",
+            checked = hideLauncher,
+            onCheckedChange = { checked ->
+                scope.launch {
+                    settingsStorage.setHideLauncher(checked)
+                }
+            }
+        )
         SettingsItem(
             icon = AppIcons.Screenshot,
             title = "截图设置",
             onClick = {
-                val intent = Intent(context, SettingsActivity::class.java).apply{
+                val intent = Intent(context, SettingsActivity::class.java).apply {
                     putExtra("page", 6)
                 }
                 context.startActivity(intent)

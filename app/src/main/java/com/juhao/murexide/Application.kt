@@ -62,6 +62,7 @@ class MyApplication : Application(), ImageLoaderFactory {
         AppForegroundState.init(this)
         observeAvatarSetting()
         initWebSocket()
+        syncLauncherVisibility()
         CacheSyncCoordinator(
             dismissConversationNotification = { chatId ->
                 val account = accountStorage.getCurrentUserInfo()
@@ -75,6 +76,13 @@ class MyApplication : Application(), ImageLoaderFactory {
         ).start(applicationScope)
         observeNetworkStatus()
         observeMessages(this)
+    }
+
+    private fun syncLauncherVisibility() {
+        applicationScope.launch {
+            val hidden = settingsStorage.getHideLauncher()
+            settingsStorage.applyLauncherVisibility(hidden)
+        }
     }
 
     private fun observeMessages(context: Context) {
@@ -93,7 +101,7 @@ class MyApplication : Application(), ImageLoaderFactory {
                         }
 
                         val notificationAllowed = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                            true // 系统禁止无需判断
+                            true
                         } else {
                             settingsStorage.notificationEnabledFlow.first()
                         }
@@ -116,7 +124,7 @@ class MyApplication : Application(), ImageLoaderFactory {
                         }
 
                         val currentConversation = UiCache.conversation.value.firstOrNull { it.chatId == msg.chatId && it.chatType == msg.chatType }
-                        
+
                         if (currentConversation?.doNotDisturb == 1) {
                             return@collect
                         }
@@ -135,7 +143,7 @@ class MyApplication : Application(), ImageLoaderFactory {
                             content = content
                         )
                     }
-                    else -> { /* 忽略其他事件 */ }
+                    else -> { }
                 }
             }
         }

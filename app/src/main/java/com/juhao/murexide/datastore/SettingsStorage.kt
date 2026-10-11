@@ -1,6 +1,8 @@
 package com.juhao.murexide.datastore
 
+import android.content.ComponentName
 import android.content.Context
+import android.content.pm.PackageManager
 import android.os.Build
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
@@ -48,6 +50,13 @@ class SettingsStorage(private val context: Context) {
         private val SCREENSHOT_HIDE_MY_INFO_KEY = booleanPreferencesKey("screenshot_hide_my_info")
         private val SCREENSHOT_HIDE_SESSION_INFO_KEY = booleanPreferencesKey("screenshot_hide_session_info")
         private val SCREENSHOT_HIDE_IMAGES_KEY = booleanPreferencesKey("screenshot_hide_images")
+
+        private val CACHE_ENABLED_KEY = booleanPreferencesKey("cache_enabled")
+
+        private val HIDE_LAUNCHER_KEY = booleanPreferencesKey("hide_launcher")
+
+        private const val LAUNCHER_ALIAS_SUFFIX = ".LauncherAlias"
+        private const val DEFAULT_SECRET_CODE = "2468"
     }
 
     private fun <T> preferenceFlow(key: Preferences.Key<T>, default: T): Flow<T> =
@@ -158,4 +167,36 @@ class SettingsStorage(private val context: Context) {
     suspend fun getScreenshotHideImages() = getPreference(SCREENSHOT_HIDE_IMAGES_KEY, false)
     suspend fun setScreenshotHideImages(enabled: Boolean) =
         setPreference(SCREENSHOT_HIDE_IMAGES_KEY, enabled)
+
+    val cacheEnabledFlow = preferenceFlow(CACHE_ENABLED_KEY, true)
+    suspend fun getCacheEnabled() = getPreference(CACHE_ENABLED_KEY, true)
+    suspend fun setCacheEnabled(enabled: Boolean) = setPreference(CACHE_ENABLED_KEY, enabled)
+
+    val hideLauncherFlow = preferenceFlow(HIDE_LAUNCHER_KEY, false)
+
+    suspend fun getHideLauncher() = getPreference(HIDE_LAUNCHER_KEY, false)
+
+    suspend fun setHideLauncher(hidden: Boolean) {
+        setPreference(HIDE_LAUNCHER_KEY, hidden)
+        applyLauncherVisibility(hidden)
+    }
+
+    fun applyLauncherVisibility(hidden: Boolean) {
+        val alias = ComponentName(
+            context.packageName,
+            context.packageName + LAUNCHER_ALIAS_SUFFIX
+        )
+        val newState = if (hidden) {
+            PackageManager.COMPONENT_ENABLED_STATE_DISABLED
+        } else {
+            PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+        }
+        runCatching {
+            context.packageManager.setComponentEnabledSetting(
+                alias,
+                newState,
+                PackageManager.DONT_KILL_APP
+            )
+        }
+    }
 }

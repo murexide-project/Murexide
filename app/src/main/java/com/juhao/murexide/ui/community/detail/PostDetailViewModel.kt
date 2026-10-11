@@ -106,11 +106,10 @@ class PostDetailViewModel(
                         )
                     }
                 }
-                .onFailure { e ->
+                .onFailure { _ ->
                     _uiState.update {
                         it.copy(
-                            isLoadingComments = false,
-                            error = "加载评论失败: ${e.message}"
+                            isLoadingComments = false
                         )
                     }
                 }

@@ -10,9 +10,15 @@ import com.juhao.murexide.data.StickyItem
 import com.juhao.murexide.data.withEditedLatestMessage
 import com.juhao.murexide.data.withLatestMessage
 import com.juhao.murexide.data.withRecalledLatestMessage
+import com.juhao.murexide.datastore.SettingsStorage
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
@@ -38,9 +44,19 @@ object LocalCache {
 
     @Volatile private var database: LocalCacheDatabase? = null
     @Volatile private var activeAccountId: String? = null
+    @Volatile private var cacheEnabled: Boolean = true
+    private var settingsStorage: SettingsStorage? = null
+    private var settingsJob: Job? = null
 
-    fun initialize(context: Context) {
+    fun initialize(context: Context, scope: CoroutineScope? = null) {
         database = LocalCacheDatabase.getInstance(context)
+        val storage = SettingsStorage(context)
+        settingsStorage = storage
+        cacheEnabled = runBlocking { storage.getCacheEnabled() }
+        settingsJob?.cancel()
+        settingsJob = scope?.launch {
+            storage.cacheEnabledFlow.collect { cacheEnabled = it }
+        }
     }
 
     fun setActiveAccount(accountId: String?) {
@@ -49,20 +65,32 @@ object LocalCache {
 
     fun currentAccountId(): String? = activeAccountId
 
-    fun observeConversations(accountId: String): Flow<List<ConversationItem>> = db().conversations()
-        .observeConversations(accountId)
-        .map { rows -> rows.map { it.toModel() } }
+    fun isCacheEnabled(): Boolean = cacheEnabled
 
-    fun observeSticky(accountId: String): Flow<List<StickyItem>> = db().conversations()
-        .observeSticky(accountId)
-        .map { rows -> rows.map { it.toModel() } }
+    fun observeConversations(accountId: String): Flow<List<ConversationItem>> =
+        if (cacheEnabled) {
+            db().conversations()
+                .observeConversations(accountId)
+                .map { rows -> rows.map { it.toModel() } }
+        } else {
+            flowOf(emptyList())
+        }
 
+    fun observeSticky(accountId: String): Flow<List<StickyItem>> =
+        if (cacheEnabled) {
+            db().conversations()
+                .observeSticky(accountId)
+                .map { rows -> rows.map { it.toModel() } }
+        } else {
+            flowOf(emptyList())
+        }
 
     suspend fun getCachedConversation(
         accountId: String,
         chatId: String,
         chatType: Int
     ): ConversationItem? = withContext(Dispatchers.IO) {
+        if (!cacheEnabled) return@withContext null
         db().conversations().getConversation(accountId, chatId, chatType)?.toModel()
     }
 
@@ -71,9 +99,13 @@ object LocalCache {
         chatId: String,
         chatType: Int,
         limit: Int
-    ): Flow<List<MessageItem>> = db().messages()
-        .observeMessages(accountId, chatId, chatType, limit)
-        .map { rows -> rows.mapNotNull(::decodeMessage) }
+    ): Flow<List<MessageItem>> = if (cacheEnabled) {
+        db().messages()
+            .observeMessages(accountId, chatId, chatType, limit)
+            .map { rows -> rows.mapNotNull(::decodeMessage) }
+    } else {
+        flowOf(emptyList())
+    }
 
     suspend fun getCachedMessagesBefore(
         accountId: String,
@@ -84,6 +116,7 @@ object LocalCache {
         beforeMsgId: String,
         limit: Int
     ): List<MessageItem> = withContext(Dispatchers.IO) {
+        if (!cacheEnabled) return@withContext emptyList()
         db().messages().getMessagesBefore(
             accountId = accountId,
             chatId = chatId,
@@ -100,6 +133,7 @@ object LocalCache {
         conversations: List<ConversationItem>,
         md5: String?
     ) = withContext(Dispatchers.IO) {
+        if (!cacheEnabled) return@withContext
         val database = db()
         database.withTransaction {
             val dao = database.conversations()
@@ -121,20 +155,27 @@ object LocalCache {
     }
 
     suspend fun cacheSticky(accountId: String, items: List<StickyItem>) = withContext(Dispatchers.IO) {
+        if (!cacheEnabled) return@withContext
         db().conversations().replaceSticky(
             accountId,
             items.mapIndexed { index, item -> item.toEntity(accountId, index) }
         )
     }
 
-    suspend fun conversationMd5(accountId: String): String =
-        db().states().get(accountId, CONVERSATION_MD5_KEY)?.value.orEmpty()
+    suspend fun conversationMd5(accountId: String): String {
+        if (!cacheEnabled) return ""
+        return db().states().get(accountId, CONVERSATION_MD5_KEY)?.value.orEmpty()
+    }
 
-    suspend fun contactMd5(accountId: String): String =
-        db().states().get(accountId, CONTACT_MD5_KEY)?.value.orEmpty()
+    suspend fun contactMd5(accountId: String): String {
+        if (!cacheEnabled) return ""
+        return db().states().get(accountId, CONTACT_MD5_KEY)?.value.orEmpty()
+    }
 
-    suspend fun setContactMd5(accountId: String, md5: String) =
+    suspend fun setContactMd5(accountId: String, md5: String) {
+        if (!cacheEnabled) return
         setState(accountId, CONTACT_MD5_KEY, md5)
+    }
 
     suspend fun clearUnread(accountId: String, chatId: String, chatType: Int) =
         withContext(Dispatchers.IO) {
@@ -177,6 +218,7 @@ object LocalCache {
         message: MessageItem,
         incrementUnread: Boolean
     ) = withContext(Dispatchers.IO) {
+        if (!cacheEnabled) return@withContext
         val database = db()
         database.withTransaction {
             val dao = database.conversations()
@@ -206,6 +248,7 @@ object LocalCache {
         message: MessageItem,
         recalled: Boolean
     ) = withContext(Dispatchers.IO) {
+        if (!cacheEnabled) return@withContext
         val dao = db().conversations()
         val currentEntity = dao.getConversationForMessage(
             accountId,
@@ -225,6 +268,7 @@ object LocalCache {
     }
 
     suspend fun cacheMessages(accountId: String, messages: List<MessageItem>) = withContext(Dispatchers.IO) {
+        if (!cacheEnabled) return@withContext
         if (messages.isEmpty()) return@withContext
         val messageEntities = messages.map { it.toEntity(accountId, json) }
         val senderEntities = messages
@@ -246,6 +290,7 @@ object LocalCache {
         scope: String = "",
         ttlMs: Long = 0L
     ) = withContext(Dispatchers.IO) {
+        if (!cacheEnabled) return@withContext
         val now = System.currentTimeMillis()
         db().payloads().put(
             CachedPayloadEntity(
@@ -260,12 +305,16 @@ object LocalCache {
     }
 
     suspend fun getPayload(accountId: String, kind: String, scope: String = ""): CachedPayloadEntity? =
-        withContext(Dispatchers.IO) { db().payloads().get(accountId, kind, scope) }
+        withContext(Dispatchers.IO) {
+            if (!cacheEnabled) return@withContext null
+            db().payloads().get(accountId, kind, scope)
+        }
 
     suspend fun deletePayloadsByScopePrefix(accountId: String, kind: String, scopePrefix: String) =
         withContext(Dispatchers.IO) { db().payloads().deleteByScopePrefix(accountId, kind, scopePrefix) }
 
     suspend fun isPayloadFresh(accountId: String, kind: String, scope: String = ""): Boolean {
+        if (!cacheEnabled) return false
         val cached = getPayload(accountId, kind, scope) ?: return false
         return cached.expiresAt == 0L || cached.expiresAt > System.currentTimeMillis()
     }
@@ -278,6 +327,7 @@ object LocalCache {
     }
 
     private suspend fun setState(accountId: String, key: String, value: String) = withContext(Dispatchers.IO) {
+        if (!cacheEnabled) return@withContext
         db().states().put(CacheSyncStateEntity(accountId, key, value, System.currentTimeMillis()))
     }
 
@@ -320,6 +370,12 @@ object LocalCache {
         latestMessageSeq = latestMessageSeq,
         latestContentType = latestContentType
     )
+    
+    suspend fun getCachedConversations(accountId: String): List<ConversationItem> =
+        withContext(Dispatchers.IO) {
+            if (!cacheEnabled) return@withContext emptyList()
+            db().conversations().getConversations(accountId).map { it.toModel() }
+        }
 
     private fun ConversationItem.toEntity(accountId: String, listPosition: Int) = CachedConversationEntity(
         accountId, chatType, chatId, name, remark, chatContent, timestampMs, unreadMessage, at,

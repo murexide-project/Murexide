@@ -84,7 +84,7 @@ data class GroupInfo(
 @Serializable
 data class PostDetailResponse(
     val code: Int,
-    val data: PostDetailData?,
+    val data: PostDetailData? = null,
     val msg: String
 )
 
@@ -133,7 +133,7 @@ data class PostDetail(
 @Serializable
 data class CommentListResponse(
     val code: Int,
-    val data: CommentListData?,
+    val data: CommentListData? = null,
     val msg: String
 )
 

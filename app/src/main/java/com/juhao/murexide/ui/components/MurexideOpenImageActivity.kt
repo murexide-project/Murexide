@@ -1,10 +1,12 @@
 package com.juhao.murexide.ui.components
 
 import android.Manifest
+import android.app.ActivityManager
+import android.content.Context
 import android.os.Bundle
 import android.util.Log
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.OnBackPressedCallback
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -21,7 +23,6 @@ import com.juhao.murexide.utils.LegacyStoragePermissionRequester
 import com.juhao.murexide.utils.requiresLegacyWritePermission
 import kotlinx.coroutines.launch
 
-/** OpenImage activity with mixed chat-media pagination and fullscreen media. */
 class MurexideOpenImageActivity : StandardOpenImageActivity(), LegacyStoragePermissionRequester {
     private var pendingStoragePermissionResult: ((Boolean) -> Unit)? = null
     private val storagePermissionLauncher = registerForActivityResult(
@@ -67,6 +68,10 @@ class MurexideOpenImageActivity : StandardOpenImageActivity(), LegacyStoragePerm
     private var shareTransitionFinished = false
     private val shareTransitionFallback = Runnable { onShareTransitionEnd() }
 
+    private val isLowRamDevice: Boolean by lazy(LazyThreadSafetyMode.NONE) {
+        (getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager).isLowRamDevice
+    }
+
     private val pageChangeCallback = object : ViewPager2.OnPageChangeCallback() {
         override fun onPageSelected(position: Int) {
             preloadAround(position)
@@ -88,6 +93,10 @@ class MurexideOpenImageActivity : StandardOpenImageActivity(), LegacyStoragePerm
             override fun handleOnBackPressed() {
                 if (canFragmentBack()) {
                     close(false)
+                } else {
+                    isEnabled = false
+                    onBackPressedDispatcher.onBackPressed()
+                    isEnabled = true
                 }
             }
         })
@@ -141,6 +150,7 @@ class MurexideOpenImageActivity : StandardOpenImageActivity(), LegacyStoragePerm
     }
 
     private fun preloadAround(position: Int) {
+        if (isLowRamDevice) return
         for (index in (position - PRELOAD_RADIUS)..(position + PRELOAD_RADIUS)) {
             val url = media.getOrNull(index)?.url ?: continue
             if (preloadedUrls.add(url)) {
@@ -151,6 +161,7 @@ class MurexideOpenImageActivity : StandardOpenImageActivity(), LegacyStoragePerm
 
     private fun maybeLoadEarlier(position: Int) {
         if (!paginationEnabled || media.isEmpty()) return
+        if (viewPager2.scrollState != ViewPager2.SCROLL_STATE_IDLE) return
         if (position <= LOAD_THRESHOLD && hasEarlierMedia && !isLoadingEarlierMedia) {
             loadEarlierPage()
         }
@@ -166,7 +177,8 @@ class MurexideOpenImageActivity : StandardOpenImageActivity(), LegacyStoragePerm
         lifecycleScope.launch {
             var continuePaging = false
             try {
-                val token = accountStorage.getCurrentToken() ?: run {
+                val token = accountStorage.getCurrentToken()
+                if (token == null) {
                     hasEarlierMedia = false
                     return@launch
                 }
@@ -260,7 +272,7 @@ class MurexideOpenImageActivity : StandardOpenImageActivity(), LegacyStoragePerm
         private const val LOAD_THRESHOLD = 1
         private const val PAGE_SIZE = 20
         private const val EMPTY_MEDIA_PAGE_DELAY_MS = 150L
-        private const val TRANSITION_FALLBACK_DELAY_MS = 450L
+        private const val TRANSITION_FALLBACK_DELAY_MS = 600L
     }
 
     private val paginationEnabled: Boolean

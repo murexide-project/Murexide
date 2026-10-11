@@ -45,12 +45,11 @@ class ConversationRepository {
     suspend fun getConversationList(token: String, md5: String = ""): Result<List<ConversationItem>> =
         fetchConversationList(token, md5).map { it.items }
 
-    /** Syncs the server snapshot, optionally bypassing the MD5 condition for an explicit refresh. */
     suspend fun syncCachedConversations(
         token: String,
         accountId: String,
         forceRefresh: Boolean = false
-    ): Result<Boolean> {
+    ): Result<List<ConversationItem>?> {
         val md5 = conversationListRequestMd5(
             cachedMd5 = LocalCache.conversationMd5(accountId),
             forceRefresh = forceRefresh
@@ -58,9 +57,9 @@ class ConversationRepository {
         return fetchConversationList(token, md5).map { snapshot ->
             if (!snapshot.unchanged) {
                 LocalCache.replaceConversations(accountId, snapshot.items, snapshot.md5)
-                true
+                snapshot.items
             } else {
-                false
+                null
             }
         }
     }
@@ -68,21 +67,20 @@ class ConversationRepository {
     private suspend fun fetchConversationList(token: String, md5: String): Result<ConversationSnapshot> {
         return withContext(Dispatchers.IO) {
             try {
-                // 构建 ProtoBuf 请求
                 val requestProto = ConversationListSend(md5 = md5)
                 val requestBody = requestProto.encode().toRequestBody("application/octet-stream".toMediaType())
-                
+
                 val httpRequest = Request.Builder()
                     .url("$baseUrl/v1/conversation/list")
                     .post(requestBody)
                     .header("token", token)
                     .build()
-                
+
                 client.newCall(httpRequest).execute().use { response ->
                     if (response.isSuccessful) {
                         val responseBody = response.body.bytes()
                         val conversationList = ConversationList.ADAPTER.decode(responseBody)
-                        
+
                         if (conversationList.status?.code == 1) {
                             val items = conversationList.data_.map { conversationData ->
                                 ConversationItem(
@@ -102,7 +100,7 @@ class ConversationRepository {
                                     certificationLevel = conversationData.certification_level.toInt()
                                 )
                             }
-                            
+
                             Result.success(
                                 ConversationSnapshot(
                                     items = items,
