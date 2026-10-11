@@ -189,9 +189,3 @@ data class CreatePostResponse(
 data class CreatePostData(
     val audioUrl: Int? = null
 )
-
-@Serializable
-data class EditPostResponse(
-    val code: Int,
-    val msg: String
-)

@@ -59,6 +59,8 @@ fun ActionPage() {
     val cacheEnabled by settingsStorage.cacheEnabledFlow.collectAsState(initial = true)
     val hideLauncher by settingsStorage.hideLauncherFlow.collectAsState(initial = false)
 
+    var showHideLauncherConfirm by remember { mutableStateOf(false) }
+
     val legacyStoragePermission = Build.VERSION.SDK_INT <= Build.VERSION_CODES.P
     var storagePermissionGranted by remember {
         mutableStateOf(!legacyStoragePermission || hasLegacyWritePermission(context))
@@ -151,8 +153,12 @@ fun ActionPage() {
             subtitle = if (hideLauncher) "已隐藏，拨号 *#*#2468#*#* 启动" else "显示在桌面启动器中",
             checked = hideLauncher,
             onCheckedChange = { checked ->
-                scope.launch {
-                    settingsStorage.setHideLauncher(checked)
+                if (checked) {
+                    showHideLauncherConfirm = true
+                } else {
+                    scope.launch {
+                        settingsStorage.setHideLauncher(false)
+                    }
                 }
             }
         )
@@ -164,6 +170,34 @@ fun ActionPage() {
                     putExtra("page", 6)
                 }
                 context.startActivity(intent)
+            }
+        )
+    }
+
+    if (showHideLauncherConfirm) {
+        AlertDialog(
+            onDismissRequest = { showHideLauncherConfirm = false },
+            title = { Text("隐藏应用入口") },
+            icon = {
+                Icon(AppIcons.Info, contentDescription = null)
+            },
+            text = {
+                Text("隐藏后应用图标将从桌面消失，只能通过拨号盘输入暗码 *#*#2468#*#* 启动应用。\n\n请确认你知道暗码并能正常通过暗码启动。")
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    showHideLauncherConfirm = false
+                    scope.launch {
+                        settingsStorage.setHideLauncher(true)
+                    }
+                }) {
+                    Text("确认开启")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showHideLauncherConfirm = false }) {
+                    Text("取消")
+                }
             }
         )
     }

@@ -120,7 +120,8 @@ fun MessageBubble(
     hideImages: Boolean = false,
     anonymousNameProvider: ((String) -> String)? = null,
     roleLabel: String? = null,
-    isHighlighted: Boolean = false
+    isHighlighted: Boolean = false,
+    onCreateExpression: (String) -> Unit = {}
 ) {
     val clipboardManager = LocalClipboard.current
     val scope = rememberCoroutineScope()
@@ -244,7 +245,8 @@ fun MessageBubble(
                     timestampDisplay = timestampDisplay,
                     clipboardManager = clipboardManager,
                     scope = scope,
-                    context = context
+                    context = context,
+                    onCreateExpression = onCreateExpression
                 )
             }
         }
@@ -318,7 +320,8 @@ private fun MessageBubbleBody(
     timestampDisplay: String,
     clipboardManager: androidx.compose.ui.platform.Clipboard,
     scope: kotlinx.coroutines.CoroutineScope,
-    context: android.content.Context
+    context: android.content.Context,
+    onCreateExpression: (String) -> Unit = {}
 ) {
     Row(
         modifier = Modifier
@@ -444,7 +447,8 @@ private fun MessageBubbleBody(
                                 onEditIconClick = onEditIconClick,
                                 clipboardManager = clipboardManager,
                                 scope = scope,
-                                context = context
+                                context = context,
+                                onCreateExpression = onCreateExpression
                             )
 
                             if (message.isRecalled) {
@@ -601,7 +605,8 @@ private fun MessageMenu(
     onEditIconClick: (String) -> Unit,
     clipboardManager: androidx.compose.ui.platform.Clipboard,
     scope: kotlinx.coroutines.CoroutineScope,
-    context: android.content.Context
+    context: android.content.Context,
+    onCreateExpression: (String) -> Unit = {}
 ) {
     DropdownMenu(
         expanded = showMenu,
@@ -620,6 +625,20 @@ private fun MessageMenu(
                 },
                 leadingIcon = {
                     Icon(AppIcons.ContentCopy, contentDescription = null, modifier = Modifier.size(18.dp))
+                }
+            )
+        }
+        
+        val imageUrl = message.imageUrl
+        if (imageUrl != null && imageUrl.isNotBlank()) {
+            DropdownMenuItem(
+                text = { Text("收藏") },
+                onClick = { 
+                    onCreateExpression(imageUrl)
+                    showMenuChanged(null)
+                },
+                leadingIcon = {
+                    Icon(AppIcons.Favorite, contentDescription = null, modifier = Modifier.size(18.dp))
                 }
             )
         }

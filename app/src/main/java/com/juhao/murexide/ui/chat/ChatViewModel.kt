@@ -13,7 +13,7 @@ import com.juhao.murexide.proto.bot.bot_info_send
 import com.juhao.murexide.proto.group.info
 import com.juhao.murexide.proto.group.info_send
 import com.juhao.murexide.repository.ChatBackgroundRepository
-import com.juhao.murexide.repository.StickerRepository
+import com.juhao.murexide.repository.ExpressionRepository
 import com.juhao.murexide.repository.InstructionRepository
 import com.juhao.murexide.repository.BoardRepository
 import com.juhao.murexide.repository.ConversationDetailRepository
@@ -87,14 +87,14 @@ class ChatViewModel(
     private val accountStorage: AccountStorage,
     private val repository: MessageRepository = MessageRepository(),
     private val backgroundRepository: ChatBackgroundRepository = ChatBackgroundRepository(),
-    private val stickerRepository: StickerRepository = StickerRepository(),
+    private val expressionRepository: ExpressionRepository = ExpressionRepository(),
     private val instructionRepository: InstructionRepository = InstructionRepository(),
     private val friendRepository: FriendRepository = FriendRepository(),
     private val groupMemberRepository: GroupMemberRepository = GroupMemberRepository(),
     private val boardRepository: BoardRepository = BoardRepository(),
     private val conversationDetailRepository: ConversationDetailRepository = ConversationDetailRepository(),
     private val wsManager: WebSocketManager = WebSocketManager.getInstance(),
-    private val currentUserId: String = "",
+    val currentUserId: String = "",
     private val currentUserName: String = "",
     private val currentUserAvatar: String = ""
 ) : ViewModel() {
@@ -533,10 +533,6 @@ class ChatViewModel(
         }
     }
 
-    fun clearLocatingMessageError() {
-        _uiState.update { it.copy(locatingMessageError = null) }
-    }
-
     override fun onCleared() {
         val text = _uiState.value.inputText
         kotlinx.coroutines.GlobalScope.launch(Dispatchers.IO) {
@@ -554,7 +550,7 @@ class ChatViewModel(
         if (messageId.isBlank()) return false
         if (_uiState.value.messages.any { it.msgId == messageId }) return true
 
-        _uiState.update { it.copy(locatingMessage = true, locatingMessageError = null) }
+        _uiState.update { it.copy(locatingMessage = true) }
 
         return try {
             historyLoadMutex.withLock {
@@ -564,13 +560,11 @@ class ChatViewModel(
             }
         } finally {
             _uiState.update {
+                if (it.messages.none { m -> m.msgId == messageId }) {
+                    _toastMessage.emit("未找到目标消息")
+                }
                 it.copy(
                     locatingMessage = false,
-                    locatingMessageError = if (it.messages.any { m -> m.msgId == messageId }) {
-                        null
-                    } else {
-                        "未找到目标消息"
-                    }
                 )
             }
         }
@@ -1410,8 +1404,8 @@ class ChatViewModel(
     private fun loadStickerData() {
         _stickerPanel.update { it.copy(isLoading = true) }
         viewModelScope.launch(Dispatchers.IO) {
-            val exprResult = stickerRepository.getExpressionList(token)
-            val packResult = stickerRepository.getStickerList(token)
+            val exprResult = expressionRepository.getExpressionList(token)
+            val packResult = expressionRepository.getStickerList(token)
 
             val expressions = exprResult.getOrElse {
                 Log.e(TAG, "Failed to load expressions", it); emptyList()
@@ -1961,22 +1955,68 @@ class ChatViewModel(
             )
         }
     }
-
-    fun deleteFriend(
-        onSuccess: () -> Unit = {},
-        onFailure: () -> Unit = {}
-    ) {
+    
+    fun topExpression(id: Int) {
         viewModelScope.launch {
-            friendRepository.deleteFriend(
+            expressionRepository.topExpression(token, id)
+                .onSuccess {
+                    _toastMessage.emit("置顶成功")
+                    refreshExpressions()
+                }
+                .onFailure {
+                    _toastMessage.emit(it.message ?: "置顶失败")
+                }
+        }
+    }
+    
+    private suspend fun refreshExpressions() {
+        expressionRepository.getExpressionList(token).onSuccess { list ->
+            _stickerPanel.update { it.copy(expressions = list) }
+        }
+    }
+    
+    fun appendEmojiToInput(emoji: String) {
+        val state = _uiState.value
+        val newText = state.inputText + emoji
+        _uiState.update {
+            it.copy(
+                inputText = newText,
+                inputSelectionStart = newText.length,
+                inputSelectionEnd = newText.length
+            )
+        }
+        viewModelScope.launch {
+            accountStorage.saveDraft(chatId, chatType, newText)
+        }
+    }
+
+    fun createExpression(url: String) {
+        viewModelScope.launch {
+            expressionRepository.createExpression(
                 token = token,
-                id = chatId,
-                type = chatType
+                url = url
             ).onSuccess {
-                _toastMessage.emit("操作成功")
-                onSuccess()
+                _toastMessage.emit("收藏成功")
             }.onFailure {
                 _toastMessage.emit(it.message ?: "操作失败")
-                onFailure()
+            }
+        }
+    }
+    
+    fun deleteExpression(id: Int) {
+        viewModelScope.launch {
+            expressionRepository.deleteExpression(
+                token = token,
+                id = id
+            ).onSuccess {
+                _stickerPanel.update { state ->
+                    state.copy(
+                        expressions = state.expressions.filterNot { it.id == id.toLong() }
+                    )
+                }
+                _toastMessage.emit("取消收藏成功")
+            }.onFailure {
+                _toastMessage.emit(it.message ?: "操作失败")
             }
         }
     }

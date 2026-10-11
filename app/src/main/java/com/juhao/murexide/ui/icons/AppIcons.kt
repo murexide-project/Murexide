@@ -73,6 +73,7 @@ object AppIcons {
     val Keep get() = MaterialSymbols.Rounded.Keep
     val Key get() = MaterialSymbols.Rounded.Key
     val Keyboard get() = MaterialSymbols.Rounded.Keyboard
+    val KeyboardArrowRight get() = MaterialSymbols.Rounded.Keyboard_arrow_right
     val KeyboardArrowDown get() = MaterialSymbols.Rounded.Keyboard_arrow_down
     val KeyboardArrowUp get() = MaterialSymbols.Rounded.Keyboard_arrow_up
     val LaptopChromebook get() = MaterialSymbols.Rounded.Laptop_chromebook

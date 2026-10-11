@@ -610,6 +610,7 @@ internal fun Msg.toMessageItem(chatId: String, chatType: Int): MessageItem {
         quoteMsgId = quote_msg_id.takeIf { it.isNotEmpty() },
         quoteMsgText = content?.quote_msg_text?.takeIf { it.isNotEmpty() },
         quoteImageUrl = content?.quote_image_url?.takeIf { it.isNotEmpty() },
+        stickerPackId = content?.sticker_pack_id,
         stickerUrl = content?.sticker_url?.takeIf { it.isNotEmpty() },
         imageUrl = content?.image_url?.takeIf { it.isNotEmpty() },
         imageWidth = content?.width?.takeIf { it > 0 },

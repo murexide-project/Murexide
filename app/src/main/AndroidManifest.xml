@@ -163,7 +163,15 @@
             android:exported="false"
             android:theme="@style/Theme.Murexide.OpenImage" />
         <activity
+            android:name=".ui.sticker.StickerDetailActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Murexide" />
+        <activity
             android:name=".ui.about.AboutActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Murexide" />
+        <activity
+            android:name=".ui.sticker.StickerPackManagerActivity"
             android:exported="false"
             android:theme="@style/Theme.Murexide" />
         <activity

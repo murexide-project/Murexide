@@ -20,8 +20,6 @@ fun resolveStickerMessageUrl(imageUrl: String?, stickerUrl: String?): String? {
         ?.let(::resolveStickerUrl)
 }
 
-// ---------- 表情包 (sticker/list) ----------
-
 @Serializable
 data class StickerItem(
     val id: Long = 0,
@@ -60,8 +58,6 @@ data class StickerListData(
     val stickerPacks: List<StickerPack> = emptyList()
 )
 
-// ---------- 个人收藏表情 (expression/list) ----------
-
 @Serializable
 data class ExpressionItem(
     val id: Long = 0,
@@ -82,4 +78,37 @@ data class ExpressionListResponse(
 @Serializable
 data class ExpressionListData(
     val expression: List<ExpressionItem> = emptyList()
+)
+
+@Serializable
+data class StickerDetailResponse(
+    val code: Int = 0,
+    val data: StickerDetailData? = null,
+    val msg: String = ""
+)
+
+@Serializable
+data class StickerDetailData(
+    val stickerPack: StickerPack? = null,
+    val user: StickerCreator? = null
+)
+
+@Serializable
+data class StickerCreator(
+    val id: Long = 0,
+    val user_id: String = "",
+    val nickname: String = "",
+    val avatar_url: String = ""
+)
+
+@Serializable
+data class StickerCreatePackResponse(
+    val code: Int = 0,
+    val data: StickerCreatePackData? = null,
+    val msg: String = ""
+)
+
+@Serializable
+data class StickerCreatePackData(
+    val id: Long = 0
 )

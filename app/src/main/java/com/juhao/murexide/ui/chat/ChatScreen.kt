@@ -90,6 +90,7 @@ import com.juhao.murexide.data.ForwardTarget
 import com.juhao.murexide.data.resolveStickerMessageUrl
 import com.juhao.murexide.repository.ConversationDetailRepository
 import com.juhao.murexide.ui.conversationdetail.ConversationDetailActivity
+import com.juhao.murexide.ui.sticker.*
 import com.juhao.murexide.ui.components.handleStaticHtmlLink
 import com.juhao.murexide.ui.chatsearch.ChatSearchActivity
 import com.juhao.murexide.ui.theme.UiState
@@ -532,7 +533,6 @@ fun ChatScreen(
     var showMenuMsgId by remember { mutableStateOf<String?>(null) }
     var showMoreMenu by remember { mutableStateOf(false) }
     var showEditNickNameDialog by remember { mutableStateOf(false) }
-    var showDeleteConfirm by remember { mutableStateOf(false) }
 
     val recallDialog by viewModel.recallDialog.collectAsState()
 
@@ -811,13 +811,6 @@ fun ChatScreen(
                 highlightedMessageId = target
                 highlightRequest++
             }
-        }
-    }
-
-    LaunchedEffect(uiState.locatingMessageError) {
-        uiState.locatingMessageError?.let { msg ->
-            Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
-            viewModel.clearLocatingMessageError()
         }
     }
 
@@ -1674,10 +1667,33 @@ fun ChatScreen(
                                         onStickerItemClick = { stickerItem ->
                                             viewModel.sendStickerItem(stickerItem)
                                         },
+                                        onEmojiTextSelected = { emoji ->
+                                            viewModel.appendEmojiToInput(emoji)
+                                        },
+                                        onStickerPackHeaderClick = { pack ->
+                                            StickerDetailActivity.start(
+                                                context = context,
+                                                packId = pack.id,
+                                                token = viewModel.token,
+                                                currentUserId = viewModel.currentUserId
+                                            )
+                                        },
+                                        onDeleteExpression = { id ->
+                                            viewModel.deleteExpression(id)
+                                        },
+                                        onTopExpression = { id ->
+                                            viewModel.topExpression(id)
+                                        },
                                         stickerPacks = expressions.stickerPacks,
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .height(inputPanelHeight)
+                                        modifier = Modifier.fillMaxWidth(),
+                                        minHeight = 280.dp,
+                                        maxHeight = with(LocalDensity.current) { inputPanelHeightPx.toDp() },
+                                        onManageStickerPacks = {
+                                            StickerPackManagerActivity.start(
+                                                context = context,
+                                                token = viewModel.token
+                                            )
+                                        }
                                     )
                                 }
 
@@ -1910,17 +1926,31 @@ fun ChatScreen(
                                             }
 
                                             MessageItem.CONTENT_TYPE_STICKER -> {
-                                                resolveStickerMessageUrl(
-                                                    imageUrl = msg.imageUrl,
-                                                    stickerUrl = msg.stickerUrl
-                                                )
-                                                    ?.let { url ->
+                                                val packId = msg.stickerPackId
+                                                if (packId != null && packId != 0L) {
+                                                    val stickerUrl = resolveStickerMessageUrl(
+                                                        imageUrl = msg.imageUrl,
+                                                        stickerUrl = msg.stickerUrl
+                                                    )
+                                                    StickerDetailActivity.start(
+                                                        context = context,
+                                                        packId = packId,
+                                                        token = viewModel.token,
+                                                        currentUserId = viewModel.currentUserId,
+                                                        stickerUrl = stickerUrl
+                                                    )
+                                                } else {
+                                                    resolveStickerMessageUrl(
+                                                        imageUrl = msg.imageUrl,
+                                                        stickerUrl = msg.stickerUrl
+                                                    )?.let { url ->
                                                         showImageViewer(
                                                             context = context,
                                                             images = listOf(fullImagePreviewItem(url)),
                                                             sourceBounds = sourceBounds
                                                         )
                                                     }
+                                                }
                                             }
                                         }
                                     } else {
@@ -1932,20 +1962,6 @@ fun ChatScreen(
                                         context = context,
                                         images = listOf(fullImagePreviewItem(url))
                                     )
-                                },
-                                onAvatarClick = {
-                                    ConversationDetailActivity.start(
-                                        context = context,
-                                        chatId = message.senderId,
-                                        chatType = message.senderType,
-                                        chatName = message.senderName,
-                                        chatAvatar = message.senderAvatar
-                                    )
-                                },
-                                onAvatarLongClick = {
-                                    if (chatType == 2 && !message.isMine) {
-                                        viewModel.mentionUser(message.senderId, message.senderName)
-                                    }
                                 },
                                 downloadProgress = downloadingFiles[message.msgId],
                                 isDownloaded = message.msgId in uiState.downloadedFiles,
@@ -1967,6 +1983,9 @@ fun ChatScreen(
                                     currentMsgHistoryToShow = msgId
                                 },
                                 isHighlighted = highlightedMessageId == message.msgId,
+                                onCreateExpression = {
+                                    viewModel.createExpression(it)
+                                }
                             )
                         }
 
@@ -2115,41 +2134,6 @@ fun ChatScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showEditNickNameDialog = false }) {
-                    Text("取消")
-                }
-            }
-        )
-    }
-
-    if (showDeleteConfirm) {
-        val actionText = when (chatType) {
-            1 -> "删除该好友"
-            2 -> "退出该群聊"
-            else -> "删除该机器人"
-        }
-        AlertDialog(
-            onDismissRequest = { showDeleteConfirm = false },
-            icon = {
-                Icon(
-                    AppIcons.Warning,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.error
-                )
-            },
-            title = { Text(actionText) },
-            text = {
-                Text("确定要${actionText}吗？")
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    showDeleteConfirm = false
-                    viewModel.deleteFriend(onSuccess = { onBackClick() })
-                }) {
-                    Text(actionText, color = MaterialTheme.colorScheme.error)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDeleteConfirm = false }) {
                     Text("取消")
                 }
             }

@@ -269,7 +269,7 @@ class CommunityRepository(
 
                 client.newCall(httpRequest).execute().use { response ->
                     if (response.isSuccessful) {
-                        val result = json.decodeFromString<EditPostResponse>(response.body.string())
+                        val result = json.decodeFromString<CommonResponse>(response.body.string())
                         if (result.code == 1) {
                             Result.success(true)
                         } else {
@@ -303,7 +303,7 @@ class CommunityRepository(
 
                 client.newCall(httpRequest).execute().use { response ->
                     if (response.isSuccessful) {
-                        val result = json.decodeFromString<EditPostResponse>(response.body.string())
+                        val result = json.decodeFromString<CommonResponse>(response.body.string())
                         if (result.code == 1) {
                             Result.success(true)
                         } else {

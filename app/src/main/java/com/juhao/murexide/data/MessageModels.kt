@@ -35,6 +35,7 @@ data class MessageItem(
     val quoteMsgText: String? = null,
     val quoteImageUrl: String? = null,
     val stickerUrl: String? = null,
+    val stickerPackId: Long? = null,
     val imageUrl: String? = null,
     val imageWidth: Long? = null,
     val imageHeight: Long? = null,
@@ -199,7 +200,6 @@ data class ChatUiState(
     val isLoadingNewer: Boolean = false,
     val hasNewer: Boolean = false,
     val locatingMessage: Boolean = false,
-    val locatingMessageError: String? = null,
     
     // -----群聊专属-----
     val isAdmin: Boolean = false,
