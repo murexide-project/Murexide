@@ -127,7 +127,6 @@ fun MessageBubble(
     val scope = rememberCoroutineScope()
 
     val isMine = if (hideMyInfo) false else message.isMine
-    val needAvatar = drawAvatar && (if (isMine) showMyBubbleAvatarSetting else true)
 
     val themeColor by UiState.themeColor
     val themeMode by UiState.themeMode
@@ -218,7 +217,8 @@ fun MessageBubble(
                     isAdmin = isAdmin,
                     isLastFromSender = isLastFromSender,
                     isFirstFromSender = isFirstFromSender,
-                    needAvatar = needAvatar,
+                    drawAvatar = drawAvatar,
+                    showMyBubbleAvatarSetting = showMyBubbleAvatarSetting,
                     showTags = showTags,
                     showMenu = showMenu,
                     showMenuChanged = showMenuChanged,
@@ -293,7 +293,8 @@ private fun MessageBubbleBody(
     isAdmin: Boolean,
     isLastFromSender: Boolean,
     isFirstFromSender: Boolean,
-    needAvatar: Boolean,
+    drawAvatar: Boolean = true,
+    showMyBubbleAvatarSetting: Boolean = true,
     showTags: Boolean,
     showMenu: Boolean,
     showMenuChanged: (String?) -> Unit,
@@ -338,21 +339,25 @@ private fun MessageBubbleBody(
             Spacer(modifier = Modifier.height(AVATAR_SIZE_DP.dp))
         }
 
-        if (needAvatar) {
-            if (hideSenderInfo) {
-                PlaceholderAvatar()
+        val hideMyAvatar = isMine && !showMyBubbleAvatarSetting
+
+        if (!hideMyAvatar) {
+            if (drawAvatar) {
+                if (hideSenderInfo) {
+                    PlaceholderAvatar()
+                } else {
+                    Avatar(
+                        url = message.senderAvatar,
+                        modifier = Modifier.combinedClickable(
+                            onClick = { onAvatarClick() },
+                            onLongClick = { onAvatarLongClick() }
+                        ),
+                        size = AVATAR_SIZE_DP.dp
+                    )
+                }
             } else {
-                Avatar(
-                    url = message.senderAvatar,
-                    modifier = Modifier.combinedClickable(
-                        onClick = { onAvatarClick() },
-                        onLongClick = { onAvatarLongClick() }
-                    ),
-                    size = AVATAR_SIZE_DP.dp
-                )
+                Spacer(modifier = Modifier.width(AVATAR_SIZE_DP.dp))
             }
-        } else {
-            Spacer(modifier = Modifier.width(AVATAR_SIZE_DP.dp))
         }
 
         val hideCard = (message.contentType == MessageItem.CONTENT_TYPE_IMAGE
