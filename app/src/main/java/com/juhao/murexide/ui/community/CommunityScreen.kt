@@ -52,7 +52,8 @@ fun CommunityScreen(
 
     val tabs = listOf(
         CommunityTab.RECOMMEND to "推荐",
-        CommunityTab.ALL_BA to "全部分区",
+        CommunityTab.ALL_BA to "全部",
+        CommunityTab.SUBSCRIBE to "关注",
         CommunityTab.MANAGE to "管理"
     )
     val selectedIndex = tabs.indexOfFirst { it.first == uiState.currentTab }.coerceAtLeast(0)
@@ -105,6 +106,13 @@ fun CommunityScreen(
                     onSideSelected = viewModel::selectBaSide,
                     baList = uiState.allBaList,
                     isLoading = uiState.isLoadingAllBa,
+                    onBaClick = { ba -> BaDetailActivity.start(context, ba.id) }
+                )
+
+                CommunityTab.SUBSCRIBE -> SubscribeContent(
+                    innerPadding = innerPadding,
+                    baList = uiState.subscribeBaList,
+                    isLoading = uiState.isLoadingSubscribeBa,
                     onBaClick = { ba -> BaDetailActivity.start(context, ba.id) }
                 )
 
@@ -171,6 +179,45 @@ fun AllBaContent(
                 emptyText = if (currentSide == BaSide.USER) "暂无用户自建分区" else "暂无分区",
                 onBaClick = onBaClick
             )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+fun SubscribeContent(
+    innerPadding: PaddingValues,
+    baList: List<BaItem>,
+    isLoading: Boolean,
+    onBaClick: (BaItem) -> Unit
+) {
+    when {
+        isLoading && baList.isEmpty() -> {
+            Box(Modifier.fillMaxSize(), Alignment.Center) {
+                ContainedLoadingIndicator()
+            }
+        }
+        baList.isEmpty() -> {
+            Box(Modifier.fillMaxSize(), Alignment.Center) {
+                Text("你还没有创建分区", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+        else -> {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(
+                    top = 8.dp,
+                    bottom = innerPadding.calculateBottomPadding()
+                )
+            ) {
+                items(baList, key = { it.id }) { ba ->
+                    SettingsItem(
+                        title = ba.name,
+                        subtitle = if (ba.postNum > 0) "${ba.postNum} 文章" else null,
+                        onClick = { onBaClick(ba) }
+                    )
+                }
+            }
         }
     }
 }
