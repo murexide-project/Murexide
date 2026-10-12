@@ -191,35 +191,13 @@ fun SubscribeContent(
     isLoading: Boolean,
     onBaClick: (BaItem) -> Unit
 ) {
-    when {
-        isLoading && baList.isEmpty() -> {
-            Box(Modifier.fillMaxSize(), Alignment.Center) {
-                ContainedLoadingIndicator()
-            }
-        }
-        baList.isEmpty() -> {
-            Box(Modifier.fillMaxSize(), Alignment.Center) {
-                Text("你还没有关注分区", color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        }
-        else -> {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(
-                    top = 8.dp,
-                    bottom = innerPadding.calculateBottomPadding()
-                )
-            ) {
-                items(baList, key = { it.id }) { ba ->
-                    SettingsItem(
-                        title = ba.name,
-                        subtitle = if (ba.postNum > 0) "${ba.postNum} 文章" else null,
-                        onClick = { onBaClick(ba) }
-                    )
-                }
-            }
-        }
-    }
+    BaList(
+        innerPadding = innerPadding,
+        baList = baList,
+        isLoading = isLoading,
+        emptyText = "你还没有关注分区",
+        onBaClick = onBaClick
+    )
 }
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -274,11 +252,7 @@ fun ManageContent(
 
                     else -> {
                         baList.forEach { ba ->
-                            SettingsItem(
-                                title = ba.name,
-                                subtitle = if (ba.postNum > 0) "${ba.postNum} 文章" else null,
-                                onClick = { onBaClick(ba) }
-                            )
+                            BaRow(ba = ba, onClick = { onBaClick(ba) })
                         }
                     }
                 }

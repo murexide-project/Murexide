@@ -756,7 +756,8 @@ private fun StickerDetailItem(
                         Icon(
                             imageVector = AppIcons.Delete,
                             contentDescription = null,
-                            modifier = Modifier.size(18.dp)
+                            modifier = Modifier.size(18.dp),
+                            tint = MaterialTheme.colorScheme.error
                         )
                     },
                     onClick = {
