@@ -199,7 +199,7 @@ fun SubscribeContent(
         }
         baList.isEmpty() -> {
             Box(Modifier.fillMaxSize(), Alignment.Center) {
-                Text("你还没有创建分区", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("你还没有关注分区", color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
         else -> {

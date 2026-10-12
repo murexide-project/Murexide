@@ -153,6 +153,13 @@ fun StickerDetailScreen(
                             ) {
                                 DropdownMenuItem(
                                     text = { Text("重命名表情包") },
+                                    leadingIcon = {
+                                        Icon(
+                                            imageVector = AppIcons.Edit,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    },
                                     onClick = {
                                         showMenu = false
                                         showRenamePackDialog = true
@@ -160,6 +167,13 @@ fun StickerDetailScreen(
                                 )
                                 DropdownMenuItem(
                                     text = { Text("添加表情") },
+                                    leadingIcon = {
+                                        Icon(
+                                            imageVector = AppIcons.Add,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    },
                                     onClick = {
                                         showMenu = false
                                         imagePickerLauncher.launch(
@@ -174,6 +188,14 @@ fun StickerDetailScreen(
                                         Text(
                                             "删除表情包",
                                             color = MaterialTheme.colorScheme.error
+                                        )
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            imageVector = AppIcons.Delete,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(18.dp),
+                                            tint = MaterialTheme.colorScheme.error
                                         )
                                     },
                                     onClick = {
@@ -716,6 +738,13 @@ private fun StickerDetailItem(
             if (isOwner) {
                 DropdownMenuItem(
                     text = { Text("重命名") },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = AppIcons.Edit,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    },
                     onClick = {
                         menuExpanded = false
                         onRename()
@@ -723,6 +752,13 @@ private fun StickerDetailItem(
                 )
                 DropdownMenuItem(
                     text = { Text("删除", color = MaterialTheme.colorScheme.error) },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = AppIcons.Delete,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    },
                     onClick = {
                         menuExpanded = false
                         onDelete()

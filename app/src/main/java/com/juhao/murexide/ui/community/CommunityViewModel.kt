@@ -54,7 +54,7 @@ class CommunityViewModel(
         when (tab) {
             CommunityTab.RECOMMEND -> if (_uiState.value.posts.isEmpty()) loadRecommend()
             CommunityTab.ALL_BA -> if (_uiState.value.allBaList.isEmpty()) loadAllBa()
-            CommunityTab.SUBSCRIBE -> if (_uiState.value.allBaList.isEmpty()) loadSubscribeBa()
+            CommunityTab.SUBSCRIBE -> if (_uiState.value.subscribeBaList.isEmpty()) loadSubscribeBa()
             CommunityTab.MANAGE -> if (_uiState.value.manageBaList.isEmpty()) loadManageBa()
         }
     }
@@ -113,13 +113,6 @@ class CommunityViewModel(
         }
     }
 
-    // ==================== 全部分区 ====================
-    //
-    // 左侧侧边分类：
-    //  - 官方：原本加载的热门分区（following-ba-list typ=2）
-    //  - 用户自建：全部分区（following-ba-list typ=4）
-    // 若后端后续提供更精确的“官方/自建”区分，可在此调整 typ。
-
     fun selectBaSide(side: BaSide) {
         if (_uiState.value.currentBaSide == side) return
         _uiState.value = _uiState.value.copy(currentBaSide = side)
@@ -144,7 +137,6 @@ class CommunityViewModel(
         }
     }
 
-    // ==================== 关注（我关注的分区） ====================
     fun loadSubscribeBa() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoadingSubscribeBa = true)
@@ -157,9 +149,6 @@ class CommunityViewModel(
                 }
         }
     }
-
-
-    // ==================== 管理（我创建的分区） ====================
 
     fun loadManageBa() {
         val userId = currentUserId ?: return
@@ -174,8 +163,6 @@ class CommunityViewModel(
                 }
         }
     }
-
-    // ==================== 互动 ====================
 
     fun toggleLike(postId: Int) {
         viewModelScope.launch {
