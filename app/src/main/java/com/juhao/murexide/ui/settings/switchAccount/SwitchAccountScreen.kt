@@ -33,6 +33,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import com.juhao.murexide.MainActivity
 import com.juhao.murexide.datastore.AccountStorage
 import com.juhao.murexide.datastore.UserAccount
@@ -61,7 +62,7 @@ fun Greeting(
     val currentAccount = accountStorage.currentTokenFlow.collectAsState(initial = "").value
 
     Scaffold(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             StyledTopBar(
                 title = { Text(if (isChooseMode) "现有账号" else "切换账号") },
