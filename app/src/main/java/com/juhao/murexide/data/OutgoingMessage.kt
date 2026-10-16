@@ -34,6 +34,7 @@ internal fun createOutgoingMessage(
         quoteMsgId = quoteMsgId,
         quoteMsgText = content.quoteMsgText,
         quoteImageUrl = content.quoteImageUrl,
+        stickerPackId = content.stickerPackId,
         imageUrl = content.image.toMediaUrl(IMAGE_BASE_URL),
         imageWidth = content.media?.width,
         imageHeight = content.media?.height,

@@ -43,7 +43,7 @@ import androidx.compose.ui.unit.sp
 import com.juhao.murexide.data.ContactGroup
 import com.juhao.murexide.data.ContactItem
 import com.juhao.murexide.data.ContactRequestItem
-import com.juhao.murexide.ui.components.Avatar
+import com.juhao.murexide.ui.components.*
 import com.juhao.murexide.ui.theme.UiState
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -300,27 +300,23 @@ private fun ContactTabContent(
             if (sections.isEmpty()) {
                 item(key = "contact_state", contentType = "state") {
                     when {
-                        isLoading -> LoadingState(
-                            modifier = Modifier.fillMaxWidth().fillParentMaxHeight(
-                                if (showNewMessageShortcut) 0.7f else 1f
-                            )
+                        isLoading -> LoadingState(Modifier.fillMaxSize())
+
+                        error != null -> EmptyPlaceholder(
+                            icon = AppIcons.Warning,
+                            title = "加载失败",
+                            subtitle = error,
+                            primaryButton = {
+                                Button(onClick = onRetry) {
+                                    Text("重试")
+                                }
+                            }
                         )
 
-                        error != null -> ErrorState(
-                            modifier = Modifier.fillMaxWidth().fillParentMaxHeight(
-                                if (showNewMessageShortcut) 0.7f else 1f
-                            ),
-                            message = error,
-                            onRetry = onRetry
-                        )
-
-                        else -> EmptyState(
-                            modifier = Modifier.fillMaxWidth().fillParentMaxHeight(
-                                if (showNewMessageShortcut) 0.7f else 1f
-                            ),
+                        else -> EmptyPlaceholder(
                             icon = tab.icon,
                             title = tab.emptyTitle,
-                            description = tab.emptyDescription
+                            subtitle = tab.emptyDescription
                         )
                     }
                 }
@@ -468,7 +464,7 @@ private fun ContactItemRow(
         contact.chatType == 3 -> "机器人 · ${contact.chatId}"
         else -> "ID: ${contact.chatId}"
     }
-    
+
     ListItem(
         onClick = onClick,
         leadingContent = {
@@ -672,16 +668,22 @@ private fun NewMessagesScreen(
         ) {
             when {
                 uiState.isRequestsLoading && requests.isEmpty() -> LoadingState(Modifier.fillMaxSize())
-                uiState.requestsError != null && requests.isEmpty() -> ErrorState(
+                uiState.requestsError != null && requests.isEmpty() -> EmptyPlaceholder(
                     modifier = Modifier.fillMaxSize(),
-                    message = uiState.requestsError,
-                    onRetry = onRefresh
+                    icon = AppIcons.Warning,
+                    title = "加载失败",
+                    subtitle = uiState.requestsError,
+                    primaryButton = {
+                        Button(onClick = onRefresh) {
+                            Text("重试")
+                        }
+                    }
                 )
-                requests.isEmpty() -> EmptyState(
+                requests.isEmpty() -> EmptyPlaceholder(
                     modifier = Modifier.fillMaxSize(),
                     icon = AppIcons.Inbox,
                     title = "暂无新消息",
-                    description = "好友和群聊申请、邀请会显示在这里"
+                    subtitle = "好友和群聊申请、邀请会显示在这里"
                 )
                 else -> LazyColumn(
                     modifier = Modifier.fillMaxSize(),
@@ -878,36 +880,6 @@ private fun LoadingState(modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun ErrorState(
-    modifier: Modifier = Modifier,
-    message: String,
-    onRetry: () -> Unit
-) {
-    Column(
-        modifier = modifier.padding(32.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(
-            text = "加载失败",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold
-        )
-        Spacer(Modifier.height(6.dp))
-        Text(
-            text = message,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center
-        )
-        Spacer(Modifier.height(16.dp))
-        Button(onClick = onRetry) {
-            Text("重试")
-        }
-    }
-}
-
-@Composable
 private fun InlineError(message: String, onRetry: () -> Unit) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -930,47 +902,5 @@ private fun InlineError(message: String, onRetry: () -> Unit) {
                 Text("重试")
             }
         }
-    }
-}
-
-@Composable
-private fun EmptyState(
-    modifier: Modifier = Modifier,
-    icon: ImageVector,
-    title: String,
-    description: String
-) {
-    Column(
-        modifier = modifier.padding(32.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Surface(
-            modifier = Modifier.size(72.dp),
-            shape = RoundedCornerShape(24.dp),
-            color = MaterialTheme.colorScheme.surfaceContainerHigh
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    modifier = Modifier.size(32.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-        Spacer(Modifier.height(16.dp))
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold
-        )
-        Spacer(Modifier.height(4.dp))
-        Text(
-            text = description,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center
-        )
     }
 }

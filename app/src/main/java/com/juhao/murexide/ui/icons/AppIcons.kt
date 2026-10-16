@@ -24,6 +24,10 @@ object AppIcons {
     val Article get() = MaterialSymbols.Rounded.Article
     val AttachFile get() = MaterialSymbols.Rounded.Attach_file
     val AudioFile get() = MaterialSymbols.Rounded.Audio_file
+    val BrightnessAuto get() = MaterialSymbols.Rounded.Brightness_auto
+    val LightMode get() = MaterialSymbols.Rounded.Light_mode
+    val DarkMode get() = MaterialSymbols.Rounded.Dark_mode
+    val Contrast get() = MaterialSymbols.Rounded.Contrast
     val Badge get() = MaterialSymbols.Rounded.Badge
     val Book get() = MaterialSymbols.Rounded.Book
     val Bookmark get() = MaterialSymbols.RoundedFilled.Bookmark
@@ -138,6 +142,10 @@ object AppFilledIcons {
     val Group get() = MaterialSymbols.RoundedFilled.Group
     val Explore get() = MaterialSymbols.RoundedFilled.Explore
     val Person get() = MaterialSymbols.RoundedFilled.Person
+    val BrightnessAuto get() = MaterialSymbols.RoundedFilled.Brightness_auto
+    val LightMode get() = MaterialSymbols.RoundedFilled.Light_mode
+    val DarkMode get() = MaterialSymbols.RoundedFilled.Dark_mode
+    val Contrast get() = MaterialSymbols.RoundedFilled.Contrast
 }
 
 @Composable

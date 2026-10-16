@@ -75,7 +75,7 @@ fun ConversationListScreen(
             }
         }
     )
-    
+
     val drafts by viewModel.drafts.collectAsState()
 
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
@@ -351,10 +351,28 @@ fun ConversationListScreen(
                         if (totalItems == 0) {
                             item {
                                 Box(
-                                    modifier = Modifier.fillParentMaxSize(),
+                                    modifier = Modifier
+                                        .fillParentMaxSize()
+                                        .padding(top = 24.dp),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    Text("暂无会话")
+                                    EmptyPlaceholder(
+                                        icon = AppIcons.ChatBubble,
+                                        title = when (filter) {
+                                            ConversationFilter.ALL -> "还没有聊天"
+                                            ConversationFilter.UNREAD -> "没有未读消息"
+                                            ConversationFilter.GROUP -> "还没有群聊"
+                                            ConversationFilter.USER -> "还没有好友会话"
+                                            ConversationFilter.BOT -> "还没有机器人"
+                                        },
+                                        subtitle = when (filter) {
+                                            ConversationFilter.ALL -> "点右下角按钮开始创建群聊或机器人"
+                                            ConversationFilter.UNREAD -> "全部消息都已读完"
+                                            ConversationFilter.GROUP -> "点右下角按钮创建一个群聊"
+                                            ConversationFilter.USER -> "去联系人页面开始一段对话吧"
+                                            ConversationFilter.BOT -> "点右下角按钮创建一个机器人"
+                                        }
+                                    )
                                 }
                             }
                         } else {
@@ -455,13 +473,16 @@ fun ConversationListScreen(
                         .padding(contentPadding),
                     contentAlignment = Alignment.Center
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("加载失败: ${state.message}")
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Button(onClick = { viewModel.refresh() }) {
-                            Text("重试")
+                    EmptyPlaceholder(
+                        icon = AppIcons.Warning,
+                        title = "加载失败",
+                        subtitle = state.message,
+                        primaryButton = {
+                            Button(onClick = { viewModel.refresh() }) {
+                                Text("重试")
+                            }
                         }
-                    }
+                    )
                 }
             }
         }
@@ -470,32 +491,21 @@ fun ConversationListScreen(
     ExpandedFullScreenSearchBar(state = searchBarState, inputField = inputField) {
         when {
             searchState.isLoading && searchState.results.isEmpty() -> LoadingScreen(Modifier)
-            searchState.error != null -> Column(
-                modifier = Modifier.fillMaxSize(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                Text(searchState.error!!)
-                Spacer(Modifier.size(12.dp))
-                TextButton(onClick = searchViewModel::retry) { Text("重试") }
-            }
-            searchState.results.isEmpty() -> Column(
-                modifier = Modifier.fillMaxSize(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                Icon(
-                    AppIcons.Inbox,
-                    contentDescription = null,
-                    modifier = Modifier.size(48.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(Modifier.height(12.dp))
-                Text(
-                    text = if (searchState.hasSearched) "未找到相关结果" else "暂无搜索内容",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+            searchState.error != null -> EmptyPlaceholder(
+                icon = AppIcons.Warning,
+                title = "搜索失败",
+                subtitle = searchState.error,
+                primaryButton = {
+                    TextButton(onClick = searchViewModel::retry) {
+                        Text("重试")
+                    }
+                }
+            )
+            searchState.results.isEmpty() -> EmptyPlaceholder(
+                icon = if (searchState.hasSearched) AppIcons.Search else AppIcons.Inbox,
+                title = if (searchState.hasSearched) "未找到相关结果" else "暂无搜索内容",
+                subtitle = if (searchState.hasSearched) "换个关键词试试" else "输入关键词开始搜索"
+            )
             else -> LazyColumn(
                 modifier = Modifier.fillMaxSize(),
             ) {

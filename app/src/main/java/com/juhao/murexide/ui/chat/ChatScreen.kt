@@ -91,7 +91,7 @@ import com.juhao.murexide.data.resolveStickerMessageUrl
 import com.juhao.murexide.repository.ConversationDetailRepository
 import com.juhao.murexide.ui.conversationdetail.ConversationDetailActivity
 import com.juhao.murexide.ui.sticker.*
-import com.juhao.murexide.ui.components.handleStaticHtmlLink
+import com.juhao.murexide.ui.components.*
 import com.juhao.murexide.ui.chatsearch.ChatSearchActivity
 import com.juhao.murexide.ui.theme.UiState
 import com.juhao.murexide.utils.NotificationHelper
@@ -1237,7 +1237,7 @@ fun ChatScreen(
                     )
 
                     val panelShape = RoundedCornerShape(28.dp)
-                    val panelGlassColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.8f)
+                    val panelGlassColor = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.8f)
                     val panelModifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 6.dp, vertical = 4.dp)
@@ -1774,41 +1774,17 @@ fun ChatScreen(
                         )
                     }
                 } else if (uiState.error != null && uiState.messages.isEmpty()) {
-                    Column(
-                        modifier = Modifier
-                            .align(Alignment.TopCenter)
-                            .padding(top = innerPadding.calculateTopPadding() + 24.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Icon(
-                            AppIcons.Warning,
-                            contentDescription = null,
-                            modifier = Modifier.size(48.dp),
-                            tint = MaterialTheme.colorScheme.error
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = "加载失败",
-                            color = MaterialTheme.colorScheme.error,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Medium
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = uiState.error ?: "未知错误",
-                            color = MaterialTheme.colorScheme.error.copy(alpha = 0.7f),
-                            fontSize = 14.sp
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Button(
-                            onClick = { viewModel.refresh() },
-                            modifier = Modifier
-                        ) {
-                            Icon(AppIcons.Refresh, contentDescription = null)
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("重试")
+                    EmptyPlaceholder(
+                        icon = AppIcons.Warning,
+                        title = "加载失败",
+                        subtitle = uiState.error ?: "未知错误",
+                        modifier = Modifier.padding(top = innerPadding.calculateTopPadding()),
+                        primaryButton = {
+                            Button(onClick = { viewModel.refresh() }) {
+                                Text("重试")
+                            }
                         }
-                    }
+                    )
                 } else {
                     LazyColumn(
                         state = listState,

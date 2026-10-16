@@ -1,10 +1,388 @@
 package com.juhao.murexide.ui.theme
 
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.graphics.Color
 
-// ===== White =====
+val defaultSeed = Color(0xFF9BD7FF)
+
+private val neutralBase: ColorScheme = darkColorScheme(
+    primary = Color(0xFF1F1F1F),
+    onPrimary = Color(0xFF1F1F1F),
+    primaryContainer = Color(0xFF1F1F1F),
+    onPrimaryContainer = Color(0xFF1F1F1F),
+    secondary = Color(0xFF1F1F1F),
+    onSecondary = Color(0xFF1F1F1F),
+    secondaryContainer = Color(0xFF1F1F1F),
+    onSecondaryContainer = Color(0xFF1F1F1F),
+    tertiary = Color(0xFF1F1F1F),
+    onTertiary = Color(0xFF1F1F1F),
+    tertiaryContainer = Color(0xFF1F1F1F),
+    onTertiaryContainer = Color(0xFF1F1F1F),
+    error = Color(0xFFFFC4BC),
+    onError = Color(0xFF741210),
+    errorContainer = Color(0xFF8C1515),
+    onErrorContainer = Color(0xFFFFE5E1),
+    background = Color(0xFF181A20),
+    onBackground = Color(0xFFE8E8EF),
+    surface = Color(0xFF181A20),
+    onSurface = Color(0xFFE8E8EF),
+    surfaceVariant = Color(0xFF30333B),
+    onSurfaceVariant = Color(0xFFD0D2DC),
+    outline = Color(0xFF9A9CA5),
+    outlineVariant = Color(0xFF525560),
+    surfaceTint = Color(0xFF1F1F1F),
+    inverseSurface = Color(0xFFE8E8EF),
+    inverseOnSurface = Color(0xFF1F1F1F),
+    inversePrimary = Color(0xFF1F1F1F),
+    surfaceContainerHighest = Color(0xFF3A3D45),
+    surfaceContainerHigh = Color(0xFF30333B),
+    surfaceContainer = Color(0xFF252830),
+    surfaceContainerLow = Color(0xFF20232A),
+    surfaceContainerLowest = Color(0xFF0D0F14),
+    primaryFixed = Color(0xFF1F1F1F),
+    primaryFixedDim = Color(0xFF1F1F1F),
+    onPrimaryFixed = Color(0xFF1F1F1F),
+    onPrimaryFixedVariant = Color(0xFF1F1F1F),
+    secondaryFixed = Color(0xFF1F1F1F),
+    secondaryFixedDim = Color(0xFF1F1F1F),
+    onSecondaryFixed = Color(0xFF1F1F1F),
+    onSecondaryFixedVariant = Color(0xFF1F1F1F),
+    tertiaryFixed = Color(0xFF1F1F1F),
+    tertiaryFixedDim = Color(0xFF1F1F1F),
+    onTertiaryFixed = Color(0xFF1F1F1F),
+    onTertiaryFixedVariant = Color(0xFF1F1F1F),
+    scrim = Color(0xFF000000)
+)
+
+private val dayNeutralBase: ColorScheme = lightColorScheme(
+    primary = Color(0xFF1F1F1F),
+    onPrimary = Color(0xFF1F1F1F),
+    primaryContainer = Color(0xFF1F1F1F),
+    onPrimaryContainer = Color(0xFF1F1F1F),
+    secondary = Color(0xFF1F1F1F),
+    onSecondary = Color(0xFF1F1F1F),
+    secondaryContainer = Color(0xFF1F1F1F),
+    onSecondaryContainer = Color(0xFF1F1F1F),
+    tertiary = Color(0xFF1F1F1F),
+    onTertiary = Color(0xFF1F1F1F),
+    tertiaryContainer = Color(0xFF1F1F1F),
+    onTertiaryContainer = Color(0xFF1F1F1F),
+    error = Color(0xFFB3261E),
+    onError = Color(0xFFFFFFFF),
+    errorContainer = Color(0xFFF9DEDC),
+    onErrorContainer = Color(0xFF410E0B),
+    background = Color(0xFFF7F8FC),
+    onBackground = Color(0xFF1B1B1F),
+    surface = Color(0xFFF7F8FC),
+    onSurface = Color(0xFF1B1B1F),
+    surfaceVariant = Color(0xFFE6E7EB),
+    onSurfaceVariant = Color(0xFF44464F),
+    outline = Color(0xFF74777F),
+    outlineVariant = Color(0xFFC4C6D0),
+    surfaceTint = Color(0xFF1F1F1F),
+    inverseSurface = Color(0xFF1B1B1F),
+    inverseOnSurface = Color(0xFFF7F8FC),
+    inversePrimary = Color(0xFF1F1F1F),
+    surfaceContainerHighest = Color(0xFFE0E1E5),
+    surfaceContainerHigh = Color(0xFFE6E7EB),
+    surfaceContainer = Color(0xFFECEDF1),
+    surfaceContainerLow = Color(0xFFF2F3F7),
+    surfaceContainerLowest = Color(0xFFFFFFFF),
+    primaryFixed = Color(0xFF1F1F1F),
+    primaryFixedDim = Color(0xFF1F1F1F),
+    onPrimaryFixed = Color(0xFF1F1F1F),
+    onPrimaryFixedVariant = Color(0xFF1F1F1F),
+    secondaryFixed = Color(0xFF1F1F1F),
+    secondaryFixedDim = Color(0xFF1F1F1F),
+    onSecondaryFixed = Color(0xFF1F1F1F),
+    onSecondaryFixedVariant = Color(0xFF1F1F1F),
+    tertiaryFixed = Color(0xFF1F1F1F),
+    tertiaryFixedDim = Color(0xFF1F1F1F),
+    onTertiaryFixed = Color(0xFF1F1F1F),
+    onTertiaryFixedVariant = Color(0xFF1F1F1F),
+    scrim = Color(0xFF000000)
+)
+
+private fun blend(base: Color, tint: Color, amount: Float): Color = Color(
+    red = base.red * (1f - amount) + tint.red * amount,
+    green = base.green * (1f - amount) + tint.green * amount,
+    blue = base.blue * (1f - amount) + tint.blue * amount,
+    alpha = 1f
+)
+
+private fun toHsl(color: Color): Triple<Float, Float, Float> {
+    val r = color.red
+    val g = color.green
+    val b = color.blue
+    val max = maxOf(r, g, b)
+    val min = minOf(r, g, b)
+    val l = (max + min) / 2f
+    if (max == min) return Triple(0f, 0f, l)
+    val d = max - min
+    val s = if (l > 0.5f) d / (2f - max - min) else d / (max + min)
+    val h = when (max) {
+        r -> ((g - b) / d + if (g < b) 6f else 0f) / 6f
+        g -> ((b - r) / d + 2f) / 6f
+        else -> ((r - g) / d + 4f) / 6f
+    }
+    return Triple(h, s, l)
+}
+
+private fun hueToRgb(p: Float, q: Float, t0: Float): Float {
+    var t = t0
+    if (t < 0f) t += 1f
+    if (t > 1f) t -= 1f
+    return when {
+        t < 1f / 6f -> p + (q - p) * 6f * t
+        t < 1f / 2f -> q
+        t < 2f / 3f -> p + (q - p) * (2f / 3f - t) * 6f
+        else -> p
+    }
+}
+
+private fun fromHsl(h: Float, s: Float, l: Float): Color {
+    if (s <= 0.0001f) return Color(l, l, l, 1f)
+    val q = if (l < 0.5f) l * (1f + s) else l + s - l * s
+    val p = 2f * l - q
+    return Color(
+        red = hueToRgb(p, q, h + 1f / 3f),
+        green = hueToRgb(p, q, h),
+        blue = hueToRgb(p, q, h - 1f / 3f),
+        alpha = 1f
+    )
+}
+
+private fun hueShift(h: Float, shift: Float): Float {
+    val v = h + shift
+    return if (v > 1f) v - 1f else if (v < 0f) v + 1f else v
+}
+
+private fun contentOn(
+    background: Color,
+    h: Float,
+    s: Float
+): Color {
+    val bgL = toHsl(background).third
+    return if (bgL > 0.55f) {
+        fromHsl(h, (s * 0.85f).coerceIn(0.35f, 0.70f), 0.18f)
+    } else {
+        fromHsl(h, (s * 0.30f).coerceIn(0.10f, 0.30f), 0.92f)
+    }
+}
+
+private fun softSurface(
+    h: Float,
+    s: Float,
+    l: Float,
+    minS: Float,
+    isDay: Boolean
+): Color = fromHsl(
+    h = h,
+    s = (s * if (isDay) 0.16f else 0.20f).coerceAtLeast(minS),
+    l = if (isDay) l.coerceIn(0.90f, 0.99f) else l.coerceIn(0.07f, 0.22f)
+)
+
+fun buildEventColorScheme(
+    base: ColorScheme,
+    eventColor: Color,
+    eventUrgent: Boolean = false,
+    isDay: Boolean = false
+): ColorScheme {
+    val (h, s, l) = toHsl(eventColor)
+
+    if (eventUrgent) {
+        val (errH, errS, _) = toHsl(base.error)
+        val bg = softSurface(errH, errS, if (isDay) 0.97f else 0.10f, 0.03f, isDay)
+        val scl = softSurface(errH, errS, if (isDay) 0.94f else 0.13f, 0.04f, isDay)
+        val sc = softSurface(errH, errS, if (isDay) 0.91f else 0.16f, 0.05f, isDay)
+        val sch = softSurface(errH, errS, if (isDay) 0.88f else 0.19f, 0.06f, isDay)
+        val schh = softSurface(errH, errS, if (isDay) 0.85f else 0.22f, 0.06f, isDay)
+        val scll = softSurface(errH, errS, if (isDay) 0.99f else 0.07f, 0.03f, isDay)
+        return base.copy(
+            primary = base.error,
+            onPrimary = base.onError,
+            primaryContainer = base.errorContainer,
+            onPrimaryContainer = base.onErrorContainer,
+            secondary = base.error,
+            onSecondary = base.onError,
+            secondaryContainer = base.errorContainer,
+            onSecondaryContainer = base.onErrorContainer,
+            tertiary = base.error,
+            onTertiary = base.onError,
+            tertiaryContainer = base.errorContainer,
+            onTertiaryContainer = base.onErrorContainer,
+            background = bg,
+            onBackground = contentOn(bg, errH, errS),
+            surface = bg,
+            onSurface = contentOn(bg, errH, errS),
+            surfaceVariant = sch,
+            onSurfaceVariant = contentOn(sch, errH, errS),
+            outline = blend(base.outline, base.error, if (isDay) 0.25f else 0.35f),
+            outlineVariant = blend(base.outlineVariant, base.error, if (isDay) 0.20f else 0.28f),
+            surfaceContainerLowest = scll,
+            surfaceContainerLow = scl,
+            surfaceContainer = sc,
+            surfaceContainerHigh = sch,
+            surfaceContainerHighest = schh,
+            surfaceTint = base.error,
+            inversePrimary = base.error
+        )
+    }
+
+    val primaryS = (s * if (isDay) 0.95f else 1.0f).coerceIn(0.36f, 0.65f)
+    val primary = if (isDay) {
+        fromHsl(h, primaryS, 0.40f)
+    } else {
+        fromHsl(h, primaryS, if (l < 0.45f) 0.78f else (l + 0.10f).coerceAtMost(0.86f))
+    }
+    val onPrimary = contentOn(primary, h, primaryS)
+
+    val primaryContainer = if (isDay) {
+        fromHsl(h, (s * 0.60f).coerceIn(0.22f, 0.45f), 0.90f)
+    } else {
+        fromHsl(h, (s * 0.60f).coerceIn(0.20f, 0.42f), 0.24f)
+    }
+    val onPrimaryContainer = if (isDay) {
+        fromHsl(h, (s * 0.75f).coerceIn(0.30f, 0.55f), 0.22f)
+    } else {
+        fromHsl(h, (s * 0.25f).coerceIn(0.08f, 0.25f), 0.92f)
+    }
+
+    val secondary = if (isDay) {
+        fromHsl(h, (s * 0.12f).coerceIn(0.04f, 0.10f), 0.42f)
+    } else {
+        fromHsl(h, (s * 0.35f).coerceIn(0.10f, 0.25f), 0.82f)
+    }
+    val onSecondary = contentOn(secondary, h, s * 0.12f)
+
+    val secondaryContainer = if (isDay) {
+        fromHsl(h, (s * 0.10f).coerceIn(0.04f, 0.08f), 0.92f)
+    } else {
+        fromHsl(h, (s * 0.30f).coerceIn(0.08f, 0.22f), 0.28f)
+    }
+    val onSecondaryContainer = if (isDay) {
+        fromHsl(h, (s * 0.20f).coerceIn(0.08f, 0.18f), 0.20f)
+    } else {
+        fromHsl(h, (s * 0.18f).coerceIn(0.05f, 0.18f), 0.92f)
+    }
+
+    val tertiaryH = hueShift(h, 60f / 360f)
+
+    val tertiary = if (isDay) {
+        fromHsl(tertiaryH, (s * 0.55f).coerceIn(0.30f, 0.55f), 0.36f)
+    } else {
+        fromHsl(tertiaryH, (s * 0.50f).coerceIn(0.18f, 0.38f), 0.85f)
+    }
+    val onTertiary = contentOn(tertiary, tertiaryH, s * 0.55f)
+
+    val tertiaryContainer = if (isDay) {
+        fromHsl(tertiaryH, (s * 0.45f).coerceIn(0.25f, 0.45f), 0.88f)
+    } else {
+        fromHsl(tertiaryH, (s * 0.45f).coerceIn(0.15f, 0.35f), 0.30f)
+    }
+    val onTertiaryContainer = if (isDay) {
+        fromHsl(tertiaryH, (s * 0.70f).coerceIn(0.35f, 0.60f), 0.22f)
+    } else {
+        fromHsl(tertiaryH, (s * 0.20f).coerceIn(0.06f, 0.20f), 0.92f)
+    }
+
+    val bg = softSurface(h, s, if (isDay) 0.97f else 0.10f, 0.03f, isDay)
+    val scl = softSurface(h, s, if (isDay) 0.95f else 0.13f, 0.04f, isDay)
+    val sc = softSurface(h, s, if (isDay) 0.92f else 0.16f, 0.05f, isDay)
+    val sch = softSurface(h, s, if (isDay) 0.89f else 0.19f, 0.05f, isDay)
+    val schh = softSurface(h, s, if (isDay) 0.86f else 0.22f, 0.05f, isDay)
+    val scll = softSurface(h, s, if (isDay) 0.99f else 0.07f, 0.03f, isDay)
+
+    val outline = blend(base.outline, eventColor, if (isDay) 0.22f else 0.30f)
+    val outlineVariant = blend(base.outlineVariant, eventColor, if (isDay) 0.16f else 0.24f)
+
+    return base.copy(
+        primary = primary,
+        onPrimary = onPrimary,
+        primaryContainer = primaryContainer,
+        onPrimaryContainer = onPrimaryContainer,
+        secondary = secondary,
+        onSecondary = onSecondary,
+        secondaryContainer = secondaryContainer,
+        onSecondaryContainer = onSecondaryContainer,
+        tertiary = tertiary,
+        onTertiary = onTertiary,
+        tertiaryContainer = tertiaryContainer,
+        onTertiaryContainer = onTertiaryContainer,
+        background = bg,
+        onBackground = contentOn(bg, h, s),
+        surface = bg,
+        onSurface = contentOn(bg, h, s),
+        surfaceVariant = sch,
+        onSurfaceVariant = contentOn(sch, h, s),
+        outline = outline,
+        outlineVariant = outlineVariant,
+        surfaceContainerLowest = scll,
+        surfaceContainerLow = scl,
+        surfaceContainer = sc,
+        surfaceContainerHigh = sch,
+        surfaceContainerHighest = schh,
+        surfaceTint = primary,
+        inversePrimary = primary,
+        primaryFixed = primaryContainer,
+        primaryFixedDim = primary,
+        onPrimaryFixed = onPrimaryContainer,
+        onPrimaryFixedVariant = onPrimaryContainer,
+        secondaryFixed = secondaryContainer,
+        secondaryFixedDim = secondary,
+        onSecondaryFixed = onSecondaryContainer,
+        onSecondaryFixedVariant = onSecondaryContainer,
+        tertiaryFixed = tertiaryContainer,
+        tertiaryFixedDim = tertiary,
+        onTertiaryFixed = onTertiaryContainer,
+        onTertiaryFixedVariant = onTertiaryContainer
+    )
+}
+
+fun buildCustomColorScheme(
+    base: ColorScheme,
+    customColor: Color,
+    isDay: Boolean = false
+): ColorScheme = buildEventColorScheme(
+    base = base,
+    eventColor = customColor,
+    eventUrgent = false,
+    isDay = isDay
+)
+
+enum class AppTheme(
+    val displayName: String,
+    val seedColor: Color
+) {
+    DYNAMIC("动态取色", Color(0xFFD946EF)),
+    WHITE("白色", Color(0xFF6750A4)),
+    PURPLE("紫色", Color(0xFF7C4DFF)),
+    BLUE("蓝色", Color(0xFF008CFF)),
+    GREEN("绿色", Color(0xFF00A63E)),
+    ORANGE("橙色", Color(0xFFFF6D00)),
+    RED("红色", Color(0xFFE53935)),
+    TEAL("青色", Color(0xFF00897B)),
+    PINK("粉色", Color(0xFFEC407A)),
+    INDIGO("靛蓝", Color(0xFF3F51B5)),
+    BROWN("棕色", Color(0xFF795548)),
+    GRAY("灰色", Color(0xFF607D8B))
+}
+
+fun buildThemeColorScheme(
+    base: ColorScheme,
+    theme: AppTheme,
+    isDay: Boolean = false
+): ColorScheme = buildEventColorScheme(
+    base = base,
+    eventColor = theme.seedColor,
+    eventUrgent = false,
+    isDay = isDay
+)
+
+val DynamicLightColorScheme = buildThemeColorScheme(dayNeutralBase, AppTheme.DYNAMIC, true)
+val DynamicDarkColorScheme = buildThemeColorScheme(neutralBase, AppTheme.DYNAMIC, false)
 
 val WhiteLightColorScheme = lightColorScheme(
     primary = Color(0xFF6750A4),
@@ -19,6 +397,10 @@ val WhiteLightColorScheme = lightColorScheme(
     onTertiary = Color(0xFF25232A),
     tertiaryContainer = Color(0xFFF6F4F8),
     onTertiaryContainer = Color(0xFF25232A),
+    error = Color(0xFFB3261E),
+    onError = Color(0xFFFFFFFF),
+    errorContainer = Color(0xFFF9DEDC),
+    onErrorContainer = Color(0xFF410E0B),
     background = Color(0xFFF1F1F3),
     onBackground = Color(0xFF242127),
     surface = Color(0xFFF1F1F3),
@@ -35,7 +417,20 @@ val WhiteLightColorScheme = lightColorScheme(
     surfaceContainerHigh = Color.White,
     surfaceContainer = Color(0xFFF8F8F8),
     surfaceContainerLow = Color.White,
-    surfaceContainerLowest = Color.White
+    surfaceContainerLowest = Color.White,
+    primaryFixed = Color(0xFFEADDFF),
+    primaryFixedDim = Color(0xFFD0BCFF),
+    onPrimaryFixed = Color(0xFF21005D),
+    onPrimaryFixedVariant = Color(0xFF4F378B),
+    secondaryFixed = Color(0xFFE8DEF8),
+    secondaryFixedDim = Color(0xFFCCC2DC),
+    onSecondaryFixed = Color(0xFF1D192B),
+    onSecondaryFixedVariant = Color(0xFF4A4458),
+    tertiaryFixed = Color(0xFFFFD8E4),
+    tertiaryFixedDim = Color(0xFFEFB8C8),
+    onTertiaryFixed = Color(0xFF31111D),
+    onTertiaryFixedVariant = Color(0xFF633B48),
+    scrim = Color(0xFF000000)
 )
 
 val WhiteDarkColorScheme = darkColorScheme(
@@ -87,402 +482,32 @@ val WhiteDarkColorScheme = darkColorScheme(
     scrim = Color(0xFF000000)
 )
 
-// ===== Purple =====
+val PurpleLightColorScheme = buildThemeColorScheme(dayNeutralBase, AppTheme.PURPLE, true)
+val PurpleDarkColorScheme = buildThemeColorScheme(neutralBase, AppTheme.PURPLE, false)
 
-val PurpleLightColorScheme = lightColorScheme(
-    primary = Color(0xFF6750A4),
-    onPrimary = Color(0xFFFFFFFF),
-    primaryContainer = Color(0xFFEADDFF),
-    onPrimaryContainer = Color(0xFF21005D),
-    secondary = Color(0xFF625B71),
-    onSecondary = Color(0xFFFFFFFF),
-    secondaryContainer = Color(0xFFE8DEF8),
-    onSecondaryContainer = Color(0xFF1D192B),
-    tertiary = Color(0xFF7D5260),
-    onTertiary = Color(0xFFFFFFFF),
-    tertiaryContainer = Color(0xFFFFD8E4),
-    onTertiaryContainer = Color(0xFF31111D),
-    error = Color(0xFFB3261E),
-    onError = Color(0xFFFFFFFF),
-    errorContainer = Color(0xFFF9DEDC),
-    onErrorContainer = Color(0xFF410E0B),
-    background = Color(0xFFFEF7FF),
-    onBackground = Color(0xFF1D1B20),
-    surface = Color(0xFFFEF7FF),
-    onSurface = Color(0xFF1D1B20),
-    surfaceVariant = Color(0xFFE7E0EC),
-    onSurfaceVariant = Color(0xFF49454F),
-    outline = Color(0xFF79747E),
-    outlineVariant = Color(0xFFCAC4D0),
-    surfaceTint = Color(0xFF6750A4),
-    inverseSurface = Color(0xFF322F35),
-    inverseOnSurface = Color(0xFFF5EFF7),
-    inversePrimary = Color(0xFFD0BCFF),
-    surfaceContainerHighest = Color(0xFFE6E0E9),
-    surfaceContainerHigh = Color(0xFFECE6F0),
-    surfaceContainer = Color(0xFFF2ECF7),
-    surfaceContainerLow = Color(0xFFF8F2FD),
-    surfaceContainerLowest = Color(0xFFFFFFFF),
-    primaryFixed = Color(0xFFEADDFF),
-    primaryFixedDim = Color(0xFFD0BCFF),
-    onPrimaryFixed = Color(0xFF21005D),
-    onPrimaryFixedVariant = Color(0xFF4F378B),
-    secondaryFixed = Color(0xFFE8DEF8),
-    secondaryFixedDim = Color(0xFFCCC2DC),
-    onSecondaryFixed = Color(0xFF1D192B),
-    onSecondaryFixedVariant = Color(0xFF4A4458),
-    tertiaryFixed = Color(0xFFFFD8E4),
-    tertiaryFixedDim = Color(0xFFEFB8C8),
-    onTertiaryFixed = Color(0xFF31111D),
-    onTertiaryFixedVariant = Color(0xFF633B48),
-    scrim = Color(0xFF000000)
-)
+val BlueLightColorScheme = buildThemeColorScheme(dayNeutralBase, AppTheme.BLUE, true)
+val BlueDarkColorScheme = buildThemeColorScheme(neutralBase, AppTheme.BLUE, false)
 
-val PurpleDarkColorScheme = darkColorScheme(
-    primary = Color(0xFFD0BCFF),
-    onPrimary = Color(0xFF381E72),
-    primaryContainer = Color(0xFF4F378B),
-    onPrimaryContainer = Color(0xFFEADDFF),
-    secondary = Color(0xFFCCC2DC),
-    onSecondary = Color(0xFF332D41),
-    secondaryContainer = Color(0xFF4A4458),
-    onSecondaryContainer = Color(0xFFE8DEF8),
-    tertiary = Color(0xFFEFB8C8),
-    onTertiary = Color(0xFF492532),
-    tertiaryContainer = Color(0xFF633B48),
-    onTertiaryContainer = Color(0xFFFFD8E4),
-    error = Color(0xFFF2B8B5),
-    onError = Color(0xFF601410),
-    errorContainer = Color(0xFF8C1D18),
-    onErrorContainer = Color(0xFFF9DEDC),
-    background = Color(0xFF141218),
-    onBackground = Color(0xFFE6E0E9),
-    surface = Color(0xFF141218),
-    onSurface = Color(0xFFE6E0E9),
-    surfaceVariant = Color(0xFF49454F),
-    onSurfaceVariant = Color(0xFFCAC4D0),
-    outline = Color(0xFF938F99),
-    outlineVariant = Color(0xFF49454F),
-    surfaceTint = Color(0xFFD0BCFF),
-    inverseSurface = Color(0xFFE6E0E9),
-    inverseOnSurface = Color(0xFF322F35),
-    inversePrimary = Color(0xFF6750A4),
-    surfaceContainerHighest = Color(0xFF36343B),
-    surfaceContainerHigh = Color(0xFF2B2930),
-    surfaceContainer = Color(0xFF211F26),
-    surfaceContainerLow = Color(0xFF1D1B20),
-    surfaceContainerLowest = Color(0xFF0F0D13),
-    primaryFixed = Color(0xFFEADDFF),
-    primaryFixedDim = Color(0xFFD0BCFF),
-    onPrimaryFixed = Color(0xFF21005D),
-    onPrimaryFixedVariant = Color(0xFF4F378B),
-    secondaryFixed = Color(0xFFE8DEF8),
-    secondaryFixedDim = Color(0xFFCCC2DC),
-    onSecondaryFixed = Color(0xFF1D192B),
-    onSecondaryFixedVariant = Color(0xFF4A4458),
-    tertiaryFixed = Color(0xFFFFD8E4),
-    tertiaryFixedDim = Color(0xFFEFB8C8),
-    onTertiaryFixed = Color(0xFF31111D),
-    onTertiaryFixedVariant = Color(0xFF633B48),
-    scrim = Color(0xFF000000)
-)
+val GreenLightColorScheme = buildThemeColorScheme(dayNeutralBase, AppTheme.GREEN, true)
+val GreenDarkColorScheme = buildThemeColorScheme(neutralBase, AppTheme.GREEN, false)
 
-// ===== Blue =====
+val OrangeLightColorScheme = buildThemeColorScheme(dayNeutralBase, AppTheme.ORANGE, true)
+val OrangeDarkColorScheme = buildThemeColorScheme(neutralBase, AppTheme.ORANGE, false)
 
-val BlueLightColorScheme = lightColorScheme(
-    primary = Color(0xFF5B8FA8),
-    onPrimary = Color(0xFFFFFFFF),
-    primaryContainer = Color(0xFFC8E6F0),
-    onPrimaryContainer = Color(0xFF001F2A),
-    secondary = Color(0xFF6B8F9E),
-    onSecondary = Color(0xFFFFFFFF),
-    secondaryContainer = Color(0xFFD0E8F2),
-    onSecondaryContainer = Color(0xFF1A2F38),
-    tertiary = Color(0xFF7A8FA0),
-    onTertiary = Color(0xFFFFFFFF),
-    tertiaryContainer = Color(0xFFD8E6F0),
-    onTertiaryContainer = Color(0xFF1E2A32),
-    error = Color(0xFFBA1A1A),
-    onError = Color(0xFFFFFFFF),
-    errorContainer = Color(0xFFFFDAD6),
-    onErrorContainer = Color(0xFF410002),
-    background = Color(0xFFF5FAFC),
-    onBackground = Color(0xFF1A1C1E),
-    surface = Color(0xFFF5FAFC),
-    onSurface = Color(0xFF1A1C1E),
-    surfaceVariant = Color(0xFFD8E4EC),
-    onSurfaceVariant = Color(0xFF404850),
-    outline = Color(0xFF707880),
-    outlineVariant = Color(0xFFC0C8D0),
-    surfaceTint = Color(0xFF5B8FA8),
-    inverseSurface = Color(0xFF2F3133),
-    inverseOnSurface = Color(0xFFEDF1F3),
-    inversePrimary = Color(0xFFB0D0E0),
-    surfaceContainerHighest = Color(0xFFDDE3E7),
-    surfaceContainerHigh = Color(0xFFE3E9ED),
-    surfaceContainer = Color(0xFFE9EFF2),
-    surfaceContainerLow = Color(0xFFEFF4F7),
-    surfaceContainerLowest = Color(0xFFFFFFFF),
-    primaryFixed = Color(0xFFC8E6F0),
-    primaryFixedDim = Color(0xFFA0C8D8),
-    onPrimaryFixed = Color(0xFF001F2A),
-    onPrimaryFixedVariant = Color(0xFF2A5568),
-    secondaryFixed = Color(0xFFD0E8F2),
-    secondaryFixedDim = Color(0xFFB0C8D4),
-    onSecondaryFixed = Color(0xFF1A2F38),
-    onSecondaryFixedVariant = Color(0xFF3A5568),
-    tertiaryFixed = Color(0xFFD8E6F0),
-    tertiaryFixedDim = Color(0xFFB8C8D4),
-    onTertiaryFixed = Color(0xFF1E2A32),
-    onTertiaryFixedVariant = Color(0xFF405568),
-    scrim = Color(0xFF000000)
-)
+val RedLightColorScheme = buildThemeColorScheme(dayNeutralBase, AppTheme.RED, true)
+val RedDarkColorScheme = buildThemeColorScheme(neutralBase, AppTheme.RED, false)
 
-val BlueDarkColorScheme = darkColorScheme(
-    primary = Color(0xFFA0C8D8),
-    onPrimary = Color(0xFF0A3545),
-    primaryContainer = Color(0xFF2A5568),
-    onPrimaryContainer = Color(0xFFC8E6F0),
-    secondary = Color(0xFFB0C8D4),
-    onSecondary = Color(0xFF1A3040),
-    secondaryContainer = Color(0xFF3A5568),
-    onSecondaryContainer = Color(0xFFD0E8F2),
-    tertiary = Color(0xFFB8C8D4),
-    onTertiary = Color(0xFF1E2A32),
-    tertiaryContainer = Color(0xFF405568),
-    onTertiaryContainer = Color(0xFFD8E6F0),
-    error = Color(0xFFFFB4AB),
-    onError = Color(0xFF690005),
-    errorContainer = Color(0xFF93000A),
-    onErrorContainer = Color(0xFFFFDAD6),
-    background = Color(0xFF0F1418),
-    onBackground = Color(0xFFE0E4E8),
-    surface = Color(0xFF0F1418),
-    onSurface = Color(0xFFE0E4E8),
-    surfaceVariant = Color(0xFF404850),
-    onSurfaceVariant = Color(0xFFC0C8D0),
-    outline = Color(0xFF8A9298),
-    outlineVariant = Color(0xFF404850),
-    surfaceTint = Color(0xFFA0C8D8),
-    inverseSurface = Color(0xFFE0E4E8),
-    inverseOnSurface = Color(0xFF2F3133),
-    inversePrimary = Color(0xFF5B8FA8),
-    surfaceContainerHighest = Color(0xFF2E3337),
-    surfaceContainerHigh = Color(0xFF23282C),
-    surfaceContainer = Color(0xFF1A1F22),
-    surfaceContainerLow = Color(0xFF151A1D),
-    surfaceContainerLowest = Color(0xFF0A0E11),
-    primaryFixed = Color(0xFFC8E6F0),
-    primaryFixedDim = Color(0xFFA0C8D8),
-    onPrimaryFixed = Color(0xFF001F2A),
-    onPrimaryFixedVariant = Color(0xFF2A5568),
-    secondaryFixed = Color(0xFFD0E8F2),
-    secondaryFixedDim = Color(0xFFB0C8D4),
-    onSecondaryFixed = Color(0xFF1A2F38),
-    onSecondaryFixedVariant = Color(0xFF3A5568),
-    tertiaryFixed = Color(0xFFD8E6F0),
-    tertiaryFixedDim = Color(0xFFB8C8D4),
-    onTertiaryFixed = Color(0xFF1E2A32),
-    onTertiaryFixedVariant = Color(0xFF405568),
-    scrim = Color(0xFF000000)
-)
+val TealLightColorScheme = buildThemeColorScheme(dayNeutralBase, AppTheme.TEAL, true)
+val TealDarkColorScheme = buildThemeColorScheme(neutralBase, AppTheme.TEAL, false)
 
-// ===== Green =====
+val PinkLightColorScheme = buildThemeColorScheme(dayNeutralBase, AppTheme.PINK, true)
+val PinkDarkColorScheme = buildThemeColorScheme(neutralBase, AppTheme.PINK, false)
 
-val GreenLightColorScheme = lightColorScheme(
-    primary = Color(0xFF386A20),
-    onPrimary = Color(0xFFFFFFFF),
-    primaryContainer = Color(0xFFB8F397),
-    onPrimaryContainer = Color(0xFF042100),
-    secondary = Color(0xFF55624C),
-    onSecondary = Color(0xFFFFFFFF),
-    secondaryContainer = Color(0xFFD8E7CB),
-    onSecondaryContainer = Color(0xFF131F0D),
-    tertiary = Color(0xFF386667),
-    onTertiary = Color(0xFFFFFFFF),
-    tertiaryContainer = Color(0xFFBBEBEC),
-    onTertiaryContainer = Color(0xFF002020),
-    error = Color(0xFFBA1A1A),
-    onError = Color(0xFFFFFFFF),
-    errorContainer = Color(0xFFFFDAD6),
-    onErrorContainer = Color(0xFF410002),
-    background = Color(0xFFFDFDF5),
-    onBackground = Color(0xFF1A1C18),
-    surface = Color(0xFFFDFDF5),
-    onSurface = Color(0xFF1A1C18),
-    surfaceVariant = Color(0xFFDFE4D7),
-    onSurfaceVariant = Color(0xFF43483E),
-    outline = Color(0xFF73796D),
-    outlineVariant = Color(0xFFC3C8BB),
-    surfaceTint = Color(0xFF386A20),
-    inverseSurface = Color(0xFF2F312D),
-    inverseOnSurface = Color(0xFFEDEEE6),
-    inversePrimary = Color(0xFF9CD67D),
-    surfaceContainerHighest = Color(0xFFDCE0D6),
-    surfaceContainerHigh = Color(0xFFE2E6DC),
-    surfaceContainer = Color(0xFFE8ECE2),
-    surfaceContainerLow = Color(0xFFEEF2E8),
-    surfaceContainerLowest = Color(0xFFFFFFFF),
-    primaryFixed = Color(0xFFB8F397),
-    primaryFixedDim = Color(0xFF9CD67D),
-    onPrimaryFixed = Color(0xFF042100),
-    onPrimaryFixedVariant = Color(0xFF1F5108),
-    secondaryFixed = Color(0xFFD8E7CB),
-    secondaryFixedDim = Color(0xFFBCCBB1),
-    onSecondaryFixed = Color(0xFF131F0D),
-    onSecondaryFixedVariant = Color(0xFF3D4B36),
-    tertiaryFixed = Color(0xFFBBEBEC),
-    tertiaryFixedDim = Color(0xFFA0CFD0),
-    onTertiaryFixed = Color(0xFF002020),
-    onTertiaryFixedVariant = Color(0xFF1E4E4F),
-    scrim = Color(0xFF000000)
-)
+val IndigoLightColorScheme = buildThemeColorScheme(dayNeutralBase, AppTheme.INDIGO, true)
+val IndigoDarkColorScheme = buildThemeColorScheme(neutralBase, AppTheme.INDIGO, false)
 
-val GreenDarkColorScheme = darkColorScheme(
-    primary = Color(0xFF9CD67D),
-    onPrimary = Color(0xFF0A3900),
-    primaryContainer = Color(0xFF1F5108),
-    onPrimaryContainer = Color(0xFFB8F397),
-    secondary = Color(0xFFBCCBB1),
-    onSecondary = Color(0xFF273420),
-    secondaryContainer = Color(0xFF3D4B36),
-    onSecondaryContainer = Color(0xFFD8E7CB),
-    tertiary = Color(0xFFA0CFD0),
-    onTertiary = Color(0xFF003738),
-    tertiaryContainer = Color(0xFF1E4E4F),
-    onTertiaryContainer = Color(0xFFBBEBEC),
-    error = Color(0xFFFFB4AB),
-    onError = Color(0xFF690005),
-    errorContainer = Color(0xFF93000A),
-    onErrorContainer = Color(0xFFFFDAD6),
-    background = Color(0xFF1A1C18),
-    onBackground = Color(0xFFE2E3DB),
-    surface = Color(0xFF1A1C18),
-    onSurface = Color(0xFFE2E3DB),
-    surfaceVariant = Color(0xFF43483E),
-    onSurfaceVariant = Color(0xFFC3C8BB),
-    outline = Color(0xFF8D9387),
-    outlineVariant = Color(0xFF43483E),
-    surfaceTint = Color(0xFF9CD67D),
-    inverseSurface = Color(0xFFE2E3DB),
-    inverseOnSurface = Color(0xFF2F312D),
-    inversePrimary = Color(0xFF386A20),
-    surfaceContainerHighest = Color(0xFF353731),
-    surfaceContainerHigh = Color(0xFF292C27),
-    surfaceContainer = Color(0xFF1F211D),
-    surfaceContainerLow = Color(0xFF1A1C18),
-    surfaceContainerLowest = Color(0xFF0F110E),
-    primaryFixed = Color(0xFFB8F397),
-    primaryFixedDim = Color(0xFF9CD67D),
-    onPrimaryFixed = Color(0xFF042100),
-    onPrimaryFixedVariant = Color(0xFF1F5108),
-    secondaryFixed = Color(0xFFD8E7CB),
-    secondaryFixedDim = Color(0xFFBCCBB1),
-    onSecondaryFixed = Color(0xFF131F0D),
-    onSecondaryFixedVariant = Color(0xFF3D4B36),
-    tertiaryFixed = Color(0xFFBBEBEC),
-    tertiaryFixedDim = Color(0xFFA0CFD0),
-    onTertiaryFixed = Color(0xFF002020),
-    onTertiaryFixedVariant = Color(0xFF1E4E4F),
-    scrim = Color(0xFF000000)
-)
+val BrownLightColorScheme = buildThemeColorScheme(dayNeutralBase, AppTheme.BROWN, true)
+val BrownDarkColorScheme = buildThemeColorScheme(neutralBase, AppTheme.BROWN, false)
 
-// ===== Orange =====
-
-val OrangeLightColorScheme = lightColorScheme(
-    primary = Color(0xFF9C4208),
-    onPrimary = Color(0xFFFFFFFF),
-    primaryContainer = Color(0xFFFFDBCA),
-    onPrimaryContainer = Color(0xFF341100),
-    secondary = Color(0xFF765848),
-    onSecondary = Color(0xFFFFFFFF),
-    secondaryContainer = Color(0xFFFFDBCA),
-    onSecondaryContainer = Color(0xFF2B160A),
-    tertiary = Color(0xFF636032),
-    onTertiary = Color(0xFFFFFFFF),
-    tertiaryContainer = Color(0xFFE9E5AA),
-    onTertiaryContainer = Color(0xFF1E1C00),
-    error = Color(0xFFBA1A1A),
-    onError = Color(0xFFFFFFFF),
-    errorContainer = Color(0xFFFFDAD6),
-    onErrorContainer = Color(0xFF410002),
-    background = Color(0xFFFFFBFF),
-    onBackground = Color(0xFF201A16),
-    surface = Color(0xFFFFFBFF),
-    onSurface = Color(0xFF201A16),
-    surfaceVariant = Color(0xFFF4DED4),
-    onSurfaceVariant = Color(0xFF52443B),
-    outline = Color(0xFF84746A),
-    outlineVariant = Color(0xFFD7C3B7),
-    surfaceTint = Color(0xFF9C4208),
-    inverseSurface = Color(0xFF362F2B),
-    inverseOnSurface = Color(0xFFFBEEE7),
-    inversePrimary = Color(0xFFFFB68C),
-    surfaceContainerHighest = Color(0xFFE8DCD5),
-    surfaceContainerHigh = Color(0xFFEEE2DB),
-    surfaceContainer = Color(0xFFF4E8E1),
-    surfaceContainerLow = Color(0xFFFAEEE7),
-    surfaceContainerLowest = Color(0xFFFFFFFF),
-    primaryFixed = Color(0xFFFFDBCA),
-    primaryFixedDim = Color(0xFFFFB68C),
-    onPrimaryFixed = Color(0xFF341100),
-    onPrimaryFixedVariant = Color(0xFF773100),
-    secondaryFixed = Color(0xFFFFDBCA),
-    secondaryFixedDim = Color(0xFFE6BDA9),
-    onSecondaryFixed = Color(0xFF2B160A),
-    onSecondaryFixedVariant = Color(0xFF5C4132),
-    tertiaryFixed = Color(0xFFE9E5AA),
-    tertiaryFixedDim = Color(0xFFCDC990),
-    onTertiaryFixed = Color(0xFF1E1C00),
-    onTertiaryFixedVariant = Color(0xFF4B491E),
-    scrim = Color(0xFF000000)
-)
-
-val OrangeDarkColorScheme = darkColorScheme(
-    primary = Color(0xFFFFB68C),
-    onPrimary = Color(0xFF552000),
-    primaryContainer = Color(0xFF773100),
-    onPrimaryContainer = Color(0xFFFFDBCA),
-    secondary = Color(0xFFE6BDA9),
-    onSecondary = Color(0xFF432B1D),
-    secondaryContainer = Color(0xFF5C4132),
-    onSecondaryContainer = Color(0xFFFFDBCA),
-    tertiary = Color(0xFFCDC990),
-    onTertiary = Color(0xFF333108),
-    tertiaryContainer = Color(0xFF4B491E),
-    onTertiaryContainer = Color(0xFFE9E5AA),
-    error = Color(0xFFFFB4AB),
-    onError = Color(0xFF690005),
-    errorContainer = Color(0xFF93000A),
-    onErrorContainer = Color(0xFFFFDAD6),
-    background = Color(0xFF201A16),
-    onBackground = Color(0xFFECE0DA),
-    surface = Color(0xFF201A16),
-    onSurface = Color(0xFFECE0DA),
-    surfaceVariant = Color(0xFF52443B),
-    onSurfaceVariant = Color(0xFFD7C3B7),
-    outline = Color(0xFFA08D82),
-    outlineVariant = Color(0xFF52443B),
-    surfaceTint = Color(0xFFFFB68C),
-    inverseSurface = Color(0xFFECE0DA),
-    inverseOnSurface = Color(0xFF362F2B),
-    inversePrimary = Color(0xFF9C4208),
-    surfaceContainerHighest = Color(0xFF3A322D),
-    surfaceContainerHigh = Color(0xFF2E2723),
-    surfaceContainer = Color(0xFF231D19),
-    surfaceContainerLow = Color(0xFF201A16),
-    surfaceContainerLowest = Color(0xFF140F0C),
-    primaryFixed = Color(0xFFFFDBCA),
-    primaryFixedDim = Color(0xFFFFB68C),
-    onPrimaryFixed = Color(0xFF341100),
-    onPrimaryFixedVariant = Color(0xFF773100),
-    secondaryFixed = Color(0xFFFFDBCA),
-    secondaryFixedDim = Color(0xFFE6BDA9),
-    onSecondaryFixed = Color(0xFF2B160A),
-    onSecondaryFixedVariant = Color(0xFF5C4132),
-    tertiaryFixed = Color(0xFFE9E5AA),
-    tertiaryFixedDim = Color(0xFFCDC990),
-    onTertiaryFixed = Color(0xFF1E1C00),
-    onTertiaryFixedVariant = Color(0xFF4B491E),
-    scrim = Color(0xFF000000)
-)
+val GrayLightColorScheme = buildThemeColorScheme(dayNeutralBase, AppTheme.GRAY, true)
+val GrayDarkColorScheme = buildThemeColorScheme(neutralBase, AppTheme.GRAY, false)

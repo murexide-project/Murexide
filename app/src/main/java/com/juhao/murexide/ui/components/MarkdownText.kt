@@ -28,6 +28,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
@@ -176,6 +180,21 @@ fun MarkdownText(
                     )
                 }
 
+                is MarkdownSegment.Blockquote -> {
+                    MarkdownBlockquote {
+                        MarkdownText(
+                            markdown = segment.content,
+                            textColor = textColor,
+                            backgroundColor = Color.Transparent,
+                            onImageClick = onImageClick,
+                            imageReferer = imageReferer,
+                            highlightKeyword = highlightKeyword,
+                            enableTextSelection = enableTextSelection,
+                            persistRenderState = persistRenderState
+                        )
+                    }
+                }
+
                 is MarkdownSegment.CodeBlock -> {
                     CodeBlockComponent(
                         code = segment.code,
@@ -198,6 +217,34 @@ fun MarkdownText(
                 else -> {}
             }
         }
+    }
+}
+
+@Composable
+private fun MarkdownBlockquote(
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit
+) {
+    val barColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
+    val paddingVertical = 6.dp
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(6.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f))
+            .drawBehind {
+                val barWidth = 3.dp.toPx()
+                val barLeft = 6.dp.toPx()
+                val verticalInset = paddingVertical.toPx()
+                drawRoundRect(
+                    color = barColor,
+                    topLeft = Offset(barLeft, verticalInset),
+                    size = Size(barWidth, (size.height - verticalInset * 2).coerceAtLeast(0f)),
+                    cornerRadius = CornerRadius(barWidth / 2f)
+                )
+            }
+            .padding(start = 23.dp, end = 10.dp, top = paddingVertical, bottom = paddingVertical)
+    ) {
+        content()
     }
 }
 
@@ -626,6 +673,7 @@ private sealed interface MarkdownSegment {
         val alt: String?,
         val linkUrl: String? = null
     ) : MarkdownSegment
+    data class Blockquote(val content: String) : MarkdownSegment
     data class HtmlTable(val content: String) : MarkdownSegment
     data class HtmlBlock(val content: String) : MarkdownSegment
     data class CodeBlock(val code: String, val language: String?) : MarkdownSegment
@@ -821,12 +869,20 @@ private fun parseMarkdownSegments(markdown: String): List<MarkdownSegment> {
                 continue
             }
 
+            val blockquoteBlock = extractBlockquoteBlock(lines, i)
+            if (blockquoteBlock != null) {
+                segments += MarkdownSegment.Blockquote(blockquoteBlock.content)
+                i = blockquoteBlock.nextIndex
+                continue
+            }
+
             val contentStart = i
             while (i < lines.size &&
                 !lines[i].trim().startsWith("```") &&
                 extractDetailsBlock(lines, i) == null &&
                 extractHtmlTableBlock(lines, i) == null &&
-                extractHtmlDivBlock(lines, i) == null) {
+                extractHtmlDivBlock(lines, i) == null &&
+                extractBlockquoteBlock(lines, i) == null) {
                 i++
             }
 
@@ -842,6 +898,35 @@ private fun parseMarkdownSegments(markdown: String): List<MarkdownSegment> {
     }
 
     return segments
+}
+
+private data class MarkdownBlockquoteBlock(
+    val content: String,
+    val nextIndex: Int
+)
+
+private val blockquoteLineRegex = Regex("^\\s*>\\s?")
+
+private fun extractBlockquoteBlock(lines: List<String>, startIndex: Int): MarkdownBlockquoteBlock? {
+    val firstLine = lines.getOrNull(startIndex) ?: return null
+    if (!blockquoteLineRegex.containsMatchIn(firstLine)) return null
+
+    val contentLines = mutableListOf<String>()
+    var i = startIndex
+    while (i < lines.size) {
+        val line = lines[i]
+        val match = blockquoteLineRegex.find(line)
+        if (match == null) break
+        contentLines += line.substring(match.range.last + 1)
+        i++
+    }
+
+    if (contentLines.isEmpty()) return null
+
+    return MarkdownBlockquoteBlock(
+        content = contentLines.joinToString("\n"),
+        nextIndex = i
+    )
 }
 
 private data class MarkdownDetailsBlock(
@@ -991,16 +1076,17 @@ private fun injectHighlightMark(markdown: String, keyword: String): String {
     }
 }
 
+private val imageRegex = Regex(
+    "\\[!\\[([^]]*)]\\(([^)\\s]+)(?:\\s+\"[^\"]*\")?\\)]\\(([^)\\s]+)(?:\\s+\"[^\"]*\")?\\)" +
+            "|" +
+            "!\\[([^]]*)]\\(([^)\\s]+)(?:\\s+\"[^\"]*\")?\\)"
+)
+
 private fun extractImagesFromContent(content: String, segments: MutableList<MarkdownSegment>) {
-    val regex = Regex(
-        "\\[!\\[([^]]*)]\\(([^)\\s]+)(?:\\s+\"[^\"]*\")?\\)]\\(([^)\\s]+)(?:\\s+\"[^\"]*\")?\\)" +
-                "|" +
-                "!\\[([^]]*)]\\(([^)\\s]+)(?:\\s+\"[^\"]*\")?\\)"
-    )
     var lastIndex = 0
     var foundAnyImage = false
 
-    regex.findAll(content).forEach { match ->
+    imageRegex.findAll(content).forEach { match ->
         foundAnyImage = true
         val range = match.range
         if (range.first > lastIndex) {

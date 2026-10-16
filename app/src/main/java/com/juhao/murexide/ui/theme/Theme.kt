@@ -31,6 +31,12 @@ private fun getOledColorScheme(baseScheme: String): ColorScheme {
         "BLUE" -> BlueDarkColorScheme
         "GREEN" -> GreenDarkColorScheme
         "ORANGE" -> OrangeDarkColorScheme
+        "RED" -> RedDarkColorScheme
+        "TEAL" -> TealDarkColorScheme
+        "PINK" -> PinkDarkColorScheme
+        "INDIGO" -> IndigoDarkColorScheme
+        "BROWN" -> BrownDarkColorScheme
+        "GRAY" -> GrayDarkColorScheme
         else -> PurpleDarkColorScheme
     }
 
@@ -136,6 +142,24 @@ fun MurexideTheme(
         }
         themeColor == "ORANGE" -> {
             if (darkTheme) OrangeDarkColorScheme else OrangeLightColorScheme
+        }
+        themeColor == "RED" -> {
+            if (darkTheme) RedDarkColorScheme else RedLightColorScheme
+        }
+        themeColor == "TEAL" -> {
+            if (darkTheme) TealDarkColorScheme else TealLightColorScheme
+        }
+        themeColor == "PINK" -> {
+            if (darkTheme) PinkDarkColorScheme else PinkLightColorScheme
+        }
+        themeColor == "INDIGO" -> {
+            if (darkTheme) IndigoDarkColorScheme else IndigoLightColorScheme
+        }
+        themeColor == "BROWN" -> {
+            if (darkTheme) BrownDarkColorScheme else BrownLightColorScheme
+        }
+        themeColor == "GRAY" -> {
+            if (darkTheme) GrayDarkColorScheme else GrayLightColorScheme
         }
         else -> {
             if (darkTheme) PurpleDarkColorScheme else PurpleLightColorScheme

@@ -94,20 +94,16 @@ fun MineScreen(
             }
 
             is MineUiState.Error -> {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(it),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("加载失败: ${state.message}", color = MaterialTheme.colorScheme.error)
-                        Spacer(modifier = Modifier.height(16.dp))
+                EmptyPlaceholder(
+                    icon = AppIcons.Warning,
+                    title = "加载失败",
+                    subtitle = state.message,
+                    primaryButton = {
                         Button(onClick = { viewModel.loadUserInfo() }) {
                             Text("重试")
                         }
                     }
-                }
+                )
             }
 
             is MineUiState.Success -> {

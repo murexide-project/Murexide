@@ -27,6 +27,8 @@ object NotificationHelper {
     private const val CHANNEL_NAME = "聊天消息"
     private const val NOTIFICATION_GROUP_PREFIX = "chat_group_"
 
+    private val notificationIdCounter = AtomicInteger(1000)
+    private val chatNotificationIds = ConcurrentHashMap<String, MutableSet<Int>>()
     private val messageCounts = ConcurrentHashMap<String, Int>()
 
     fun createNotificationChannel(context: Context) {
@@ -58,7 +60,9 @@ object NotificationHelper {
         val count = (messageCounts[chatId] ?: 0) + 1
         messageCounts[chatId] = count
 
-        val notificationId = chatId.hashCode()
+        val notificationId = notificationIdCounter.incrementAndGet()
+        chatNotificationIds.getOrPut(chatId) { java.util.Collections.synchronizedSet(mutableSetOf()) }
+            .add(notificationId)
 
         val intent = Intent(context, ChatActivity::class.java).apply {
             putExtra("chat_id", chatId)
@@ -74,14 +78,11 @@ object NotificationHelper {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val title = if (count == 1) chatName else "$chatName 等 $count 条新消息"
-        val text = if (count == 1) content else "共 $count 条新消息"
-
         val builder = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
-            .setContentTitle(title)
-            .setContentText(text)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
+            .setContentTitle(chatName)
+            .setContentText(content)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(content))
             .setContentIntent(pendingIntent)
             .setAutoCancel(true)
             .setGroup(NOTIFICATION_GROUP_PREFIX + chatId)
@@ -98,12 +99,16 @@ object NotificationHelper {
 
     fun clearNotification(context: Context, chatId: String) {
         messageCounts.remove(chatId)
-        val notificationId = chatId.hashCode()
-        NotificationManagerCompat.from(context).cancel(notificationId)
+        val ids = chatNotificationIds.remove(chatId) ?: return
+        val manager = NotificationManagerCompat.from(context)
+        synchronized(ids) {
+            ids.forEach { manager.cancel(it) }
+        }
     }
 
     fun clearAllNotifications(context: Context) {
         messageCounts.clear()
+        chatNotificationIds.clear()
         NotificationManagerCompat.from(context).cancelAll()
     }
 }
@@ -113,7 +118,6 @@ object AppForegroundState {
     private val _returnedToForeground = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     private var hasEnteredForeground = false
 
-    /** Emitted only when the running app returns after all activities had stopped. */
     val returnedToForeground: SharedFlow<Unit> = _returnedToForeground.asSharedFlow()
 
     val isInForeground: Boolean

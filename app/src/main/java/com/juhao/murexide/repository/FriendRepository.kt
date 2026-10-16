@@ -36,35 +36,29 @@ class FriendRepository(
 ) {
     private val json = Json { ignoreUnknownKeys = true }
 
-    /** Uses the API's address-book MD5 to avoid replacing unchanged cached contacts. */
-    suspend fun syncCachedAddressBook(token: String): Result<Boolean> {
-        val accountId = LocalCache.currentAccountId() ?: return Result.success(false)
-        val md5 = LocalCache.contactMd5(accountId)
-        return getAddressBook(token, md5).map { groups ->
-            val changed = md5.isBlank() || groups.isNotEmpty()
-            if (changed) cacheContacts(accountId, groups)
-            changed
-        }
+    suspend fun syncCachedAddressBook(token: String): Result<List<ContactGroup>> {
+        val accountId = LocalCache.currentAccountId()
+        val md5 = accountId?.let { LocalCache.contactMd5(it) } ?: ""
+        return getAddressBook(token, md5)
     }
 
     suspend fun getAddressBook(token: String, md5: String = ""): Result<List<ContactGroup>> {
         return withContext(Dispatchers.IO) {
             try {
-                // 构建 ProtoBuf 请求
                 val requestProto = address_book_list_send(md5 = md5)
                 val requestBody = requestProto.encode().toRequestBody("application/octet-stream".toMediaType())
-                
+
                 val httpRequest = Request.Builder()
                     .url("$baseUrl/v1/friend/address-book-list")
                     .post(requestBody)
                     .header("token", token)
                     .build()
-                
+
                 client.newCall(httpRequest).execute().use { response ->
                     if (response.isSuccessful) {
                         val responseBody = response.body.bytes()
                         val bookList = address_book_list.ADAPTER.decode(responseBody)
-                        
+
                         if (bookList.status?.code == 1) {
                             val groups = bookList.data_.map { groupData ->
                                 ContactGroup(
@@ -105,7 +99,6 @@ class FriendRepository(
         }
     }
 
-    /** 获取好友、群聊与机器人申请/邀请。请求与响应均为 protobuf。 */
     suspend fun getRequests(token: String): Result<ContactRequestList> {
         return withContext(Dispatchers.IO) {
             try {
@@ -126,36 +119,36 @@ class FriendRepository(
                     }
 
                     val requests = ContactRequestList(
-                            requests = result.requests.map { item ->
-                                ContactRequestItem(
-                                    requestId = item.requestId,
-                                    requesterName = item.name,
-                                    requesterAvatarUrl = item.avatar,
-                                    receiverName = item.receiverName,
-                                    receiverAvatarUrl = item.receiverAvatar,
-                                    groupName = item.groupName,
-                                    groupAvatarUrl = item.groupAvatar,
-                                    botName = item.botName,
-                                    botAvatarUrl = item.botAvatar,
-                                    inviterId = resolveInviterId(
-                                        inviterId = item.inviterId,
-                                        alternateInviterId = item.alternateInviterId
-                                    ),
-                                    sourceType = item.sourceType,
-                                    targetType = item.targetType,
-                                    targetId = item.targetId,
-                                    receiverId = item.receiverId,
-                                    result = item.result,
-                                    processedAt = item.processedAt,
-                                    invitedAt = item.inviteAt,
-                                    invitedAtText = item.inviteAtStr,
-                                    processorName = item.processorName,
-                                    note = item.note
-                                )
-                            },
-                            total = result.total,
-                            pending = result.pending
-                        )
+                        requests = result.requests.map { item ->
+                            ContactRequestItem(
+                                requestId = item.requestId,
+                                requesterName = item.name,
+                                requesterAvatarUrl = item.avatar,
+                                receiverName = item.receiverName,
+                                receiverAvatarUrl = item.receiverAvatar,
+                                groupName = item.groupName,
+                                groupAvatarUrl = item.groupAvatar,
+                                botName = item.botName,
+                                botAvatarUrl = item.botAvatar,
+                                inviterId = resolveInviterId(
+                                    inviterId = item.inviterId,
+                                    alternateInviterId = item.alternateInviterId
+                                ),
+                                sourceType = item.sourceType,
+                                targetType = item.targetType,
+                                targetId = item.targetId,
+                                receiverId = item.receiverId,
+                                result = item.result,
+                                processedAt = item.processedAt,
+                                invitedAt = item.inviteAt,
+                                invitedAtText = item.inviteAtStr,
+                                processorName = item.processorName,
+                                note = item.note
+                            )
+                        },
+                        total = result.total,
+                        pending = result.pending
+                    )
                     LocalCache.currentAccountId()?.let { accountId ->
                         LocalCache.putPayload(
                             accountId = accountId,
@@ -180,12 +173,6 @@ class FriendRepository(
         )
     }
 
-    /**
-     * 处理申请/邀请。
-     * agree: 1-同意，2-拒绝；服务端还会使用 3/4 表示过期或群聊已解散。
-     * 群主处理群聊/机器人申请走 /group/agree-invite；收到的群聊/机器人邀请及好友申请
-     * 走 /friend/agree-apply。两个接口都支持通过和拒绝。
-     */
     suspend fun respondToRequest(
         token: String,
         requestId: Int,
@@ -237,12 +224,7 @@ class FriendRepository(
             Result.failure(e)
         }
     }
-    
-    /**
-     * 添加用户/群聊/机器人。
-     * @param type 1-用户，2-群聊，3-机器人
-     * code: 1 正常，-1 不存在，-9 已在群聊中
-     */
+
     suspend fun apply(token: String, chatId: String, chatType: Int, remark: String = ""): Result<DeleteFriendResponse> {
         return withContext(Dispatchers.IO) {
             try {
@@ -273,7 +255,6 @@ class FriendRepository(
         }
     }
 
-    /** 判断某会话是否已在通讯录中（已添加）。 */
     suspend fun isAdded(token: String, chatId: String, chatType: Int): Result<Boolean> {
         return getAddressBook(token).map { groups ->
             groups.any { g ->
@@ -317,7 +298,6 @@ class FriendRepository(
         }
     }
 
-    /** 邀请已添加的机器人加入群聊。 */
     suspend fun inviteBotToGroup(token: String, botId: String, groupId: String): Result<DeleteFriendResponse> {
         return withContext(Dispatchers.IO) {
             try {
@@ -346,7 +326,6 @@ class FriendRepository(
         }
     }
 
-    /** Updates one chat's notification state. noNotify=1 means mute, 0 means unmute. */
     suspend fun setNoNotify(token: String, chatId: String, muted: Boolean): Result<Boolean> {
         return withContext(Dispatchers.IO) {
             try {

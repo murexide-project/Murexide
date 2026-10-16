@@ -49,9 +49,14 @@ class ContactViewModel(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
             repository.syncCachedAddressBook(token)
-                .onSuccess {
-                    loadCachedContactsOrEmpty()
-                    _uiState.update { it.copy(isLoading = false, error = null) }
+                .onSuccess { groups ->
+                    _uiState.update {
+                        it.copy(
+                            contactGroups = groups,
+                            isLoading = false,
+                            error = null
+                        )
+                    }
                 }
                 .onFailure { e ->
                     val restored = loadCachedContactsOrEmpty()
@@ -95,6 +100,7 @@ class ContactViewModel(
     }
 
     private suspend fun loadCachedContactsOrEmpty(): Boolean {
+        if (!LocalCache.isCacheEnabled()) return false
         val accountId = LocalCache.currentAccountId() ?: return false
         val cached = LocalCache.getPayload(accountId, LocalCache.KIND_CONTACTS) ?: return false
         val groups = runCatching {
@@ -105,6 +111,7 @@ class ContactViewModel(
     }
 
     private suspend fun loadCachedRequestsOrEmpty(): Boolean {
+        if (!LocalCache.isCacheEnabled()) return false
         val accountId = LocalCache.currentAccountId() ?: return false
         val cached = LocalCache.getPayload(accountId, LocalCache.KIND_REQUESTS) ?: return false
         val requests = runCatching {

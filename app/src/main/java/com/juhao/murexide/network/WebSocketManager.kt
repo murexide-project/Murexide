@@ -493,14 +493,13 @@ private fun WsMsg.toPushedMessageItem(currentUserId: String?): MessageItem {
         msgSeq = msg_seq,
         direction = if (sender?.chat_id == currentUserId) "right" else "left",
         isRecalled = isRecalled,
-        // A push recall may contain the operator (for example a bot) in sender rather than
-        // the original author. The existing message must remain the source of identity.
         hasReliableSender = !isRecalled,
         deleteTime = delete_time,
         isEdited = edit_time > 0,
         quoteMsgId = quote_msg_id.takeIf { it.isNotEmpty() },
         quoteMsgText = content?.quote_msg_text?.takeIf { it.isNotEmpty() },
         quoteImageUrl = content?.quote_image_url?.takeIf { it.isNotEmpty() },
+        stickerPackId = content?.sticker_pack_id,
         stickerUrl = content?.sticker_url?.takeIf { it.isNotEmpty() },
         imageUrl = content?.image_url?.takeIf { it.isNotEmpty() },
         imageWidth = content?.width?.takeIf { it > 0 },
