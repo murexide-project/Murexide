@@ -37,6 +37,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -343,8 +344,9 @@ fun ChatScreen(
     onOpenConversation: (ForwardTarget) -> Unit = {},
     bigScreenMode: Boolean = false,
     backUnreadCount: Int = 0,
-    searchTargetMsgSeq: Long? = null,
+    initialUnreadCount: Int = 0,
     searchTargetMsgId: String? = null,
+    searchTargetMsgSeq: Long? = null,
     viewModel: ChatViewModel
 ) {
     val density = LocalDensity.current
@@ -554,7 +556,7 @@ fun ChatScreen(
     var composerHeightPx by remember { mutableIntStateOf(0) }
     var listHeightPx by remember { mutableIntStateOf(0) }
     var showScrollToBottom by remember { mutableStateOf(false) }
-    var unreadCount by remember { mutableIntStateOf(0) }
+    var unreadCount by remember { mutableIntStateOf(initialUnreadCount) }
     var firstMessageId by remember { mutableStateOf<String?>(null) }
     var highlightedMessageId by remember { mutableStateOf<String?>(null) }
     var highlightRequest by remember { mutableIntStateOf(0) }
@@ -718,6 +720,20 @@ fun ChatScreen(
                 ownerId = uiState.ownerId,
                 adminIds = uiState.adminIds
             )
+        }
+    }
+
+    val unreadDividerMsgId = remember(
+        initialUnreadCount,
+        uiState.messages,
+        searchTargetMsgId
+    ) {
+        if (searchTargetMsgId != null) return@remember null
+        if (initialUnreadCount <= 0 || uiState.messages.isEmpty()) return@remember null
+        if (initialUnreadCount > uiState.messages.size) {
+            uiState.messages.lastOrNull()?.msgId
+        } else {
+            uiState.messages.getOrNull(initialUnreadCount - 1)?.msgId
         }
     }
 
@@ -1796,13 +1812,13 @@ fun ChatScreen(
                             top = innerPadding.calculateTopPadding(),
                             bottom = innerPadding.calculateBottomPadding()
                         ),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
                     ) {
-                        items(
+                        itemsIndexed(
                             items = displayItems,
-                            key = { it.message.msgId },
-                            contentType = { it.message.contentType }
-                        ) { item ->
+                            key = { _, item -> item.message.msgId },
+                            contentType = { _, item -> item.message.contentType }
+                        ) { _, item ->
                             val message = item.message
 
                             MessageBubble(
@@ -1963,6 +1979,10 @@ fun ChatScreen(
                                     viewModel.createExpression(it)
                                 }
                             )
+                            
+                            if (message.msgId == unreadDividerMsgId) {
+                                UnreadDivider()
+                            }
                         }
 
                         if (uiState.isLoadingMore) {
@@ -2005,11 +2025,25 @@ fun ChatScreen(
                     )
 
                     AnimatedScrollToBottomButton(
-                        visible = showScrollToBottom || uiState.hasNewer,
+                        visible = showScrollToBottom || uiState.hasNewer ||
+                            (unreadCount > 0 && unreadDividerMsgId != null),
                         unreadCount = unreadCount,
                         loadNewerMode = uiState.hasNewer && !showScrollToBottom,
                         onClick = {
-                            if (showScrollToBottom) {
+                            val dividerId = unreadDividerMsgId
+                            if (unreadCount > 0 && dividerId != null) {
+                                scope.launch {
+                                    val idx = displayItems.indexOfFirst {
+                                        it.message.msgId == dividerId
+                                    }
+                                    if (idx >= 0) {
+                                        listState.animateScrollToItem(idx)
+                                    } else {
+                                        listState.animateScrollToItem(0)
+                                    }
+                                    unreadCount = 0
+                                }
+                            } else if (showScrollToBottom) {
                                 scrollToBottom()
                             } else if (uiState.hasNewer) {
                                 viewModel.loadNewer()
@@ -2113,6 +2147,31 @@ fun ChatScreen(
                     Text("取消")
                 }
             }
+        )
+    }
+}
+
+@Composable
+private fun UnreadDivider(modifier: Modifier = Modifier) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        HorizontalDivider(
+            modifier = Modifier.weight(1f),
+            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+        )
+        Text(
+            text = "以下为新消息",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(horizontal = 8.dp)
+        )
+        HorizontalDivider(
+            modifier = Modifier.weight(1f),
+            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
         )
     }
 }

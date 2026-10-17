@@ -230,7 +230,7 @@ internal fun FloatingAvatarsLayer(
     val density = LocalDensity.current
     val avatarSize = 36.dp
     val avatarSizePx = with(density) { avatarSize.toPx() }
-    val bubbleInsetPx = with(density) { 2.dp.toPx() }
+    val bubbleInsetPx = with(density) { 1.dp.toPx() }
 
     val placements by remember(items, listHeightPx, composerHeightPx, showMyAvatar, avatarSizePx) {
         derivedStateOf {

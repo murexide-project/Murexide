@@ -2,62 +2,71 @@ package com.juhao.murexide.ui.chat.components
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.text.BasicText
+import androidx.compose.foundation.text.InlineTextContent
+import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.LinkAnnotation
+import androidx.compose.ui.text.Placeholder
+import androidx.compose.ui.text.PlaceholderVerticalAlign
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withLink
-import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
-import com.juhao.murexide.ui.theme.liquidglass.LiquidGlassSelectionContainer
 
 @Composable
 internal fun MessageText(
     text: String,
-    timestampText: String,
     bodyStyle: TextStyle,
-    timestampStyle: TextStyle,
     modifier: Modifier = Modifier,
-    enableSelection: Boolean = false,
-    linkColor: Color = MaterialTheme.colorScheme.primary
+    linkColor: Color = MaterialTheme.colorScheme.primary,
+    trailingReserveWidthPx: Int? = null
 ) {
-    val annotatedString = remember(text, timestampText, timestampStyle, linkColor) {
+    val density = LocalDensity.current
+    val reserveId = "trailing_reserve"
+    val hasReserve = trailingReserveWidthPx != null && trailingReserveWidthPx > 0
+
+    val annotatedString = remember(text, linkColor, trailingReserveWidthPx) {
         buildAnnotatedString {
             appendWithLinks(text, linkColor)
-            if (timestampText.isNotEmpty()) {
-                append(' ')
-                withStyle(timestampStyle.toSpanStyle()) {
-                    append(timestampText)
-                }
+            if (hasReserve) {
+                appendInlineContent(reserveId, "\u00A0")
             }
         }
     }
 
-    val basicText = @Composable {
+    val inlineContent = remember(trailingReserveWidthPx, density) {
+        if (hasReserve) {
+            mapOf(
+                reserveId to InlineTextContent(
+                    Placeholder(
+                        width = (trailingReserveWidthPx!! / density.density).sp,
+                        height = 1.em,
+                        placeholderVerticalAlign = PlaceholderVerticalAlign.TextBottom
+                    )
+                ) { }
+            )
+        } else {
+            emptyMap()
+        }
+    }
+
+    Box(modifier = modifier) {
         BasicText(
             text = annotatedString,
             style = bodyStyle,
-            modifier = Modifier
+            modifier = Modifier,
+            inlineContent = inlineContent
         )
-    }
-
-    if (enableSelection) {
-        LiquidGlassSelectionContainer(
-            modifier = modifier
-        ) {
-            basicText()
-        }
-    } else {
-        Box(modifier = modifier) {
-            basicText()
-        }
     }
 }
 

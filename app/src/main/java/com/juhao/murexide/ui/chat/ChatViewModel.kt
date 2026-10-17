@@ -158,8 +158,11 @@ class ChatViewModel(
 
     private var draftSaveJob: Job? = null
     private var draftRestored = false
+    
+    private val conversationKey = ConversationKey(chatId = chatId, chatType = chatType)
 
     init {
+        ActiveConversationRegistry.activate(this, conversationKey)
         setupWebSocket()
         loadMessages()
 
@@ -534,9 +537,11 @@ class ChatViewModel(
     }
 
     override fun onCleared() {
+        draftSaveJob?.cancel()
         val text = _uiState.value.inputText
+        val sending = _uiState.value.isSending
         kotlinx.coroutines.GlobalScope.launch(Dispatchers.IO) {
-            if (text.isNotBlank()) {
+            if (!sending && text.isNotBlank()) {
                 accountStorage.saveDraft(chatId, chatType, text)
             } else {
                 accountStorage.clearDraft(chatId, chatType)
@@ -833,7 +838,12 @@ class ChatViewModel(
         draftSaveJob?.cancel()
         draftSaveJob = viewModelScope.launch {
             delay(500L.milliseconds)
-            accountStorage.saveDraft(chatId, chatType, text)
+            val current = _uiState.value.inputText
+            if (current.isNotBlank() && !_uiState.value.isSending) {
+                accountStorage.saveDraft(chatId, chatType, current)
+            } else if (current.isBlank()) {
+                accountStorage.clearDraft(chatId, chatType)
+            }
         }
     }
 
@@ -879,6 +889,8 @@ class ChatViewModel(
                 quoteMsgId = state.replyTo?.msgId,
                 commandId = state.pendingCommandId
             ).onSuccess { msgId ->
+                draftSaveJob?.cancel()
+                draftSaveJob = null
                 accountStorage.clearDraft(chatId, chatType)
                 addSentMessage(
                     msgId = msgId,
@@ -1012,6 +1024,8 @@ class ChatViewModel(
                 contentType = MessageItem.CONTENT_TYPE_VIDEO,
                 quoteMsgId = state.replyTo?.msgId
             ).onSuccess { msgId ->
+                draftSaveJob?.cancel()
+                draftSaveJob = null
                 accountStorage.clearDraft(chatId, chatType)
                 addSentMessage(
                     msgId = msgId,
@@ -1055,6 +1069,8 @@ class ChatViewModel(
                 contentType = MessageItem.CONTENT_TYPE_IMAGE,
                 quoteMsgId = state.replyTo?.msgId
             ).onSuccess { msgId ->
+                draftSaveJob?.cancel()
+                draftSaveJob = null
                 accountStorage.clearDraft(chatId, chatType)
                 addSentMessage(
                     msgId = msgId,
@@ -1150,6 +1166,8 @@ class ChatViewModel(
                 contentType = MessageItem.CONTENT_TYPE_FILE,
                 quoteMsgId = state.replyTo?.msgId
             ).onSuccess { msgId ->
+                draftSaveJob?.cancel()
+                draftSaveJob = null
                 accountStorage.clearDraft(chatId, chatType)
                 addSentMessage(
                     msgId = msgId,
@@ -1356,6 +1374,8 @@ class ChatViewModel(
                 content = content,
                 contentType = contentType
             ).onSuccess {
+                draftSaveJob?.cancel()
+                draftSaveJob = null
                 accountStorage.clearDraft(chatId, chatType)
                 _uiState.update {
                     it.copy(
@@ -1467,6 +1487,8 @@ class ChatViewModel(
                 contentType = MessageItem.CONTENT_TYPE_STICKER,
                 quoteMsgId = state.replyTo?.msgId
             ).onSuccess { msgId ->
+                draftSaveJob?.cancel()
+                draftSaveJob = null
                 accountStorage.clearDraft(chatId, chatType)
                 addSentMessage(
                     msgId = msgId,
@@ -1578,6 +1600,8 @@ class ChatViewModel(
                 contentType = MessageItem.CONTENT_TYPE_TEXT,
                 commandId = item.id
             ).onSuccess { msgId ->
+                draftSaveJob?.cancel()
+                draftSaveJob = null
                 accountStorage.clearDraft(chatId, chatType)
                 addSentMessage(
                     msgId = msgId,
@@ -1605,6 +1629,8 @@ class ChatViewModel(
                 contentType = MessageItem.CONTENT_TYPE_TEXT,
                 commandId = item.id
             ).onSuccess { msgId ->
+                draftSaveJob?.cancel()
+                draftSaveJob = null
                 accountStorage.clearDraft(chatId, chatType)
                 addSentMessage(
                     msgId = msgId,
@@ -1955,7 +1981,7 @@ class ChatViewModel(
             )
         }
     }
-    
+
     fun topExpression(id: Int) {
         viewModelScope.launch {
             expressionRepository.topExpression(token, id)
@@ -1968,13 +1994,13 @@ class ChatViewModel(
                 }
         }
     }
-    
+
     private suspend fun refreshExpressions() {
         expressionRepository.getExpressionList(token).onSuccess { list ->
             _stickerPanel.update { it.copy(expressions = list) }
         }
     }
-    
+
     fun appendEmojiToInput(emoji: String) {
         val state = _uiState.value
         val newText = state.inputText + emoji
@@ -2002,7 +2028,7 @@ class ChatViewModel(
             }
         }
     }
-    
+
     fun deleteExpression(id: Int) {
         viewModelScope.launch {
             expressionRepository.deleteExpression(

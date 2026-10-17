@@ -701,6 +701,7 @@ fun MainScreen(account: UserAccount) {
                                             chatType = conversation.chatType,
                                             chatName = conversation.displayName,
                                             chatAvatar = conversation.avatarUrl,
+                                            initialUnreadCount = conversation.unreadMessage
                                         )
                                     }
                                 },

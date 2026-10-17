@@ -35,6 +35,10 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathOperation
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalConfiguration
@@ -138,12 +142,12 @@ fun MessageBubble(
     val incomingBubbleColor = when {
         isWhiteLightTheme -> WhiteThemeIncomingBubbleColor
         isWhiteDarkTheme -> MaterialTheme.colorScheme.surfaceContainerHigh
-        else -> MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp).copy(alpha = bubbleOpacity)
+        else -> MaterialTheme.colorScheme.surfaceColorAtElevation(8.dp).copy(alpha = bubbleOpacity)
     }
     val incomingAttachmentBackgroundColor = when {
         isWhiteLightTheme -> WhiteThemeIncomingBubbleColor
         isWhiteDarkTheme -> MaterialTheme.colorScheme.surfaceContainerHigh
-        else -> MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp)
+        else -> MaterialTheme.colorScheme.surfaceColorAtElevation(8.dp)
     }
 
     val context = LocalContext.current
@@ -404,112 +408,120 @@ private fun MessageBubbleBody(
                     colors = CardDefaults.cardColors(containerColor = cardColor),
                     modifier = Modifier.weight(1f, fill = false)
                 ) {
-                    Column(modifier = Modifier.padding(if (hideCard) 0.dp else 8.dp)) {
-                        val displayName = if (hideSenderInfo && anonymousNameProvider != null) {
-                            anonymousNameProvider(message.senderId)
-                        } else {
-                            message.senderName
-                        }
-
-                        if (!hideCard && !isMine && isLastFromSender) {
-                            SenderHeader(
-                                displayName = displayName,
-                                roleLabel = roleLabel,
-                                message = message,
-                                showTags = showTags,
-                                hideSenderInfo = hideSenderInfo
-                            )
-                        }
-
-                        message.cmdName?.let {
-                            Text(
-                                text = "/$it",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                            )
-                        }
-
-                        if (hasQuote && !hideCard) {
-                            QuoteCard(
-                                message = message,
-                                hideSenderInfo = hideSenderInfo,
-                                hideImages = hideImages,
-                                isSelectionMode = isSelectionMode,
-                                onQuoteClick = onQuoteClick
-                            )
-                        }
-
-                        CompositionLocalProvider(LocalLayoutDirection provides defaultLayoutDirection) {
-                            MessageMenu(
-                                message = message,
-                                showMenu = showMenu,
-                                showMenuChanged = showMenuChanged,
-                                isMine = isMine,
-                                isAdmin = isAdmin,
-                                onRecall = onRecall,
-                                onEdit = onEdit,
-                                onReply = onReply,
-                                onForward = onForward,
-                                onEditIconClick = onEditIconClick,
-                                clipboardManager = clipboardManager,
-                                scope = scope,
-                                context = context,
-                                onCreateExpression = onCreateExpression
-                            )
-
-                            if (message.isRecalled) {
-                                Text(
-                                    text = message.getRecallDisplayContent(),
-                                    style = MaterialTheme.typography.bodySmall.copy(
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                )
+                    Box(modifier = Modifier.padding(if (hideCard) 0.dp else 8.dp)) {
+                        Column {
+                            val displayName = if (hideSenderInfo && anonymousNameProvider != null) {
+                                anonymousNameProvider(message.senderId)
                             } else {
-                                MessageContentRouter(
+                                message.senderName
+                            }
+
+                            if (!hideCard && !isMine && isLastFromSender) {
+                                SenderHeader(
+                                    displayName = displayName,
+                                    roleLabel = roleLabel,
                                     message = message,
-                                    isMine = isMine,
-                                    isSelected = isSelected,
-                                    isSelectionMode = isSelectionMode,
-                                    onLongPress = onLongPress,
-                                    onImageClick = onImageClick,
-                                    onMarkdownImageClick = onMarkdownImageClick,
-                                    onDownloadClick = onDownloadClick,
-                                    downloadProgress = downloadProgress,
-                                    isDownloaded = isDownloaded,
+                                    showTags = showTags,
+                                    hideSenderInfo = hideSenderInfo
+                                )
+                            }
+
+                            message.cmdName?.let {
+                                Text(
+                                    text = "/$it",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                )
+                            }
+
+                            if (hasQuote && !hideCard) {
+                                QuoteCard(
+                                    message = message,
+                                    hideSenderInfo = hideSenderInfo,
                                     hideImages = hideImages,
-                                    incomingAttachmentBackgroundColor = incomingAttachmentBackgroundColor,
-                                    timestampDisplay = timestampDisplay,
-                                    audioPlaybackState = audioPlaybackState,
+                                    isSelectionMode = isSelectionMode,
+                                    onQuoteClick = onQuoteClick
+                                )
+                            }
+
+                            CompositionLocalProvider(LocalLayoutDirection provides defaultLayoutDirection) {
+                                MessageMenu(
+                                    message = message,
+                                    showMenu = showMenu,
+                                    showMenuChanged = showMenuChanged,
+                                    isMine = isMine,
+                                    isAdmin = isAdmin,
+                                    onRecall = onRecall,
+                                    onEdit = onEdit,
+                                    onReply = onReply,
+                                    onForward = onForward,
+                                    onEditIconClick = onEditIconClick,
+                                    clipboardManager = clipboardManager,
+                                    scope = scope,
                                     context = context,
-                                    bubbleCornerRadius = bubbleCornerRadius,
-                                    bubbleOpacity = bubbleOpacity,
-                                    incomingBubbleColor = incomingBubbleColor
+                                    onCreateExpression = onCreateExpression
                                 )
-                            }
 
-                            if (!message.isRecalled && message.buttons.isNotEmpty()) {
-                                MessageButtons(
-                                    buttons = message.buttons,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(
-                                            top = if (hideCard) 4.dp else 6.dp,
-                                            start = if (hideCard) 8.dp else 0.dp,
-                                            end = if (hideCard) 8.dp else 0.dp,
-                                            bottom = if (hideCard) 4.dp else 0.dp
-                                        ),
-                                    onButtonClick = { button -> onButtonClick(message, button) }
-                                )
-                            }
+                                if (message.isRecalled) {
+                                    Text(
+                                        text = message.getRecallDisplayContent(),
+                                        style = MaterialTheme.typography.bodySmall.copy(
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                    )
+                                } else {
+                                    MessageContentRouter(
+                                        message = message,
+                                        isMine = isMine,
+                                        isSelected = isSelected,
+                                        isSelectionMode = isSelectionMode,
+                                        onLongPress = onLongPress,
+                                        onImageClick = onImageClick,
+                                        onMarkdownImageClick = onMarkdownImageClick,
+                                        onDownloadClick = onDownloadClick,
+                                        downloadProgress = downloadProgress,
+                                        isDownloaded = isDownloaded,
+                                        hideImages = hideImages,
+                                        timestampDisplay = timestampDisplay,
+                                        incomingAttachmentBackgroundColor = incomingAttachmentBackgroundColor,
+                                        audioPlaybackState = audioPlaybackState,
+                                        context = context,
+                                        bubbleCornerRadius = bubbleCornerRadius,
+                                        bubbleOpacity = bubbleOpacity,
+                                        incomingBubbleColor = incomingBubbleColor
+                                    )
+                                }
 
-                            if ((!hideCard && message.contentType != MessageItem.CONTENT_TYPE_TEXT) || message.isRecalled) {
-                                MessageFooter(
-                                    timestampDisplay = timestampDisplay,
-                                    isEdited = message.isEdited,
-                                    isRecalled = message.isRecalled
-                                )
+                                if (!message.isRecalled && message.buttons.isNotEmpty()) {
+                                    MessageButtons(
+                                        buttons = message.buttons,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(
+                                                top = if (hideCard) 4.dp else 6.dp,
+                                                start = if (hideCard) 8.dp else 0.dp,
+                                                end = if (hideCard) 8.dp else 0.dp,
+                                                bottom = if (hideCard) 4.dp else 0.dp
+                                            ),
+                                        onButtonClick = { button -> onButtonClick(message, button) }
+                                    )
+                                }
                             }
                         }
+
+                        MessageFooter(
+                            timestampDisplay = timestampDisplay,
+                            isEdited = message.isEdited,
+                            isRecalled = message.isRecalled,
+                            modifier = Modifier
+                                .align(if (isMine) Alignment.BottomStart else Alignment.BottomEnd)
+                                .background(cardColor)
+                                .padding(
+                                    start = if (isMine) 0.dp else 4.dp,
+                                    end = if (isMine) 4.dp else 0.dp,
+                                    top = 2.dp
+                                )
+                        )
                     }
                 }
 
@@ -614,6 +626,15 @@ private fun MessageMenu(
     context: android.content.Context,
     onCreateExpression: (String) -> Unit = {}
 ) {
+    var showSelectTextDialog by remember(message.msgId) { mutableStateOf(false) }
+
+    if (showSelectTextDialog) {
+        SelectTextDialog(
+            text = message.content,
+            onDismiss = { showSelectTextDialog = false }
+        )
+    }
+
     DropdownMenu(
         expanded = showMenu,
         onDismissRequest = { showMenuChanged(null) },
@@ -627,6 +648,16 @@ private fun MessageMenu(
                         clipboardManager.setClipEntry(ClipEntry(ClipData.newPlainText("msg", message.content)))
                     }
                     Toast.makeText(context, "复制成功", Toast.LENGTH_SHORT).show()
+                    showMenuChanged(null)
+                },
+                leadingIcon = {
+                    Icon(AppIcons.ContentCopy, contentDescription = null, modifier = Modifier.size(18.dp))
+                }
+            )
+            DropdownMenuItem(
+                text = { Text("选择复制") },
+                onClick = {
+                    showSelectTextDialog = true
                     showMenuChanged(null)
                 },
                 leadingIcon = {
@@ -722,29 +753,48 @@ private fun MessageContentRouter(
     downloadProgress: Float?,
     isDownloaded: Boolean,
     hideImages: Boolean,
-    incomingAttachmentBackgroundColor: Color,
     timestampDisplay: String,
+    incomingAttachmentBackgroundColor: Color,
     audioPlaybackState: AudioPlaybackState,
     context: android.content.Context,
     bubbleCornerRadius: Float,
     bubbleOpacity: Float,
     incomingBubbleColor: Color
 ) {
+    val reserve = remember(timestampDisplay, message.isEdited) {
+        val timeCharCount = timestampDisplay.length + if (message.isEdited) 4 else 0
+        val count = (timeCharCount * 2).coerceAtLeast(6)
+        "\u202F".repeat(count)
+    }
+
+    val textMeasurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    val timeTextStyle = remember { TextStyle(fontSize = 10.sp, lineHeight = 16.sp) }
+    val textReserveWidthPx = remember(timestampDisplay, message.isEdited, density) {
+        val timeText = timestampDisplay + if (message.isEdited) " 已编辑" else ""
+        textMeasurer.measure(
+            text = AnnotatedString(timeText),
+            style = timeTextStyle
+        ).size.width + with(density) { 8.dp.roundToPx() }
+    }
+
     when (message.contentType) {
-        MessageItem.CONTENT_TYPE_TEXT -> TextContent(
-            message = message,
-            isSelected = isSelected,
-            timestampDisplay = timestampDisplay
+        MessageItem.CONTENT_TYPE_TEXT -> MessageText(
+            text = message.content,
+            bodyStyle = MaterialTheme.typography.bodyMedium.copy(
+                color = MaterialTheme.colorScheme.onSurface
+            ),
+            trailingReserveWidthPx = textReserveWidthPx
         )
 
         MessageItem.CONTENT_TYPE_MARKDOWN -> MarkdownContent(
-            message = message,
+            text = message.content + reserve,
             isSelected = isSelected,
             onMarkdownImageClick = onMarkdownImageClick
         )
 
         MessageItem.CONTENT_TYPE_HTML -> HtmlContent(
-            message = message,
+            text = message.content + reserve,
             isMine = isMine,
             incomingAttachmentBackgroundColor = incomingAttachmentBackgroundColor,
             context = context
@@ -768,7 +818,6 @@ private fun MessageContentRouter(
             onImageClick = onImageClick,
             hideImages = hideImages,
             incomingAttachmentBackgroundColor = incomingAttachmentBackgroundColor,
-            timestampDisplay = timestampDisplay,
             context = context
         )
 
@@ -779,7 +828,6 @@ private fun MessageContentRouter(
             onDownloadClick = onDownloadClick,
             downloadProgress = downloadProgress,
             isDownloaded = isDownloaded,
-            timestampDisplay = timestampDisplay,
             bubbleCornerRadius = bubbleCornerRadius,
             bubbleOpacity = bubbleOpacity,
             incomingBubbleColor = incomingBubbleColor
@@ -792,38 +840,13 @@ private fun MessageContentRouter(
 }
 
 @Composable
-private fun TextContent(
-    message: MessageItem,
-    isSelected: Boolean,
-    timestampDisplay: String
-) {
-    val timeText = remember(timestampDisplay, message.isEdited) {
-        buildString {
-            append(timestampDisplay)
-            if (message.isEdited) append(" 已编辑")
-        }
-    }
-    MessageText(
-        text = message.content,
-        timestampText = timeText,
-        bodyStyle = MaterialTheme.typography.bodyMedium.copy(
-            color = MaterialTheme.colorScheme.onSurface
-        ),
-        timestampStyle = MaterialTheme.typography.labelSmall.copy(
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-        ),
-        enableSelection = isSelected
-    )
-}
-
-@Composable
 private fun MarkdownContent(
-    message: MessageItem,
+    text: String,
     isSelected: Boolean,
     onMarkdownImageClick: (String) -> Unit
 ) {
     MarkdownText(
-        markdown = message.content,
+        markdown = text,
         enableTextSelection = isSelected,
         onImageClick = onMarkdownImageClick
     )
@@ -831,16 +854,16 @@ private fun MarkdownContent(
 
 @Composable
 private fun HtmlContent(
-    message: MessageItem,
+    text: String,
     isMine: Boolean,
     incomingAttachmentBackgroundColor: Color,
     context: android.content.Context
 ) {
     LiteHtmlContent(
-        htmlContent = message.content,
+        htmlContent = text,
         modifier = Modifier.fillMaxWidth(),
         onImageClick = { imageUrl ->
-            val allImages = extractImageUrls(message.content)
+            val allImages = extractImageUrls(text)
             showImageViewer(
                 context = context,
                 images = allImages.map(::fullImagePreviewItem),
@@ -911,7 +934,6 @@ private fun MediaContent(
     onImageClick: (MessageItem, ImageViewerSourceBounds?) -> Unit,
     hideImages: Boolean,
     incomingAttachmentBackgroundColor: Color,
-    timestampDisplay: String,
     context: android.content.Context
 ) {
     if (hideImages) {
@@ -1016,11 +1038,6 @@ private fun MediaContent(
         videoDuration?.let { duration ->
             VideoDurationBadge(duration = duration)
         }
-
-        MediaTimestampBadge(
-            timestampDisplay = timestampDisplay,
-            isSticker = message.contentType == MessageItem.CONTENT_TYPE_STICKER
-        )
     }
 }
 
@@ -1110,32 +1127,6 @@ private fun BoxScope.VideoDurationBadge(duration: String) {
 }
 
 @Composable
-private fun BoxScope.MediaTimestampBadge(
-    timestampDisplay: String,
-    isSticker: Boolean
-) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(3.dp),
-        modifier = Modifier
-            .align(Alignment.BottomEnd)
-            .padding(end = 6.dp, bottom = 6.dp)
-            .background(color = Color.Black.copy(alpha = 0.3f), shape = RoundedCornerShape(50.dp))
-            .padding(horizontal = 6.dp, vertical = 2.dp)
-    ) {
-        if (isSticker) {
-            Icon(
-                imageVector = AppIcons.Mood,
-                contentDescription = null,
-                modifier = Modifier.size(12.dp),
-                tint = Color.White
-            )
-        }
-        Text(text = timestampDisplay, fontSize = 10.sp, lineHeight = 16.sp, maxLines = 1, color = Color.White)
-    }
-}
-
-@Composable
 private fun FileContent(
     message: MessageItem,
     isMine: Boolean,
@@ -1143,7 +1134,6 @@ private fun FileContent(
     onDownloadClick: (MessageItem) -> Unit,
     downloadProgress: Float?,
     isDownloaded: Boolean,
-    timestampDisplay: String,
     bubbleCornerRadius: Float,
     bubbleOpacity: Float,
     incomingBubbleColor: Color
@@ -1189,7 +1179,6 @@ private fun FileContent(
         FileInfo(
             fileName = fileName,
             fileSize = message.fileSize,
-            timestampDisplay = timestampDisplay,
             isDownloading = isDownloading,
             progress = progress,
             isComplete = isComplete,
@@ -1251,7 +1240,6 @@ private fun FileIcon(
 private fun FileInfo(
     fileName: String,
     fileSize: Long?,
-    timestampDisplay: String,
     isDownloading: Boolean,
     progress: Float,
     isComplete: Boolean,
@@ -1278,13 +1266,6 @@ private fun FileInfo(
                     modifier = Modifier.padding(end = 4.dp)
                 )
             }
-            Text(
-                text = timestampDisplay,
-                fontSize = 12.sp,
-                lineHeight = 18.sp,
-                maxLines = 1,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-            )
 
             if (isDownloading) {
                 Text(
@@ -1355,9 +1336,10 @@ private fun UnsupportedContent(contentType: Int) {
 private fun MessageFooter(
     timestampDisplay: String,
     isEdited: Boolean,
-    isRecalled: Boolean
+    isRecalled: Boolean,
+    modifier: Modifier = Modifier
 ) {
-    Row(modifier = Modifier.padding(top = 2.dp)) {
+    Row(modifier = modifier) {
         Text(
             text = timestampDisplay,
             fontSize = 10.sp,
@@ -1571,7 +1553,32 @@ fun QuarterCircleCorner(
             }
         }
     }
-} 
+}
+
+@Composable
+private fun SelectTextDialog(
+    text: String,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("选择文本") },
+        text = {
+            OutlinedTextField(
+                value = text,
+                onValueChange = { },
+                readOnly = true,
+                modifier = Modifier.fillMaxWidth(),
+                textStyle = MaterialTheme.typography.bodyMedium
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("确定")
+            }
+        }
+    )
+}
 
 private fun getFileIcon(fileName: String): ImageVector {
     val extension = fileName.substringAfterLast('.', "").lowercase()

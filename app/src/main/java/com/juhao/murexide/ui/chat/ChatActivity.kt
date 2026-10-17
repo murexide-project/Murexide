@@ -37,6 +37,7 @@ class ChatActivity : ComponentActivity() {
 
     private var searchTargetMsgId by mutableStateOf<String?>(null)
     private var searchTargetMsgSeq by mutableStateOf<Long?>(null)
+    private var initialUnreadCount by mutableStateOf(0)
 
     @OptIn(ExperimentalMaterial3ExpressiveApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -47,6 +48,7 @@ class ChatActivity : ComponentActivity() {
         val chatType = intent.getIntExtra("chat_type", 1)
         val chatName = intent.getStringExtra("chat_name") ?: ""
         val chatAvatar = intent.getStringExtra("chat_avatar") ?: ""
+        initialUnreadCount = intent.getIntExtra("initial_unread_count", 0)
         readSearchTarget(intent)
 
         val accountStorage = AccountStorage.getInstance(this)
@@ -110,6 +112,7 @@ class ChatActivity : ComponentActivity() {
                             }
                         },
                         backUnreadCount = conversations.unreadTotal(ConversationKey(chatId, chatType)),
+                        initialUnreadCount = initialUnreadCount,
                         searchTargetMsgId = searchTargetMsgId,
                         searchTargetMsgSeq = searchTargetMsgSeq,
                         viewModel = chatViewModel
@@ -147,13 +150,15 @@ class ChatActivity : ComponentActivity() {
             chatId: String,
             chatType: Int,
             chatName: String,
-            chatAvatar: String
+            chatAvatar: String,
+            initialUnreadCount: Int = 0
         ) {
             val intent = Intent(context, ChatActivity::class.java).apply {
                 putExtra("chat_id", chatId)
                 putExtra("chat_type", chatType)
                 putExtra("chat_name", chatName)
                 putExtra("chat_avatar", chatAvatar)
+                putExtra("initial_unread_count", initialUnreadCount)
             }
             context.startActivity(intent)
         }
