@@ -211,6 +211,10 @@
             android:exported="false"
             android:theme="@style/Theme.Murexide" />
         <activity
+            android:name=".ui.conversationdetail.BotSettingsActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Murexide" />
+        <activity
             android:name=".ui.settings.switchAccount.SwitchAccountActivity"
             android:exported="false"
             android:theme="@style/Theme.Murexide" />

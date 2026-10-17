@@ -91,13 +91,18 @@ fun ConversationDetailScreen(
     onBack: () -> Unit,
     onEnterChat: (ConversationDetail) -> Unit,
     onEditGroup: (ConversationDetail) -> Unit = {},
+    onEditBot: (ConversationDetail) -> Unit = {},
     onOpenMember: (GroupMember) -> Unit = {},
     onOpenBoard: (BaItem) -> Unit = {},
     onInviteBotToGroup: (ConversationDetail) -> Unit = {},
     onLeaveGroup: () -> Unit = {},
+    refreshSignal: Int = 0,
     currentUserId: String
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    LaunchedEffect(refreshSignal) {
+        if (refreshSignal > 0) viewModel.loadDetail()
+    }
     val context = LocalContext.current
     val liquidGlassEnabled = LocalLiquidGlassEnabled.current
     val liquidBackdrop = LocalLiquidGlassBackdrop.current
@@ -175,6 +180,14 @@ fun ConversationDetailScreen(
                     if ((group?.permissionLevel ?: 0) >= 2) {
                         IconButton(onClick = { onEditGroup(group!!) }) {
                             Icon(AppIcons.Edit, "编辑群聊")
+                        }
+                    }
+                    val bot = currentDetail?.takeIf {
+                        it.chatType == 3 && !it.createBy.isNullOrEmpty() && it.createBy == currentUserId
+                    }
+                    if (bot != null) {
+                        IconButton(onClick = { onEditBot(bot) }) {
+                            Icon(AppIcons.Edit, "编辑机器人")
                         }
                     }
                     Box {

@@ -81,6 +81,7 @@ private const val QUOTE_PREVIEW_SIZE_DP = 40
 private const val IMAGE_MAX_LANDSCAPE_DP = 240
 private const val IMAGE_MAX_PORTRAIT_DP = 160
 private const val VIDEO_WIDTH_DP = 200
+private const val STICKER_MAX_DP = 120
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -923,6 +924,7 @@ private fun MediaContent(
 
     val isImageMessage = message.contentType == MessageItem.CONTENT_TYPE_IMAGE
     val isVideoMessage = message.contentType == MessageItem.CONTENT_TYPE_VIDEO
+    val isStickerMessage = message.contentType == MessageItem.CONTENT_TYPE_STICKER
     val mediaUrl = when (message.contentType) {
         MessageItem.CONTENT_TYPE_STICKER -> resolveStickerMessageUrl(
             imageUrl = message.imageUrl,
@@ -938,7 +940,11 @@ private fun MediaContent(
     } else {
         imageAspectRatio(message.imageWidth, message.imageHeight)
     }
-    val imageMaxWidth = if (imageRatio >= 1f) IMAGE_MAX_LANDSCAPE_DP.dp else IMAGE_MAX_PORTRAIT_DP.dp
+    val imageMaxWidth = when {
+        isStickerMessage -> STICKER_MAX_DP.dp
+        imageRatio >= 1f -> IMAGE_MAX_LANDSCAPE_DP.dp
+        else -> IMAGE_MAX_PORTRAIT_DP.dp
+    }
     val displayUrl = if (isImageMessage) imageThumbnailUrl(mediaUrl) else mediaUrl
     var retryCount by remember(mediaUrl) { mutableIntStateOf(0) }
     var loadState by remember(mediaUrl, retryCount) { mutableIntStateOf(0) }
@@ -960,7 +966,9 @@ private fun MediaContent(
                 if (isVideoMessage) {
                     Modifier.width(VIDEO_WIDTH_DP.dp).aspectRatio(imageRatio)
                 } else {
-                    Modifier.widthIn(min = 100.dp, max = imageMaxWidth).aspectRatio(imageRatio)
+                    Modifier
+                        .widthIn(min = if (isStickerMessage) 48.dp else 100.dp, max = imageMaxWidth)
+                        .aspectRatio(imageRatio)
                 }
             )
             .onGloballyPositioned { coordinates -> sourceCoordinates.value = coordinates }

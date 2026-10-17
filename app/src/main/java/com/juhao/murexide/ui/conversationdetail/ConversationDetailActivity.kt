@@ -7,6 +7,8 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
@@ -33,6 +35,14 @@ class ConversationDetailActivity : ComponentActivity() {
 
     private val detailState =
         mutableStateOf<DetailState>(DetailState.Resolving)
+
+    /** 编辑页保存成功后递增，用于触发详情刷新。 */
+    private val refreshSignal = mutableIntStateOf(0)
+
+    private val editBotLauncher =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            if (result.resultCode == RESULT_OK) refreshSignal.intValue++
+        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -78,6 +88,17 @@ class ConversationDetailActivity : ComponentActivity() {
                                 groupAvatar = detail.avatarUrl
                             )
                         },
+                        onEditBot = { detail ->
+                            editBotLauncher.launch(
+                                BotSettingsActivity.intent(
+                                    context = this,
+                                    botId = detail.chatId,
+                                    botName = detail.name,
+                                    botAvatar = detail.avatarUrl
+                                )
+                            )
+                        },
+                        refreshSignal = refreshSignal.intValue,
                         onOpenMember = { member ->
                             start(
                                 context = this,
