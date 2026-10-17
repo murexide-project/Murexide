@@ -7,7 +7,12 @@ import android.content.ClipData
 import android.view.View
 import android.widget.Toast
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -24,6 +29,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.boundsInWindow
@@ -35,6 +44,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathOperation
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
@@ -660,12 +670,12 @@ private fun MessageMenu(
                 }
             )
         }
-        
+
         val imageUrl = message.imageUrl
         if (imageUrl != null && imageUrl.isNotBlank()) {
             DropdownMenuItem(
                 text = { Text("收藏") },
-                onClick = { 
+                onClick = {
                     onCreateExpression(imageUrl)
                     showMenuChanged(null)
                 },
@@ -1136,12 +1146,17 @@ private fun FileContent(
     val fileName = message.fileName ?: return
     val progress = downloadProgress ?: 0f
     val isDownloading = downloadProgress != null && downloadProgress < 1f
-    val isIndeterminate = downloadProgress != null && downloadProgress < 0f
     val isComplete = isDownloaded || (downloadProgress != null && progress >= 1f)
+
+    val animatedProgress by animateFloatAsState(
+        targetValue = progress.coerceIn(0f, 1f),
+        animationSpec = tween(durationMillis = 100, easing = LinearEasing),
+        label = "file_progress_animated"
+    )
 
     Row(
         modifier = Modifier
-            .width(IntrinsicSize.Max)
+            .widthIn(min = 240.dp)
             .clip(
                 RoundedCornerShape(
                     topStart = bubbleCornerRadius.dp,
@@ -1161,151 +1176,101 @@ private fun FileContent(
             .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        FileIcon(
-            isDownloading = isDownloading,
-            isIndeterminate = isIndeterminate,
-            progress = progress,
-            isComplete = isComplete,
-            fileName = fileName
-        )
+        Surface(
+            shape = CircleShape,
+            onClick = { onDownloadClick(message) },
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(40.dp)
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                if (isDownloading) {
+                    val rotation by rememberInfiniteTransition(label = "file_progress_rotation")
+                        .animateFloat(
+                            initialValue = 0f,
+                            targetValue = 360f,
+                            animationSpec = infiniteRepeatable(
+                                animation = tween(durationMillis = 1000, easing = LinearEasing),
+                                repeatMode = RepeatMode.Restart
+                            ),
+                            label = "rotation"
+                        )
+
+                    CircularProgressIndicator(
+                        progress = { animatedProgress.coerceIn(0.01f, 1f) },
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .size(36.dp)
+                            .graphicsLayer { rotationZ = rotation },
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        trackColor = MaterialTheme.colorScheme.primary,
+                        strokeWidth = 3.dp
+                    )
+                }
+
+                when {
+                    isDownloading -> Icon(
+                        imageVector = AppIcons.Close,
+                        contentDescription = "取消下载",
+                        modifier = Modifier.size(24.dp),
+                        tint = MaterialTheme.colorScheme.onPrimary
+                    )
+                    isComplete -> Icon(
+                        imageVector = getFileIcon(fileName),
+                        contentDescription = null,
+                        modifier = Modifier.size(24.dp),
+                        tint = MaterialTheme.colorScheme.onPrimary
+                    )
+                    else -> Icon(
+                        imageVector = AppIcons.Download,
+                        contentDescription = "下载",
+                        modifier = Modifier.size(24.dp),
+                        tint = MaterialTheme.colorScheme.onPrimary
+                    )
+                }
+            }
+        }
 
         Spacer(modifier = Modifier.width(12.dp))
 
-        FileInfo(
-            fileName = fileName,
-            fileSize = message.fileSize,
-            isDownloading = isDownloading,
-            progress = progress,
-            isComplete = isComplete,
-            modifier = Modifier.weight(1f)
-        )
+        Column {
+            Text(
+                text = fileName,
+                fontSize = 14.sp,
+                lineHeight = 20.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                color = MaterialTheme.colorScheme.onSurface
+            )
 
-        Spacer(modifier = Modifier.width(24.dp))
-
-        FileActionIcon(
-            isComplete = isComplete,
-            isDownloading = isDownloading,
-            onDownloadClick = { onDownloadClick(message) }
-        )
-    }
-}
-
-@Composable
-private fun FileIcon(
-    isDownloading: Boolean,
-    isIndeterminate: Boolean,
-    progress: Float,
-    isComplete: Boolean,
-    fileName: String
-) {
-    Surface(
-        shape = CircleShape,
-        color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.size(40.dp)
-    ) {
-        Box(contentAlignment = Alignment.Center) {
-            if (isDownloading) {
-                if (isIndeterminate) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(30.dp),
-                        color = MaterialTheme.colorScheme.onPrimary,
-                        strokeWidth = 2.dp
-                    )
-                } else {
-                    CircularProgressIndicator(
-                        progress = { progress },
-                        modifier = Modifier.size(30.dp),
-                        color = MaterialTheme.colorScheme.onPrimary,
-                        strokeWidth = 2.dp
+            Row(modifier = Modifier.padding(top = 2.dp)) {
+                message.fileSize?.let { size ->
+                    Text(
+                        text = formatFileSize(size),
+                        fontSize = 12.sp,
+                        lineHeight = 18.sp,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                        modifier = Modifier.padding(end = 4.dp)
                     )
                 }
-            } else {
-                Icon(
-                    imageVector = if (isComplete) AppIcons.Check else getFileIcon(fileName),
-                    contentDescription = null,
-                    modifier = Modifier.size(24.dp),
-                    tint = MaterialTheme.colorScheme.onPrimary
-                )
+
+                if (isDownloading) {
+                    Text(
+                        text = "${(progress * 100).toInt()}%",
+                        fontSize = 12.sp,
+                        lineHeight = 18.sp,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                } else if (isComplete) {
+                    Text(
+                        text = "已下载",
+                        fontSize = 12.sp,
+                        lineHeight = 18.sp,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
             }
         }
-    }
-}
-
-@Composable
-private fun FileInfo(
-    fileName: String,
-    fileSize: Long?,
-    isDownloading: Boolean,
-    progress: Float,
-    isComplete: Boolean,
-    modifier: Modifier = Modifier
-) {
-    Column(modifier = modifier) {
-        Text(
-            text = fileName,
-            fontSize = 14.sp,
-            lineHeight = 20.sp,
-            fontWeight = FontWeight.Bold,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-
-        Row(modifier = Modifier.padding(top = 2.dp)) {
-            fileSize?.let { size ->
-                Text(
-                    text = formatFileSize(size),
-                    fontSize = 12.sp,
-                    lineHeight = 18.sp,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-                    modifier = Modifier.padding(end = 4.dp)
-                )
-            }
-
-            if (isDownloading) {
-                Text(
-                    text = " ${(progress * 100).toInt()}%",
-                    fontSize = 12.sp,
-                    lineHeight = 18.sp,
-                    color = MaterialTheme.colorScheme.primary
-                )
-            } else if (isComplete) {
-                Text(
-                    text = " 已下载",
-                    fontSize = 12.sp,
-                    lineHeight = 18.sp,
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun FileActionIcon(
-    isComplete: Boolean,
-    isDownloading: Boolean,
-    onDownloadClick: () -> Unit
-) {
-    when {
-        isComplete -> Icon(
-            imageVector = AppIcons.CheckCircle,
-            contentDescription = "已下载",
-            modifier = Modifier.size(20.dp),
-            tint = MaterialTheme.colorScheme.primary
-        )
-        isDownloading -> Icon(
-            imageVector = AppIcons.Close,
-            contentDescription = "取消下载",
-            modifier = Modifier.size(20.dp).clickable { },
-            tint = MaterialTheme.colorScheme.error
-        )
-        else -> Icon(
-            imageVector = AppIcons.Download,
-            contentDescription = "下载",
-            modifier = Modifier.size(20.dp).clickable { onDownloadClick() },
-            tint = MaterialTheme.colorScheme.primary
-        )
     }
 }
 

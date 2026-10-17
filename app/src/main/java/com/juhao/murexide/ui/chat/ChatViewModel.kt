@@ -24,10 +24,7 @@ import com.juhao.murexide.utils.FileDownloader.downloadFileWithProgress
 import com.juhao.murexide.data.*
 import com.juhao.murexide.data.local.LocalCache
 import com.juhao.murexide.datastore.AccountStorage
-import com.juhao.murexide.utils.MentionUtils
-import com.juhao.murexide.utils.QiniuUploadResponse
-import com.juhao.murexide.utils.QiniuUploader
-import com.juhao.murexide.utils.parseCommaSeparatedInts
+import com.juhao.murexide.utils.*
 import com.juhao.murexide.network.WebSocketManager
 import com.juhao.murexide.network.RecallActor
 import kotlinx.coroutines.CompletableDeferred
@@ -147,6 +144,9 @@ class ChatViewModel(
 
     private val _downloadingFiles = MutableStateFlow<Map<String, Float>>(emptyMap())
     val downloadingFiles: StateFlow<Map<String, Float>> = _downloadingFiles.asStateFlow()
+    
+    private val downloadCalls = mutableMapOf<String, okhttp3.Call>()
+    private val downloadedFileUris = mutableMapOf<String, String>()
 
     private val _lastReadAnchor = MutableStateFlow<String?>(null)
     val lastReadAnchor: StateFlow<String?> = _lastReadAnchor.asStateFlow()
@@ -1877,30 +1877,53 @@ class ChatViewModel(
         val fileUrl = message.fileUrl ?: return
         val fileName = message.fileName ?: "file_${System.currentTimeMillis()}"
         if (message.msgId in _downloadingFiles.value) return
-
+        if (downloadCalls.containsKey(message.msgId)) return
+    
         _downloadingFiles.update { it + (message.msgId to 0f) }
         _uiState.update { it.copy(downloadedFiles = it.downloadedFiles - message.msgId) }
-
+    
         viewModelScope.launch {
-            downloadFileWithProgress(
-                url = fileUrl,
-                fileName = fileName,
-                context = context,
-                onProgress = { progress ->
-                    _downloadingFiles.update { it + (message.msgId to progress) }
-                },
-                onComplete = { savedPath ->
-                    _downloadingFiles.update { it - message.msgId }
-                    _uiState.update { it.copy(downloadedFiles = it.downloadedFiles + message.msgId) }
-                    viewModelScope.launch { _toastMessage.emit("文件已保存到: $savedPath") }
-                },
-                onError = { error ->
-                    _downloadingFiles.update { it - message.msgId }
-                    _uiState.update { it.copy(downloadedFiles = it.downloadedFiles - message.msgId) }
-                    viewModelScope.launch { _toastMessage.emit("下载失败: $error") }
-                }
-            )
+            try {
+                downloadFileWithProgress(
+                    url = fileUrl,
+                    fileName = fileName,
+                    context = context,
+                    onProgress = { progress ->
+                        _downloadingFiles.update { it + (message.msgId to progress) }
+                    },
+                    onComplete = { savedPath ->
+                        _downloadingFiles.update { it - message.msgId }
+                        downloadedFileUris[message.msgId] = savedPath
+                        _uiState.update { it.copy(downloadedFiles = it.downloadedFiles + message.msgId) }
+                        viewModelScope.launch { _toastMessage.emit("文件已保存到: $savedPath") }
+                    },
+                    onError = { error ->
+                        if (_downloadingFiles.value.containsKey(message.msgId)) {
+                            _downloadingFiles.update { it - message.msgId }
+                            _uiState.update { it.copy(downloadedFiles = it.downloadedFiles - message.msgId) }
+                            viewModelScope.launch { _toastMessage.emit("下载失败: $error") }
+                        }
+                    },
+                    onCallCreated = { call ->
+                        downloadCalls[message.msgId] = call
+                    }
+                )
+            } finally {
+                downloadCalls.remove(message.msgId)
+            }
         }
+    }
+    
+    fun cancelDownload(msgId: String) {
+        downloadCalls.remove(msgId)?.cancel()
+        _downloadingFiles.update { it - msgId }
+        _uiState.update { it.copy(downloadedFiles = it.downloadedFiles - msgId) }
+        viewModelScope.launch { _toastMessage.emit("已取消下载") }
+    }
+    
+    fun openDownloadedFile(message: MessageItem, context: Context) {
+        val path = downloadedFileUris[message.msgId] ?: return
+        FileDownloader.openFile(context, path, message.fileName ?: "file")
     }
 
     fun updateNickName(value: String) = _uiState.update { it.copy(myGroupNickname = value) }

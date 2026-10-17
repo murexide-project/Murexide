@@ -68,7 +68,8 @@ object FileDownloader {
         context: Context,
         onProgress: (Float) -> Unit,
         onComplete: (String) -> Unit,
-        onError: (String) -> Unit
+        onError: (String) -> Unit,
+        onCallCreated: ((okhttp3.Call) -> Unit)? = null
     ) = withContext(Dispatchers.IO) {
         try {
             val safeFileName = sanitizeDownloadFileName(fileName)
@@ -76,15 +77,19 @@ object FileDownloader {
                 .url(url)
                 .addHeader("Referer", FILE_DOWNLOAD_REFERER)
                 .build()
-
-            val savedPath = client.newCall(request).execute().use { response ->
+    
+            val call = client.newCall(request)
+            onCallCreated?.invoke(call)
+            val isCancelled = { call.isCanceled() }
+    
+            val savedPath = call.execute().use { response ->
                 if (!response.isSuccessful) {
                     withContext(Dispatchers.Main) {
                         onError("HTTP ${response.code}")
                     }
                     return@withContext
                 }
-
+    
                 val contentLength = response.body.contentLength()
                 response.body.byteStream().use { inputStream ->
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -93,7 +98,8 @@ object FileDownloader {
                             safeFileName,
                             inputStream,
                             contentLength,
-                            onProgress
+                            onProgress,
+                            isCancelled
                         )
                     } else {
                         saveToDownloadLegacy(
@@ -101,12 +107,13 @@ object FileDownloader {
                             safeFileName,
                             inputStream,
                             contentLength,
-                            onProgress
+                            onProgress,
+                            isCancelled
                         )
                     }
                 }
             }
-
+    
             withContext(Dispatchers.Main) {
                 onComplete(savedPath)
                 openFile(context, savedPath, safeFileName)
@@ -128,16 +135,17 @@ object FileDownloader {
         fileName: String,
         inputStream: java.io.InputStream,
         contentLength: Long,
-        onProgress: (Float) -> Unit
+        onProgress: (Float) -> Unit,
+        isCancelled: () -> Boolean
     ): String {
         val resolver = context.contentResolver
         val uri = insertPendingDownload(resolver, fileName)
-
+    
         try {
             resolver.openOutputStream(uri)?.use { outputStream ->
-                copyWithProgress(inputStream, outputStream, contentLength, onProgress)
+                copyWithProgress(inputStream, outputStream, contentLength, onProgress, isCancelled)
             } ?: throw IOException("无法写入文件")
-
+    
             fixSuffixAfterExtension(resolver, uri, fileName)
             val publishedValues = ContentValues().apply {
                 put(MediaStore.MediaColumns.IS_PENDING, 0)
@@ -233,23 +241,24 @@ object FileDownloader {
         fileName: String,
         inputStream: java.io.InputStream,
         contentLength: Long,
-        onProgress: (Float) -> Unit
+        onProgress: (Float) -> Unit,
+        isCancelled: () -> Boolean
     ): String {
         if (requiresLegacyWritePermission(context)) {
             throw LegacyStoragePermissionRequiredException()
         }
-
+    
         val downloadDir = legacyMurexideDownloadDirectory(context)
-
+    
         if (!downloadDir.exists() && !downloadDir.mkdirs()) {
             throw IOException("无法创建下载目录")
         }
-
+    
         val file = createUniqueFile(downloadDir, fileName)
-
+    
         try {
             FileOutputStream(file).use { outputStream ->
-                copyWithProgress(inputStream, outputStream, contentLength, onProgress)
+                copyWithProgress(inputStream, outputStream, contentLength, onProgress, isCancelled)
             }
             return file.absolutePath
         } catch (error: Throwable) {
@@ -262,17 +271,21 @@ object FileDownloader {
         inputStream: java.io.InputStream,
         outputStream: java.io.OutputStream,
         contentLength: Long,
-        onProgress: (Float) -> Unit
+        onProgress: (Float) -> Unit,
+        isCancelled: () -> Boolean
     ) {
         val buffer = ByteArray(8192)
         var bytesRead: Int
         var totalBytesRead = 0L
         var lastProgress = -1f
-
+    
         while (inputStream.read(buffer).also { bytesRead = it } != -1) {
+            if (isCancelled()) {
+                throw IOException("已取消下载")
+            }
             outputStream.write(buffer, 0, bytesRead)
             totalBytesRead += bytesRead
-
+    
             if (contentLength > 0) {
                 val progress = (totalBytesRead.toFloat() / contentLength).coerceIn(0f, 1f)
                 if (progress - lastProgress >= 0.01f) {
@@ -283,7 +296,7 @@ object FileDownloader {
                 onProgress(-1f)
             }
         }
-
+    
         outputStream.flush()
         onProgress(1f)
     }
@@ -329,7 +342,7 @@ object FileDownloader {
         throw IOException("无法创建不重名的下载文件")
     }
 
-    private fun openFile(context: Context, filePathOrUri: String, fileName: String) {
+    fun openFile(context: Context, filePathOrUri: String, fileName: String) {
         try {
             val uri = if (filePathOrUri.startsWith("content://")) {
                 filePathOrUri.toUri()

@@ -1976,10 +1976,11 @@ fun ChatScreen(
                                 downloadProgress = downloadingFiles[message.msgId],
                                 isDownloaded = message.msgId in uiState.downloadedFiles,
                                 onDownloadClick = { msg ->
-                                    if (!selectionMode) {
-                                        startDownload(msg)
-                                    } else {
-                                        viewModel.toggleMessageSelection(msg)
+                                    when {
+                                        selectionMode -> viewModel.toggleMessageSelection(msg)
+                                        downloadingFiles.containsKey(msg.msgId) -> viewModel.cancelDownload(msg.msgId)
+                                        msg.msgId in uiState.downloadedFiles -> viewModel.openDownloadedFile(msg, context)
+                                        else -> startDownload(msg)
                                     }
                                 },
                                 onButtonClick = { msg, button ->

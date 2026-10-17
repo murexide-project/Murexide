@@ -39,6 +39,8 @@ import com.juhao.murexide.data.StickerPack
 import com.juhao.murexide.data.resolveStickerUrl
 import com.juhao.murexide.ui.icons.AppIcons
 import com.juhao.murexide.ui.components.ExpressiveDropdownMenu
+import com.juhao.murexide.ui.components.fullImagePreviewItem
+import com.juhao.murexide.ui.components.showImageViewer
 
 private const val GRID_COLUMNS = 4
 
@@ -508,15 +510,17 @@ private fun UploadProgressBar(progress: Float) {
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun StickerPreviewHeader(
     url: String,
     height: Dp
 ) {
     val context = LocalContext.current
-    val imageRequest = remember(url) {
+    val resolvedUrl = remember(url) { resolveStickerUrl(url) }
+    val imageRequest = remember(resolvedUrl) {
         ImageRequest.Builder(context)
-            .data(resolveStickerUrl(url))
+            .data(resolvedUrl)
             .apply {
                 if (url.contains("jwznb.com")) {
                     setHeader("Referer", "https://myapp.jwznb.com")
@@ -530,7 +534,15 @@ private fun StickerPreviewHeader(
         modifier = Modifier
             .fillMaxWidth()
             .height(height)
-            .background(MaterialTheme.colorScheme.surfaceContainerLow),
+            .background(MaterialTheme.colorScheme.surfaceContainerLow)
+            .combinedClickable(
+                onClick = {
+                    showImageViewer(
+                        context = context,
+                        images = listOf(fullImagePreviewItem(resolvedUrl))
+                    )
+                }
+            ),
         contentAlignment = Alignment.Center
     ) {
         AsyncImage(
@@ -676,9 +688,11 @@ private fun StickerDetailItem(
     val context = LocalContext.current
     var menuExpanded by remember { mutableStateOf(false) }
 
-    val imageRequest = remember(sticker.url) {
+    val stickerUrl = remember(sticker.url) { resolveStickerUrl(sticker.url) }
+
+    val imageRequest = remember(stickerUrl) {
         ImageRequest.Builder(context)
-            .data(resolveStickerUrl(sticker.url))
+            .data(stickerUrl)
             .apply {
                 if (sticker.url.contains("jwznb.com")) {
                     setHeader("Referer", "https://myapp.jwznb.com")
@@ -694,7 +708,13 @@ private fun StickerDetailItem(
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(8.dp))
                 .combinedClickable(
-                    onClick = { menuExpanded = true }
+                    onClick = {
+                        showImageViewer(
+                            context = context,
+                            images = listOf(fullImagePreviewItem(stickerUrl))
+                        )
+                    },
+                    onLongClick = { menuExpanded = true }
                 )
                 .padding(4.dp),
             horizontalAlignment = Alignment.CenterHorizontally
