@@ -340,10 +340,6 @@ private fun MessageBubbleBody(
             ),
         verticalAlignment = Alignment.Bottom
     ) {
-        if (isFirstFromSender || isLastFromSender) {
-            Spacer(modifier = Modifier.height(AVATAR_SIZE_DP.dp))
-        }
-
         val hideMyAvatar = isMine && !showMyBubbleAvatarSetting
 
         if (!hideMyAvatar) {
@@ -408,8 +404,8 @@ private fun MessageBubbleBody(
                     colors = CardDefaults.cardColors(containerColor = cardColor),
                     modifier = Modifier.weight(1f, fill = false)
                 ) {
-                    Box(modifier = Modifier.padding(if (hideCard) 0.dp else 8.dp)) {
-                        Column {
+                    Box {
+                        Column(modifier = Modifier.padding(if (hideCard) 0.dp else 8.dp)) {
                             val displayName = if (hideSenderInfo && anonymousNameProvider != null) {
                                 anonymousNameProvider(message.senderId)
                             } else {
@@ -515,12 +511,11 @@ private fun MessageBubbleBody(
                             isRecalled = message.isRecalled,
                             modifier = Modifier
                                 .align(if (isMine) Alignment.BottomStart else Alignment.BottomEnd)
-                                .background(cardColor)
-                                .padding(
-                                    start = if (isMine) 0.dp else 4.dp,
-                                    end = if (isMine) 4.dp else 0.dp,
-                                    top = 2.dp
+                                .padding(4.dp)
+                                .then(
+                                    if (hideCard) Modifier.background(cardColor.copy(alpha = 0.6f), RoundedCornerShape(24.dp)) else Modifier
                                 )
+                                .padding(horizontal = 4.dp, vertical = 2.dp)
                         )
                     }
                 }

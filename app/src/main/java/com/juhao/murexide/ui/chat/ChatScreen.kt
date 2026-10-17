@@ -354,6 +354,7 @@ fun ChatScreen(
     val scope = rememberCoroutineScope()
     val clipboardManager = LocalClipboard.current
     val uiState by viewModel.screenState.collectAsState()
+    val lastReadAnchor by viewModel.lastReadAnchor.collectAsState()
     val themeColor by UiState.themeColor
     val chatBackgroundColor = if (themeColor == "WHITE") {
         MaterialTheme.colorScheme.surfaceContainer
@@ -556,11 +557,42 @@ fun ChatScreen(
     var composerHeightPx by remember { mutableIntStateOf(0) }
     var listHeightPx by remember { mutableIntStateOf(0) }
     var showScrollToBottom by remember { mutableStateOf(false) }
-    var unreadCount by remember { mutableIntStateOf(initialUnreadCount) }
+    var liveUnreadCount by remember { mutableIntStateOf(0) }
+    var hasJumpedToUnread by remember { mutableStateOf(false) }
     var firstMessageId by remember { mutableStateOf<String?>(null) }
     var highlightedMessageId by remember { mutableStateOf<String?>(null) }
     var highlightRequest by remember { mutableIntStateOf(0) }
     var quoteJumpJob by remember { mutableStateOf<Job?>(null) }
+
+    var firstUnreadMsgId by remember { mutableStateOf<String?>(null) }
+    var firstUnreadResolved by remember { mutableStateOf(false) }
+
+    LaunchedEffect(
+        lastReadAnchor,
+        initialUnreadCount,
+        searchTargetMsgId,
+        uiState.messages.isNotEmpty()
+    ) {
+        if (firstUnreadResolved) return@LaunchedEffect
+        if (searchTargetMsgId != null) {
+            firstUnreadResolved = true
+            return@LaunchedEffect
+        }
+        if (uiState.messages.isEmpty()) return@LaunchedEffect
+
+        if (lastReadAnchor != null) {
+            firstUnreadMsgId = lastReadAnchor
+            firstUnreadResolved = true
+            return@LaunchedEffect
+        }
+
+        if (initialUnreadCount <= 0 || initialUnreadCount > uiState.messages.size) {
+            firstUnreadResolved = true
+            return@LaunchedEffect
+        }
+        firstUnreadMsgId = uiState.messages.getOrNull(initialUnreadCount - 1)?.msgId
+        firstUnreadResolved = true
+    }
 
     LaunchedEffect(highlightedMessageId, highlightRequest) {
         val highlightedId = highlightedMessageId ?: return@LaunchedEffect
@@ -723,20 +755,6 @@ fun ChatScreen(
         }
     }
 
-    val unreadDividerMsgId = remember(
-        initialUnreadCount,
-        uiState.messages,
-        searchTargetMsgId
-    ) {
-        if (searchTargetMsgId != null) return@remember null
-        if (initialUnreadCount <= 0 || uiState.messages.isEmpty()) return@remember null
-        if (initialUnreadCount > uiState.messages.size) {
-            uiState.messages.lastOrNull()?.msgId
-        } else {
-            uiState.messages.getOrNull(initialUnreadCount - 1)?.msgId
-        }
-    }
-
     LaunchedEffect(showMenuMsgId, displayItems) {
         val targetMsgId = showMenuMsgId ?: return@LaunchedEffect
         if (displayItems.none { it.message.msgId == targetMsgId }) {
@@ -807,7 +825,7 @@ fun ChatScreen(
 
                 showScrollToBottom = !atBottom
                 if (atBottom) {
-                    unreadCount = 0
+                    liveUnreadCount = 0
                 }
             }
     }
@@ -862,11 +880,11 @@ fun ChatScreen(
 
                 if (isAtBottom && !listState.isScrollInProgress) {
                     listState.animateScrollToItem(0)
-                    unreadCount = 0
+                    liveUnreadCount = 0
                     pendingCount = 0
                 } else {
                     if (!message.isMine) {
-                        unreadCount += pendingCount
+                        liveUnreadCount += pendingCount
                     }
                     pendingCount = 0
                 }
@@ -876,7 +894,7 @@ fun ChatScreen(
     val scrollToBottom: () -> Unit = {
         scope.launch {
             listState.animateScrollToItem(0)
-            unreadCount = 0
+            liveUnreadCount = 0
             if (uiState.messages.isNotEmpty()) {
                 firstMessageId = uiState.messages.first().msgId
             }
@@ -1456,13 +1474,13 @@ fun ChatScreen(
                             ) {
                                 if (uiState.isGag) {
                                     val gagUntilTimestamp = uiState.gagUntilTimestamp
-                                    
+
                                     val gagUntilTime = if (gagUntilTimestamp != null) {
                                         if (gagUntilTimestamp == -1L) "永久" else formatTimestamp(gagUntilTimestamp, true)
                                     } else {
                                         "未知时间"
                                     }
-                                    
+
                                     Row(
                                         modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
                                         verticalAlignment = Alignment.CenterVertically,
@@ -1979,8 +1997,8 @@ fun ChatScreen(
                                     viewModel.createExpression(it)
                                 }
                             )
-                            
-                            if (message.msgId == unreadDividerMsgId) {
+
+                            if (message.msgId == firstUnreadMsgId) {
                                 UnreadDivider()
                             }
                         }
@@ -2024,26 +2042,72 @@ fun ChatScreen(
                             .clipToBounds()
                     )
 
+                    AnimatedVisibility(
+                        visible = firstUnreadMsgId != null && !hasJumpedToUnread,
+                        enter = fadeIn() + expandVertically(),
+                        exit = fadeOut() + shrinkVertically(),
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(
+                                top = innerPadding.calculateTopPadding() + 12.dp,
+                                end = 12.dp
+                            )
+                    ) {
+                        BadgedBox(
+                            badge = {
+                                if (initialUnreadCount > 0) {
+                                    Badge(
+                                        containerColor = MaterialTheme.colorScheme.error,
+                                        contentColor = MaterialTheme.colorScheme.onError
+                                    ) {
+                                        Text(
+                                            text = if (initialUnreadCount > 99) "99+" else initialUnreadCount.toString(),
+                                            fontSize = 10.sp
+                                        )
+                                    }
+                                }
+                            }
+                        ) {
+                            SmallFloatingActionButton(
+                                onClick = {
+                                    val targetId = firstUnreadMsgId ?: return@SmallFloatingActionButton
+                                    scope.launch {
+                                        val existingIdx = displayItems.indexOfFirst {
+                                            it.message.msgId == targetId
+                                        }
+                                        if (existingIdx >= 0) {
+                                            listState.animateScrollToItem(existingIdx)
+                                        } else if (viewModel.loadQuotedMessage(targetId)) {
+                                            val idx = withTimeoutOrNull(2_000.milliseconds) {
+                                                snapshotFlow {
+                                                    displayItems.indexOfFirst { it.message.msgId == targetId }
+                                                }.first { it >= 0 }
+                                            }
+                                            if (idx != null) {
+                                                listState.animateScrollToItem(idx)
+                                            }
+                                        }
+                                        liveUnreadCount = 0
+                                        hasJumpedToUnread = true
+                                    }
+                                },
+                                shape = CircleShape
+                            ) {
+                                Icon(
+                                    imageVector = AppIcons.ArrowUpward,
+                                    contentDescription = "跳转到未读消息",
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+                    }
+
                     AnimatedScrollToBottomButton(
-                        visible = showScrollToBottom || uiState.hasNewer ||
-                            (unreadCount > 0 && unreadDividerMsgId != null),
-                        unreadCount = unreadCount,
+                        visible = showScrollToBottom || uiState.hasNewer,
+                        unreadCount = liveUnreadCount,
                         loadNewerMode = uiState.hasNewer && !showScrollToBottom,
                         onClick = {
-                            val dividerId = unreadDividerMsgId
-                            if (unreadCount > 0 && dividerId != null) {
-                                scope.launch {
-                                    val idx = displayItems.indexOfFirst {
-                                        it.message.msgId == dividerId
-                                    }
-                                    if (idx >= 0) {
-                                        listState.animateScrollToItem(idx)
-                                    } else {
-                                        listState.animateScrollToItem(0)
-                                    }
-                                    unreadCount = 0
-                                }
-                            } else if (showScrollToBottom) {
+                            if (showScrollToBottom) {
                                 scrollToBottom()
                             } else if (uiState.hasNewer) {
                                 viewModel.loadNewer()

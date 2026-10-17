@@ -148,6 +148,10 @@ class ChatViewModel(
     private val _downloadingFiles = MutableStateFlow<Map<String, Float>>(emptyMap())
     val downloadingFiles: StateFlow<Map<String, Float>> = _downloadingFiles.asStateFlow()
 
+    private val _lastReadAnchor = MutableStateFlow<String?>(null)
+    val lastReadAnchor: StateFlow<String?> = _lastReadAnchor.asStateFlow()
+    private var lastReadAnchorInitialized = false
+
     private var historyCursorMessageId: String? = null
     private var cachedHistoryCursor: MessageItem? = null
     private var isUsingCachedHistory = false
@@ -158,7 +162,7 @@ class ChatViewModel(
 
     private var draftSaveJob: Job? = null
     private var draftRestored = false
-    
+
     private val conversationKey = ConversationKey(chatId = chatId, chatType = chatType)
 
     init {
@@ -398,6 +402,10 @@ class ChatViewModel(
                 ).first()
                 if (loadGeneration != historyLoadGeneration) return@launch
                 initialCachedMessages = cached
+                if (!lastReadAnchorInitialized) {
+                    _lastReadAnchor.value = cached.firstOrNull()?.msgId
+                    lastReadAnchorInitialized = true
+                }
             }
 
             repository.getMessageList(
