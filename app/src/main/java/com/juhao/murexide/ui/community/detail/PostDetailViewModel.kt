@@ -155,6 +155,30 @@ class PostDetailViewModel(
             }
         }
     }
+    
+    fun submitComment(content: String, onResult: (Boolean) -> Unit = {}) {
+        val repo = repository ?: return
+        val post = _uiState.value.post ?: return
+        val trimmed = content.trim()
+        if (trimmed.isEmpty()) return
+    
+        viewModelScope.launch {
+            repo.createComment(postId = post.id, content = trimmed)
+                .onSuccess {
+                    _uiState.update { state ->
+                        state.copy(
+                            post = state.post?.copy(commentNum = state.post.commentNum + 1),
+                            commentTotal = state.commentTotal + 1
+                        )
+                    }
+                    loadComments(reset = true)
+                    onResult(true)
+                }
+                .onFailure {
+                    onResult(false)
+                }
+        }
+    }
 
     fun deletePost() {
         val repo = repository ?: return

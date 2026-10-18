@@ -223,6 +223,7 @@ internal fun FloatingAvatarsLayer(
     listHeightPx: Int,
     composerHeightPx: Int,
     showMyAvatar: Boolean,
+    dividerMsgId: String? = null,
     onAvatarClick: (MessageItem) -> Unit,
     onAvatarLongClick: (MessageItem) -> Unit,
     modifier: Modifier = Modifier
@@ -231,8 +232,12 @@ internal fun FloatingAvatarsLayer(
     val avatarSize = 36.dp
     val avatarSizePx = with(density) { avatarSize.toPx() }
     val bubbleInsetPx = with(density) { 1.dp.toPx() }
+    val dividerHeightPx = with(density) { 33.dp.toPx() }
 
-    val placements by remember(items, listHeightPx, composerHeightPx, showMyAvatar, avatarSizePx) {
+    val placements by remember(
+        items, listHeightPx, composerHeightPx, showMyAvatar,
+        avatarSizePx, dividerMsgId, dividerHeightPx
+    ) {
         derivedStateOf {
             computeAvatarPlacements(
                 layoutInfo = listState.layoutInfo,
@@ -241,7 +246,9 @@ internal fun FloatingAvatarsLayer(
                 composerHeightPx = composerHeightPx,
                 showMyAvatar = showMyAvatar,
                 avatarSizePx = avatarSizePx,
-                bubbleInsetPx = bubbleInsetPx
+                bubbleInsetPx = bubbleInsetPx,
+                dividerMsgId = dividerMsgId,
+                dividerHeightPx = dividerHeightPx
             )
         }
     }
@@ -300,7 +307,9 @@ internal fun computeAvatarPlacements(
     composerHeightPx: Int,
     showMyAvatar: Boolean,
     avatarSizePx: Float,
-    bubbleInsetPx: Float
+    bubbleInsetPx: Float,
+    dividerMsgId: String? = null,
+    dividerHeightPx: Float = 0f
 ): List<AvatarPlacement> {
     val visible = layoutInfo.visibleItemsInfo
     if (visible.isEmpty()) return emptyList()
@@ -321,18 +330,21 @@ internal fun computeAvatarPlacements(
     for (info in visible) {
         val item = items.getOrNull(info.index) ?: continue
         val message = item.message
-
+    
         if (message.contentType == MessageItem.CONTENT_TYPE_TIP) {
             currentGroup = null
             continue
         }
-
+    
         val bottomInset = if (item.isFirstFromSender) bubbleInsetPx else 0f
         val topInset = if (item.isLastFromSender) bubbleInsetPx else 0f
-
+    
         val rawBottom = (listHeightPx - composerHeightPx - info.offset).toFloat()
         val rawTop = rawBottom - info.size.toFloat()
-        val cellBottom = rawBottom - bottomInset
+
+        val dividerExtra = if (message.msgId == dividerMsgId) dividerHeightPx else 0f
+
+        val cellBottom = rawBottom - dividerExtra - bottomInset
         val cellTop = rawTop + topInset
 
         val isMine = message.isMine

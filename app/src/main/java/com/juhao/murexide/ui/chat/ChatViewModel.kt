@@ -144,13 +144,12 @@ class ChatViewModel(
 
     private val _downloadingFiles = MutableStateFlow<Map<String, Float>>(emptyMap())
     val downloadingFiles: StateFlow<Map<String, Float>> = _downloadingFiles.asStateFlow()
-    
+
     private val downloadCalls = mutableMapOf<String, okhttp3.Call>()
     private val downloadedFileUris = mutableMapOf<String, String>()
 
-    private val _lastReadAnchor = MutableStateFlow<String?>(null)
-    val lastReadAnchor: StateFlow<String?> = _lastReadAnchor.asStateFlow()
-    private var lastReadAnchorInitialized = false
+    private val _lastVisibleMsgId = MutableStateFlow<String?>(null)
+    val lastVisibleMsgId: StateFlow<String?> = _lastVisibleMsgId.asStateFlow()
 
     private var historyCursorMessageId: String? = null
     private var cachedHistoryCursor: MessageItem? = null
@@ -163,11 +162,20 @@ class ChatViewModel(
     private var draftSaveJob: Job? = null
     private var draftRestored = false
 
+    private var initialLastVisibleMsgId: String? = null
+    private var lastVisibleInitialized = false
+
     private val conversationKey = ConversationKey(chatId = chatId, chatType = chatType)
 
     init {
         ActiveConversationRegistry.activate(this, conversationKey)
         setupWebSocket()
+        viewModelScope.launch {
+            val stored = accountStorage.getLastVisibleMsgId(chatId, chatType)
+            initialLastVisibleMsgId = stored
+            _lastVisibleMsgId.value = stored
+            lastVisibleInitialized = true
+        }
         loadMessages()
 
         viewModelScope.launch {
@@ -190,8 +198,16 @@ class ChatViewModel(
             loadBackground()
             when (chatType) {
                 1 -> loadUserInfo()
-                2 -> { loadGroupInfo(); loadBoard(); loadInstructionData() }
-                3 -> { loadBotInfo(); loadBoard(); loadInstructionData() }
+                2 -> { 
+                    loadGroupInfo()
+                    loadBoard()
+                    loadInstructionData() 
+                }
+                3 -> { 
+                    loadBotInfo()
+                    loadBoard()
+                    loadInstructionData()
+                }
             }
         }
     }
@@ -402,10 +418,6 @@ class ChatViewModel(
                 ).first()
                 if (loadGeneration != historyLoadGeneration) return@launch
                 initialCachedMessages = cached
-                if (!lastReadAnchorInitialized) {
-                    _lastReadAnchor.value = cached.firstOrNull()?.msgId
-                    lastReadAnchorInitialized = true
-                }
             }
 
             repository.getMessageList(
@@ -433,6 +445,8 @@ class ChatViewModel(
                         error = null
                     )
                 }
+
+                maybePrefetchUntilUnread(loadGeneration)
             }.onFailure { error ->
                 if (loadGeneration != historyLoadGeneration) return@onFailure
                 cachedHistoryCursor = initialCachedMessages.lastOrNull()
@@ -449,6 +463,7 @@ class ChatViewModel(
                             error = null
                         )
                     }
+                    maybePrefetchUntilUnread(loadGeneration)
                     return@onFailure
                 }
                 _uiState.update {
@@ -460,6 +475,52 @@ class ChatViewModel(
                     )
                 }
             }
+        }
+    }
+
+    private fun maybePrefetchUntilUnread(loadGeneration: Long) {
+        viewModelScope.launch {
+            val unread = resolveConversationUnreadCount() ?: return@launch
+            if (loadGeneration != historyLoadGeneration) return@launch
+
+            if (unread <= 0) {
+                return@launch
+            }
+
+            val current = _uiState.value.messages
+            if (current.isEmpty()) return@launch
+
+            if (unread <= current.size) {
+                return@launch
+            }
+
+            var remaining = unread
+            while (remaining > 0 && _uiState.value.hasMore) {
+                if (loadGeneration != historyLoadGeneration) return@launch
+                val beforeSize = _uiState.value.messages.size
+                historyLoadMutex.withLock {
+                    if (loadGeneration != historyLoadGeneration) return@launch
+                    loadOlderMessagesUntil()
+                }
+                if (loadGeneration != historyLoadGeneration) return@launch
+                val added = _uiState.value.messages.size - beforeSize
+                if (added <= 0) break
+                remaining -= added
+            }
+        }
+    }
+
+    private suspend fun resolveConversationUnreadCount(): Int? {
+        val accountId = LocalCache.currentAccountId() ?: return null
+        return LocalCache.getCachedConversation(accountId, chatId, chatType)?.unreadMessage
+    }
+
+    fun updateLastVisibleMsgId(msgId: String) {
+        if (msgId.isBlank()) return
+        if (_lastVisibleMsgId.value == msgId) return
+        _lastVisibleMsgId.value = msgId
+        viewModelScope.launch(Dispatchers.IO) {
+            accountStorage.saveLastVisibleMsgId(chatId, chatType, msgId)
         }
     }
 
@@ -548,11 +609,15 @@ class ChatViewModel(
         draftSaveJob?.cancel()
         val text = _uiState.value.inputText
         val sending = _uiState.value.isSending
+        val lastVisible = _lastVisibleMsgId.value
         kotlinx.coroutines.GlobalScope.launch(Dispatchers.IO) {
             if (!sending && text.isNotBlank()) {
                 accountStorage.saveDraft(chatId, chatType, text)
             } else {
                 accountStorage.clearDraft(chatId, chatType)
+            }
+            if (!lastVisible.isNullOrBlank()) {
+                accountStorage.saveLastVisibleMsgId(chatId, chatType, lastVisible)
             }
         }
         ActiveConversationRegistry.deactivate(this)
@@ -1878,10 +1943,10 @@ class ChatViewModel(
         val fileName = message.fileName ?: "file_${System.currentTimeMillis()}"
         if (message.msgId in _downloadingFiles.value) return
         if (downloadCalls.containsKey(message.msgId)) return
-    
+
         _downloadingFiles.update { it + (message.msgId to 0f) }
         _uiState.update { it.copy(downloadedFiles = it.downloadedFiles - message.msgId) }
-    
+
         viewModelScope.launch {
             try {
                 downloadFileWithProgress(
@@ -1913,14 +1978,14 @@ class ChatViewModel(
             }
         }
     }
-    
+
     fun cancelDownload(msgId: String) {
         downloadCalls.remove(msgId)?.cancel()
         _downloadingFiles.update { it - msgId }
         _uiState.update { it.copy(downloadedFiles = it.downloadedFiles - msgId) }
         viewModelScope.launch { _toastMessage.emit("已取消下载") }
     }
-    
+
     fun openDownloadedFile(message: MessageItem, context: Context) {
         val path = downloadedFileUris[message.msgId] ?: return
         FileDownloader.openFile(context, path, message.fileName ?: "file")

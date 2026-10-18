@@ -490,6 +490,44 @@ class CommunityRepository(
             }
         }
     }
+    
+    suspend fun createComment(
+        postId: Int,
+        content: String,
+        commentId: Int = 0
+    ): Result<Boolean> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val params = buildJsonObject {
+                    put("postId", postId)
+                    put("commentId", commentId)
+                    put("content", content)
+                }
+                val requestBody = json.encodeToString(params).toRequestBody("application/json".toMediaType())
+    
+                val httpRequest = Request.Builder()
+                    .url("$baseUrl/v1/community/comment/comment")
+                    .post(requestBody)
+                    .header("token", token)
+                    .build()
+    
+                client.newCall(httpRequest).execute().use { response ->
+                    if (response.isSuccessful) {
+                        val result = json.decodeFromString<BaseResponse>(response.body.string())
+                        if (result.code == 1) {
+                            Result.success(true)
+                        } else {
+                            Result.failure(Exception(result.msg.ifEmpty { "评论失败" }))
+                        }
+                    } else {
+                        Result.failure(Exception("HTTP error: ${response.code}"))
+                    }
+                }
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+        }
+    }
 
     suspend fun toggleCollect(postId: Int): Result<Boolean> {
         return withContext(Dispatchers.IO) {

@@ -1,8 +1,6 @@
 package com.juhao.murexide.repository
 
-import com.juhao.murexide.data.ConversationItem
-import com.juhao.murexide.data.MessageItem
-import com.juhao.murexide.data.StickyItem
+import com.juhao.murexide.data.*
 import com.juhao.murexide.data.local.LocalCache
 import com.juhao.murexide.network.NetworkClient
 import com.juhao.murexide.proto.conversation.ConversationListSend
@@ -154,6 +152,73 @@ class ConversationRepository {
             } catch (e: Exception) {
                 Result.failure(e)
             }
+        }
+    }
+    
+    suspend fun addSticky(token: String, chatId: String, chatType: Int): Result<Unit> =
+        postStickyAction(token, "/v1/sticky/add", chatId, chatType)
+
+    suspend fun deleteSticky(token: String, chatId: String, chatType: Int): Result<Unit> =
+        postStickyAction(token, "/v1/sticky/delete", chatId, chatType)
+
+    private suspend fun postStickyAction(
+        token: String,
+        path: String,
+        chatId: String,
+        chatType: Int
+    ): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            val body = json.encodeToString(
+                buildJsonObject {
+                    put("chatId", chatId)
+                    put("chatType", chatType)
+                }
+            ).toRequestBody("application/json".toMediaType())
+
+            val request = Request.Builder()
+                .url("$baseUrl$path")
+                .post(body)
+                .header("token", token)
+                .build()
+
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    return@use Result.failure(Exception("HTTP error: ${response.code}"))
+                }
+                val result = json.decodeFromString<CommonResponse>(response.body.string())
+                if (result.code == 1) Result.success(Unit)
+                else Result.failure(Exception(result.msg.ifBlank { "操作失败" }))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun deleteConversation(
+        token: String,
+        chatId: String
+    ): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            val body = json.encodeToString(
+                buildJsonObject { put("chatId", chatId) }
+            ).toRequestBody("application/json".toMediaType())
+
+            val request = Request.Builder()
+                .url("$baseUrl/v1/conversation/remove")
+                .post(body)
+                .header("token", token)
+                .build()
+
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    return@use Result.failure(Exception("HTTP error: ${response.code}"))
+                }
+                val result = json.decodeFromString<CommonResponse>(response.body.string())
+                if (result.code == 1) Result.success(Unit)
+                else Result.failure(Exception(result.msg.ifBlank { "删除会话失败" }))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
         }
     }
 

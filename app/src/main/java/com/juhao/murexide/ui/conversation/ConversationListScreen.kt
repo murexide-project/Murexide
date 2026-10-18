@@ -4,14 +4,22 @@ import com.juhao.murexide.ui.icons.AppIcons
 import com.juhao.murexide.ui.icons.AutoMirroredIcon
 
 import androidx.compose.animation.*
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.animateTo
+import androidx.compose.foundation.gestures.AnchoredDraggableState
+import androidx.compose.foundation.gestures.DraggableAnchors
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.anchoredDraggable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.text.input.clearText
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
@@ -21,6 +29,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
@@ -229,8 +238,7 @@ fun ConversationListScreen(
                 if (hide) return@Crossfade
                 Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(bottom = innerPadding.calculateBottomPadding())) {
                     FloatingActionButton(
-                        onClick = { showCreateMenu = true },
-                        containerColor = MaterialTheme.colorScheme.primary
+                        onClick = { showCreateMenu = true }
                     ) {
                         Icon(AppIcons.Add, contentDescription = "添加")
                     }
@@ -415,28 +423,26 @@ fun ConversationListScreen(
                                 items = stickyConvs,
                                 key = { item -> "sticky_${item.chatType}:${item.chatId}" }
                             ) { conversation ->
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .animateContentSize()
-                                ) {
-                                    if (isStickyCollapsed) return@Box
-                                    ConversationItem(
-                                        conversation = conversation,
-                                        draft = drafts["${conversation.chatType}_${conversation.chatId}"],
-                                        isSelected = currentConversation?.chatId == conversation.chatId &&
-                                                currentConversation.chatType == conversation.chatType &&
-                                                bigScreenMode,
-                                        isSticky = true,
-                                        onClick = {
-                                            viewModel.clearUnread(
-                                                conversation.chatId,
-                                                conversation.chatType
-                                            )
-                                            onConversationClick(conversation)
-                                        }
-                                    )
-                                }
+                                if (isStickyCollapsed) return@items
+                                SwipeableConversationItem(
+                                    modifier = Modifier.animateItem(),
+                                    conversation = conversation,
+                                    draft = drafts["${conversation.chatType}_${conversation.chatId}"],
+                                    isSelected = currentConversation?.chatId == conversation.chatId &&
+                                            currentConversation.chatType == conversation.chatType &&
+                                            bigScreenMode,
+                                    isSticky = true,
+                                    onClick = {
+                                        viewModel.clearUnread(
+                                            conversation.chatId,
+                                            conversation.chatType
+                                        )
+                                        onConversationClick(conversation)
+                                    },
+                                    onPin = { viewModel.pinConversation(conversation) },
+                                    onUnpin = { viewModel.unpinConversation(conversation) },
+                                    onDelete = { viewModel.removeConversation(conversation) }
+                                )
                             }
 
                             item(key = "divider2") {
@@ -447,7 +453,8 @@ fun ConversationListScreen(
                                 items = normalConvs,
                                 key = { item -> "normal_${item.chatType}:${item.chatId}" }
                             ) { conversation ->
-                                ConversationItem(
+                                SwipeableConversationItem(
+                                    modifier = Modifier.animateItem(),
                                     conversation = conversation,
                                     draft = drafts["${conversation.chatType}_${conversation.chatId}"],
                                     isSelected = currentConversation?.chatId == conversation.chatId &&
@@ -460,7 +467,10 @@ fun ConversationListScreen(
                                             conversation.chatType
                                         )
                                         onConversationClick(conversation)
-                                    }
+                                    },
+                                    onPin = { viewModel.pinConversation(conversation) },
+                                    onUnpin = { viewModel.unpinConversation(conversation) },
+                                    onDelete = { viewModel.removeConversation(conversation) }
                                 )
                             }
                         }
@@ -537,22 +547,163 @@ fun ConversationListScreen(
     }
 }
 
+private enum class SwipeState {
+    Closed,
+    Open
+}
+
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun ConversationItem(
+private fun SwipeableConversationItem(
+    modifier: Modifier = Modifier,
     conversation: ConversationItem,
     draft: String? = null,
     isSelected: Boolean = false,
     isSticky: Boolean = false,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onPin: () -> Unit,
+    onUnpin: () -> Unit,
+    onDelete: () -> Unit
 ) {
+    val scope = rememberCoroutineScope()
+    val density = LocalDensity.current
+    val buttonWidth = 80.dp
+    val totalWidth = buttonWidth * 2
+    val totalWidthPx = with(density) { totalWidth.toPx() }
+
+    val state = remember {
+        AnchoredDraggableState(
+            initialValue = SwipeState.Closed,
+            anchors = DraggableAnchors {
+                SwipeState.Closed at 0f
+                SwipeState.Open at -totalWidthPx
+            }
+        )
+    }
+
+    LaunchedEffect(conversation.chatId, conversation.chatType, isSticky) {
+        if (state.currentValue == SwipeState.Open) {
+            state.animateTo(SwipeState.Closed)
+        }
+    }
+    
     val themeColor by UiState.themeColor
-    val listItemColor = if ((isSticky && themeColor != "WHITE") || (!isSticky && themeColor == "WHITE")) {
+    val listItemColor = if (isSelected)
+        MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+    else if ((isSticky && themeColor != "WHITE") || (!isSticky && themeColor == "WHITE")) {
         MaterialTheme.colorScheme.surfaceContainer
     } else {
         MaterialTheme.colorScheme.surface
     }
 
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(IntrinsicSize.Min)
+            .background(
+                if (isSelected)
+                    MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                else
+                    listItemColor
+            )
+            .anchoredDraggable(
+                state = state,
+                orientation = Orientation.Horizontal
+            )
+    ) {
+        Row(
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .fillMaxHeight()
+                .clip(RoundedCornerShape(16.dp))
+                .width(totalWidth)
+        ) {
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .background(MaterialTheme.colorScheme.primaryContainer)
+                    .clickable {
+                        scope.launch { state.animateTo(SwipeState.Closed) }
+                        if (isSticky) onUnpin() else onPin()
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(
+                        imageVector = AppIcons.Keep,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                    Text(
+                        text = if (isSticky) "取消置顶" else "置顶",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                }
+            }
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .background(MaterialTheme.colorScheme.errorContainer)
+                    .clickable {
+                        scope.launch { state.animateTo(SwipeState.Closed) }
+                        onDelete()
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(
+                        imageVector = AppIcons.Delete,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                    Text(
+                        text = "删除",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                }
+            }
+        }
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .offset { IntOffset(state.requireOffset().roundToInt(), 0) }
+        ) {
+            ConversationItem(
+                modifier = Modifier,
+                conversation = conversation,
+                draft = draft,
+                listItemColor = listItemColor,
+                isSelected = isSelected,
+                isSticky = isSticky,
+                onClick = {
+                    if (state.currentValue == SwipeState.Open) {
+                        scope.launch { state.animateTo(SwipeState.Closed) }
+                    } else {
+                        onClick()
+                    }
+                }
+            )
+        }
+    }
+}
+
+@Composable
+fun ConversationItem(
+    modifier: Modifier = Modifier,
+    conversation: ConversationItem,
+    draft: String? = null,
+    listItemColor: Color,
+    isSelected: Boolean = false,
+    isSticky: Boolean = false,
+    onClick: () -> Unit
+) {
     ListItem(
+        modifier = modifier,
         onClick = onClick,
         leadingContent = {
             Box{
@@ -578,10 +729,7 @@ fun ConversationItem(
             }
         },
         colors = ListItemDefaults.colors(
-            containerColor = if (isSelected)
-                MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
-            else
-                listItemColor
+            containerColor = listItemColor
         )
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {

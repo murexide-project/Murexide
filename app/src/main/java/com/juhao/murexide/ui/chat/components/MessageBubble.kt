@@ -100,6 +100,7 @@ private const val STICKER_MAX_DP = 120
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun MessageBubble(
+    modifier: Modifier = Modifier,
     message: MessageItem,
     isSelectionMode: Boolean = false,
     isSelected: Boolean = false,
@@ -196,7 +197,7 @@ fun MessageBubble(
 
     CompositionLocalProvider(LocalLayoutDirection provides bubbleLayoutDirection) {
         Row(
-            modifier = Modifier
+            modifier = modifier
                 .alpha(animatedAlpha)
                 .background(highlightColor, shape = RoundedCornerShape(12.dp))
                 .combinedClickable(
@@ -468,35 +469,26 @@ private fun MessageBubbleBody(
                                     onCreateExpression = onCreateExpression
                                 )
 
-                                if (message.isRecalled) {
-                                    Text(
-                                        text = message.getRecallDisplayContent(),
-                                        style = MaterialTheme.typography.bodySmall.copy(
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
-                                    )
-                                } else {
-                                    MessageContentRouter(
-                                        message = message,
-                                        isMine = isMine,
-                                        isSelected = isSelected,
-                                        isSelectionMode = isSelectionMode,
-                                        onLongPress = onLongPress,
-                                        onImageClick = onImageClick,
-                                        onMarkdownImageClick = onMarkdownImageClick,
-                                        onDownloadClick = onDownloadClick,
-                                        downloadProgress = downloadProgress,
-                                        isDownloaded = isDownloaded,
-                                        hideImages = hideImages,
-                                        timestampDisplay = timestampDisplay,
-                                        incomingAttachmentBackgroundColor = incomingAttachmentBackgroundColor,
-                                        audioPlaybackState = audioPlaybackState,
-                                        context = context,
-                                        bubbleCornerRadius = bubbleCornerRadius,
-                                        bubbleOpacity = bubbleOpacity,
-                                        incomingBubbleColor = incomingBubbleColor
-                                    )
-                                }
+                                MessageContentRouter(
+                                    message = message,
+                                    isMine = isMine,
+                                    isSelected = isSelected,
+                                    isSelectionMode = isSelectionMode,
+                                    onLongPress = onLongPress,
+                                    onImageClick = onImageClick,
+                                    onMarkdownImageClick = onMarkdownImageClick,
+                                    onDownloadClick = onDownloadClick,
+                                    downloadProgress = downloadProgress,
+                                    isDownloaded = isDownloaded,
+                                    hideImages = hideImages,
+                                    timestampDisplay = timestampDisplay,
+                                    incomingAttachmentBackgroundColor = incomingAttachmentBackgroundColor,
+                                    audioPlaybackState = audioPlaybackState,
+                                    context = context,
+                                    bubbleCornerRadius = bubbleCornerRadius,
+                                    bubbleOpacity = bubbleOpacity,
+                                    incomingBubbleColor = incomingBubbleColor
+                                )
 
                                 if (!message.isRecalled && message.buttons.isNotEmpty()) {
                                     MessageButtons(
@@ -522,9 +514,7 @@ private fun MessageBubbleBody(
                             modifier = Modifier
                                 .align(if (isMine) Alignment.BottomStart else Alignment.BottomEnd)
                                 .padding(4.dp)
-                                .then(
-                                    if (hideCard) Modifier.background(cardColor.copy(alpha = 0.6f), RoundedCornerShape(24.dp)) else Modifier
-                                )
+                                .background(cardColor.copy(alpha = 0.6f), RoundedCornerShape(24.dp))
                                 .padding(horizontal = 4.dp, vertical = 2.dp)
                         )
                     }
@@ -781,6 +771,16 @@ private fun MessageContentRouter(
             text = AnnotatedString(timeText),
             style = timeTextStyle
         ).size.width + with(density) { 8.dp.roundToPx() }
+    }
+    
+    if (message.isRecalled) {
+        Text(
+            text = message.getRecallDisplayContent() + reserve,
+            style = MaterialTheme.typography.bodySmall.copy(
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        )
+        return
     }
 
     when (message.contentType) {

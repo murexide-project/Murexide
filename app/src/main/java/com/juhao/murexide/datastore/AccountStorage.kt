@@ -31,7 +31,8 @@ data class UserAccount(
     val id: String = "1",
     val token: String = "",
     val isValidated: Boolean = false,
-    val drafts: Map<String, String> = emptyMap()
+    val drafts: Map<String, String> = emptyMap(),
+    val lastVisibleMsgIds: Map<String, String> = emptyMap()
 )
 
 internal fun upsertAccountInList(
@@ -90,8 +91,6 @@ class AccountStorage private constructor(context: Context) {
     @Volatile
     private var currentUserIdSnapshot: String? = null
 
-    // ========== 加密相关 ==========
-
     private fun loadOrCreateSecretKey(): SecretKey {
         val keyStore = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
         if (keyStore.containsAlias(KEY_ALIAS)) {
@@ -143,8 +142,6 @@ class AccountStorage private constructor(context: Context) {
     private fun encodeAccounts(accounts: List<UserAccount>): String =
         encrypt(json.encodeToString(accounts))
 
-    // ========== 原子存储操作 ==========
-
     private suspend fun readStoredAccounts(): StoredAccounts = withContext(Dispatchers.IO) {
         val preferences = dataStore.data.first()
         StoredAccounts(
@@ -153,10 +150,6 @@ class AccountStorage private constructor(context: Context) {
         ).also { currentUserIdSnapshot = it.currentUserId }
     }
 
-    /**
-     * DataStore serializes edit transforms. Reading, decrypting, changing, and encrypting the
-     * account list in this single transform prevents a stale instance from overwriting newer data.
-     */
     private suspend fun updateStoredAccounts(
         transform: (StoredAccounts) -> StoredAccounts
     ): StoredAccounts = withContext(Dispatchers.IO) {
@@ -184,8 +177,6 @@ class AccountStorage private constructor(context: Context) {
 
         checkNotNull(updated).also { currentUserIdSnapshot = it.currentUserId }
     }
-
-    // ========== 账户存储相关 ==========
 
     suspend fun getDefaultAccount(): UserAccount {
         val stored = readStoredAccounts()
@@ -222,10 +213,6 @@ class AccountStorage private constructor(context: Context) {
         }
     }
 
-    /**
-     * Replaces every stored copy of this account in one DataStore transaction.
-     * [obsoleteAccountId] is used to remove a temporary pre-validation account ID.
-     */
     suspend fun upsertAccount(
         account: UserAccount,
         makeCurrent: Boolean,
@@ -301,8 +288,6 @@ class AccountStorage private constructor(context: Context) {
         .distinctUntilChanged()
         .flowOn(Dispatchers.IO)
 
-    // ========== 当前用户管理 ==========
-
     suspend fun setCurrentUser(accountId: String) {
         updateStoredAccounts { stored ->
             val account = stored.accounts.find { it.id == accountId }
@@ -331,12 +316,6 @@ class AccountStorage private constructor(context: Context) {
         }
         .distinctUntilChanged()
 
-    /**
-     * 当前账号的原子快照。
-     *
-     * 用户 ID 与账号列表来自同一次 DataStore 发射，避免切换账号时把新 ID 和旧 Token
-     * 临时组合到一起。WebSocket 登录应直接使用这里已经校验并持久化的账号信息。
-     */
     val currentAccountFlow: Flow<UserAccount?> = dataStore.data
         .map { preferences ->
             val currentUserId = preferences[CURRENT_USER_ID_KEY]
@@ -365,7 +344,6 @@ class AccountStorage private constructor(context: Context) {
         .map { account -> account?.token?.takeIf { it.isNotEmpty() } }
         .distinctUntilChanged()
 
-    /** 获取最近一次异步读取到的用户 ID；应用启动前可能为 null。 */
     fun getCurrentUserIdSync(): String? = currentUserIdSnapshot
 
     suspend fun updateCurrentToken(token: String) {
@@ -378,8 +356,6 @@ class AccountStorage private constructor(context: Context) {
             )
         }
     }
-
-    // ========== 便捷方法 ==========
 
     suspend fun getAccountById(accountId: String): UserAccount? =
         getAccounts().find { it.id == accountId }
@@ -414,7 +390,7 @@ class AccountStorage private constructor(context: Context) {
     suspend fun getCurrentAvatar(): String? = getCurrentAccount()?.avatar
 
     suspend fun getCurrentUserInfo(): UserAccount? = getCurrentAccount()
-    
+
     suspend fun saveDraft(chatId: String, chatType: Int, draft: String) {
         updateStoredAccounts { stored ->
             val currentId = stored.currentUserId ?: return@updateStoredAccounts stored
@@ -433,17 +409,43 @@ class AccountStorage private constructor(context: Context) {
             )
         }
     }
-    
+
     suspend fun getDraft(chatId: String, chatType: Int): String {
         val account = getCurrentAccount() ?: return ""
         return account.drafts["${chatType}_$chatId"] ?: ""
     }
-    
+
     suspend fun clearDraft(chatId: String, chatType: Int) {
         saveDraft(chatId, chatType, "")
     }
-    
+
     val currentDraftsFlow: Flow<Map<String, String>> = currentAccountFlow
         .map { it?.drafts ?: emptyMap() }
+        .distinctUntilChanged()
+
+    suspend fun saveLastVisibleMsgId(chatId: String, chatType: Int, msgId: String) {
+        if (msgId.isBlank()) return
+        updateStoredAccounts { stored ->
+            val currentId = stored.currentUserId ?: return@updateStoredAccounts stored
+            stored.copy(
+                accounts = stored.accounts.map { account ->
+                    if (account.id == currentId) {
+                        val key = "${chatType}_$chatId"
+                        account.copy(
+                            lastVisibleMsgIds = account.lastVisibleMsgIds + (key to msgId)
+                        )
+                    } else account
+                }
+            )
+        }
+    }
+
+    suspend fun getLastVisibleMsgId(chatId: String, chatType: Int): String? {
+        val account = getCurrentAccount() ?: return null
+        return account.lastVisibleMsgIds["${chatType}_$chatId"]
+    }
+
+    val currentLastVisibleMsgIdsFlow: Flow<Map<String, String>> = currentAccountFlow
+        .map { it?.lastVisibleMsgIds ?: emptyMap() }
         .distinctUntilChanged()
 }

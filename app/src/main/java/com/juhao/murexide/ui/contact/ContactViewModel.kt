@@ -40,8 +40,12 @@ class ContactViewModel(
     val uiState: StateFlow<ContactUiState> = _uiState.asStateFlow()
 
     init {
-        loadContacts()
-        loadRequests()
+        viewModelScope.launch {
+            loadCachedContactsOrEmpty()
+            loadCachedRequestsOrEmpty()
+            loadContacts()
+            loadRequests()
+        }
         observeInvitationUpdates()
     }
 
@@ -50,12 +54,12 @@ class ContactViewModel(
             _uiState.update { it.copy(isLoading = true, error = null) }
             repository.syncCachedAddressBook(token)
                 .onSuccess { groups ->
-                    _uiState.update {
-                        it.copy(
-                            contactGroups = groups,
-                            isLoading = false,
-                            error = null
-                        )
+                    _uiState.update { state ->
+                        if (groups.isEmpty() && state.contactGroups.isNotEmpty()) {
+                            state.copy(isLoading = false, error = null)
+                        } else {
+                            state.copy(contactGroups = groups, isLoading = false, error = null)
+                        }
                     }
                 }
                 .onFailure { e ->

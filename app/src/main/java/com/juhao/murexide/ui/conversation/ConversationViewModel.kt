@@ -427,4 +427,90 @@ class ConversationViewModel(
             }
         }
     }
+
+    private fun conversationToSticky(conversation: ConversationItem): StickyItem =
+        StickyItem(
+            id = 0,
+            chatType = conversation.chatType,
+            chatId = conversation.chatId,
+            chatName = conversation.displayName,
+            avatarUrl = conversation.avatarUrl,
+            certificationLevel = conversation.certificationLevel
+        )
+
+    fun pinConversation(conversation: ConversationItem) {
+        val state = _uiState.value as? ConversationUiState.Success ?: return
+        val oldSticky = state.stickyConversations
+        val oldIds = _stickyIds.value
+
+        val newSticky = conversationToSticky(conversation)
+        applySticky(listOf(newSticky) + oldSticky)
+        syncConversationCache()
+
+        viewModelScope.launch {
+            repository.addSticky(token, conversation.chatId, conversation.chatType)
+                .onSuccess {
+                    fetchStickyList()
+                }
+                .onFailure {
+                    applySticky(oldSticky)
+                    _stickyIds.value = oldIds
+                    syncConversationCache()
+                }
+        }
+    }
+
+    fun unpinConversation(conversation: ConversationItem) {
+        val state = _uiState.value as? ConversationUiState.Success ?: return
+        val oldSticky = state.stickyConversations
+        val oldIds = _stickyIds.value
+
+        applySticky(oldSticky.filterNot { it.chatId == conversation.chatId })
+        syncConversationCache()
+
+        viewModelScope.launch {
+            repository.deleteSticky(token, conversation.chatId, conversation.chatType)
+                .onFailure {
+                    applySticky(oldSticky)
+                    _stickyIds.value = oldIds
+                    syncConversationCache()
+                }
+        }
+    }
+
+    fun removeConversation(conversation: ConversationItem) {
+        val state = _uiState.value as? ConversationUiState.Success ?: return
+
+        val oldConversations = state.conversations
+        val oldSticky = state.stickyConversations
+        val oldIds = _stickyIds.value
+        val wasSticky = oldIds.contains(conversation.chatId)
+
+        val newConversations = oldConversations.filterNot {
+            it.chatId == conversation.chatId && it.chatType == conversation.chatType
+        }
+        _uiState.value = state.copy(
+            conversations = newConversations,
+            stickyConversations = oldSticky.filterNot { it.chatId == conversation.chatId }
+        )
+        _stickyIds.value = oldIds - conversation.chatId
+        syncConversationCache()
+
+        viewModelScope.launch {
+            repository.deleteConversation(token, conversation.chatId)
+                .onSuccess {
+                    if (wasSticky) {
+                        repository.deleteSticky(token, conversation.chatId, conversation.chatType)
+                    }
+                }
+                .onFailure {
+                    _uiState.value = state.copy(
+                        conversations = oldConversations,
+                        stickyConversations = oldSticky
+                    )
+                    _stickyIds.value = oldIds
+                    syncConversationCache()
+                }
+        }
+    }
 }

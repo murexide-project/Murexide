@@ -17,7 +17,6 @@ import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import android.widget.Toast
 import androidx.compose.ui.draw.clip
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.ui.Alignment
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
@@ -69,6 +68,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.juhao.murexide.ui.components.Avatar
 import com.juhao.murexide.ui.components.ExpressiveDropdownMenu
+import com.juhao.murexide.ui.components.FloatingTopBar
 import com.juhao.murexide.ui.components.fullImagePreviewItem
 import com.juhao.murexide.ui.components.imageMessagePreviewItem
 import com.juhao.murexide.ui.components.videoMessagePreviewItem
@@ -133,110 +133,6 @@ private enum class ChatInputPanel {
 }
 
 private val DefaultInputPanelHeight = 280.dp
-
-@Composable
-private fun FloatingTopBar(
-    hazeState: HazeState,
-    liquidBackdrop: Backdrop?,
-    navigationIcon: (@Composable () -> Unit)? = null,
-    actions: (@Composable RowScope.() -> Unit)? = null,
-    title: @Composable () -> Unit,
-    showOverlay: Boolean = true
-) {
-    val liquidGlassEnabled = LocalLiquidGlassEnabled.current
-    val liquidGlassBlur = LocalLiquidGlassBlur.current
-    val controlSize = 48.dp
-    val buttonShape = CircleShape
-    val topBarColor = MaterialTheme.colorScheme.surfaceContainer
-    val topBarStyle = HazeMaterials.thin().then {
-        blurRadius(32.dp)
-        noiseFactor(0f)
-    }
-    val useGlassBar = liquidGlassEnabled && liquidBackdrop != null
-    val glassSurfaceColor = topBarColor.copy(alpha = 0.8f)
-
-    fun Modifier.glassControl(shape: androidx.compose.ui.graphics.Shape): Modifier =
-        if (useGlassBar) {
-            drawBackdrop(
-                backdrop = liquidBackdrop,
-                shape = { shape },
-                effects = {
-                    vibrancy()
-                    blur(1.dp.toPx() * liquidGlassBlur)
-                    lens(16.dp.toPx(), 32.dp.toPx())
-                },
-                onDrawSurface = {
-                    drawRect(glassSurfaceColor)
-                },
-            )
-        } else {
-            shadow(2.dp, shape)
-                .clip(shape)
-                .hazeBlur(
-                    input = HazeInput.Sources(hazeState),
-                    style = topBarStyle
-                )
-        }
-
-    Box(modifier = Modifier.fillMaxWidth()) {
-        if (showOverlay) {
-            Box(
-                modifier = Modifier
-                    .matchParentSize()
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(
-                                topBarColor.copy(alpha = 0.8f),
-                                topBarColor.copy(alpha = 0.6f),
-                                Color.Transparent
-                            )
-                        )
-                    )
-            )
-        }
-
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .statusBarsPadding()
-                .padding(horizontal = 6.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            if (navigationIcon != null) {
-                Box(
-                    modifier = Modifier
-                        .size(controlSize)
-                        .glassControl(buttonShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    navigationIcon()
-                }
-            }
-
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .height(controlSize)
-                    .glassControl(RoundedCornerShape(24.dp)),
-                contentAlignment = Alignment.CenterStart
-            ) {
-                title()
-            }
-
-            if (actions != null) {
-                Row(
-                    modifier = Modifier
-                        .height(controlSize)
-                        .glassControl(buttonShape),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    actions()
-                }
-            }
-        }
-    }
-}
 
 private suspend fun View.measureShownImeHeight(): Int? {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return null
@@ -354,7 +250,7 @@ fun ChatScreen(
     val scope = rememberCoroutineScope()
     val clipboardManager = LocalClipboard.current
     val uiState by viewModel.screenState.collectAsState()
-    val lastReadAnchor by viewModel.lastReadAnchor.collectAsState()
+    val lastVisibleMsgId by viewModel.lastVisibleMsgId.collectAsState()
     val themeColor by UiState.themeColor
     val chatBackgroundColor = if (themeColor == "WHITE") {
         MaterialTheme.colorScheme.surfaceContainer
@@ -565,41 +461,20 @@ fun ChatScreen(
     var quoteJumpJob by remember { mutableStateOf<Job?>(null) }
 
     var firstUnreadMsgId by remember { mutableStateOf<String?>(null) }
-    var firstUnreadResolved by remember { mutableStateOf(false) }
 
     LaunchedEffect(
-        lastReadAnchor,
+        lastVisibleMsgId,
         initialUnreadCount,
-        searchTargetMsgId,
-        uiState.messages.isNotEmpty()
+        uiState.messages.size,
+        uiState.messages.firstOrNull()?.msgId
     ) {
-        if (firstUnreadResolved) return@LaunchedEffect
-        if (searchTargetMsgId != null) {
-            firstUnreadResolved = true
-            return@LaunchedEffect
-        }
         if (uiState.messages.isEmpty()) return@LaunchedEffect
+        if (firstUnreadMsgId != null) return@LaunchedEffect
 
-        if (lastReadAnchor != null) {
-            firstUnreadMsgId = lastReadAnchor
-            firstUnreadResolved = true
-            return@LaunchedEffect
-        }
-
-        if (initialUnreadCount <= 0 || initialUnreadCount > uiState.messages.size) {
-            firstUnreadResolved = true
-            return@LaunchedEffect
-        }
-        firstUnreadMsgId = uiState.messages.getOrNull(initialUnreadCount - 1)?.msgId
-        firstUnreadResolved = true
-    }
-
-    LaunchedEffect(highlightedMessageId, highlightRequest) {
-        val highlightedId = highlightedMessageId ?: return@LaunchedEffect
-        val request = highlightRequest
-        delay(1_600.milliseconds)
-        if (highlightedMessageId == highlightedId && highlightRequest == request) {
-            highlightedMessageId = null
+        val resolved = lastVisibleMsgId
+            ?: uiState.messages.getOrNull(initialUnreadCount - 1)?.msgId
+        if (resolved != null) {
+            firstUnreadMsgId = resolved
         }
     }
 
@@ -830,6 +705,16 @@ fun ChatScreen(
             }
     }
 
+    LaunchedEffect(listState, displayItems) {
+        snapshotFlow {
+            val visibleItems = listState.layoutInfo.visibleItemsInfo
+            if (visibleItems.isEmpty()) null
+            else visibleItems.firstOrNull()?.key as? String
+        }.collect { topMsgId ->
+            topMsgId?.let { viewModel.updateLastVisibleMsgId(it) }
+        }
+    }
+
     LaunchedEffect(searchTargetMsgId, searchTargetMsgSeq) {
         val target = searchTargetMsgId ?: return@LaunchedEffect
         if (target.isBlank()) return@LaunchedEffect
@@ -1002,13 +887,20 @@ fun ChatScreen(
                         } else {
                             null
                         },
+                        avatar = if (!selectionMode) {
+                            {
+                                Avatar(
+                                    url = chatAvatar,
+                                    alwaysCircle = true,
+                                    size = 40.dp
+                                )
+                            }
+                        } else null,
                         title = {
                             Crossfade(targetState = selectionMode) { isSelectionMode ->
                                 if (isSelectionMode) {
                                     Row(
-                                        modifier = Modifier
-                                            .padding(start = 12.dp)
-                                            .height(46.dp),
+                                        modifier = Modifier.height(46.dp),
                                         verticalAlignment = Alignment.CenterVertically,
                                         horizontalArrangement = Arrangement.spacedBy(2.dp)
                                     ) {
@@ -1055,91 +947,71 @@ fun ChatScreen(
                                 } else {
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .padding(4.dp)
-                                            .clip(RoundedCornerShape(24.dp))
+                                        modifier = Modifier.height(46.dp)
                                     ) {
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            modifier = Modifier
-                                                .weight(1f)
-                                                .fillMaxHeight()
-                                                .clip(RoundedCornerShape(4.dp))
-                                                .clickable {
-                                                    ConversationDetailActivity.start(
-                                                        context = context,
-                                                        chatId = viewModel.chatId,
-                                                        chatType = chatType,
-                                                        chatName = chatName,
-                                                        chatAvatar = chatAvatar
-                                                    )
-                                                }
-                                        ) {
-                                            Avatar(
-                                                url = chatAvatar,
-                                                alwaysCircle = true,
-                                                size = 40.dp
+                                        Column {
+                                            Text(
+                                                text = chatName,
+                                                style = MaterialTheme.typography.bodyLarge,
+                                                fontWeight = FontWeight.Bold,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
                                             )
-                                            Spacer(modifier = Modifier.width(8.dp))
-                                            Column {
+                                            if (chatType == 2 && uiState.memberCount != null) {
                                                 Text(
-                                                    text = chatName,
-                                                    style = MaterialTheme.typography.bodyLarge,
-                                                    fontWeight = FontWeight.Bold,
-                                                    maxLines = 1,
-                                                    overflow = TextOverflow.Ellipsis
+                                                    text = "${uiState.memberCount} 位成员",
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                    maxLines = 1
                                                 )
-                                                if (chatType == 2 && uiState.memberCount != null) {
-                                                    Text(
-                                                        text = "${uiState.memberCount} 位成员",
-                                                        style = MaterialTheme.typography.bodySmall,
-                                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                        maxLines = 1
-                                                    )
-                                                }
-                                                if (chatType == 3 && uiState.usageCount != null) {
-                                                    Text(
-                                                        text = "${uiState.usageCount} 人使用",
-                                                        style = MaterialTheme.typography.bodySmall,
-                                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                        maxLines = 1
-                                                    )
-                                                }
-                                                if (chatType == 1 && uiState.continuousOnlineDay != null) {
-                                                    Text(
-                                                        text = "连续在线 ${uiState.continuousOnlineDay} 天",
-                                                        style = MaterialTheme.typography.bodySmall,
-                                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                        maxLines = 1
-                                                    )
-                                                }
                                             }
-                                        }
-                                        if (uiState.boardPanel.boards.isNotEmpty()) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .height(46.dp)
-                                                    .clip(RoundedCornerShape(4.dp))
-                                                    .clickable { viewModel.toggleBoard() }
-                                                    .padding(horizontal = 4.dp),
-                                                contentAlignment = Alignment.Center
-                                            ) {
-                                                Icon(
-                                                    imageVector = if (uiState.boardPanel.isExpanded) {
-                                                        AppIcons.KeyboardArrowUp
-                                                    } else {
-                                                        AppIcons.KeyboardArrowDown
-                                                    },
-                                                    contentDescription = if (uiState.boardPanel.isExpanded) "收起看板" else "展开看板",
-                                                    modifier = Modifier.size(24.dp)
+                                            if (chatType == 3 && uiState.usageCount != null) {
+                                                Text(
+                                                    text = "${uiState.usageCount} 人使用",
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                    maxLines = 1
+                                                )
+                                            }
+                                            if (chatType == 1 && uiState.continuousOnlineDay != null) {
+                                                Text(
+                                                    text = "连续在线 ${uiState.continuousOnlineDay} 天",
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                    maxLines = 1
                                                 )
                                             }
                                         }
                                     }
                                 }
                             }
+                        },
+                        onTitleClick = {
+                            if (!selectionMode) {
+                                ConversationDetailActivity.start(
+                                    context = context,
+                                    chatId = viewModel.chatId,
+                                    chatType = chatType,
+                                    chatName = chatName,
+                                    chatAvatar = chatAvatar
+                                )
+                            }
+                        },
+                        extraButton = if (selectionMode) null else {
+                            {
+                                Icon(
+                                    imageVector = if (uiState.boardPanel.isExpanded) {
+                                        AppIcons.KeyboardArrowUp
+                                    } else {
+                                        AppIcons.KeyboardArrowDown
+                                    },
+                                    contentDescription = if (uiState.boardPanel.isExpanded) "收起看板" else "展开看板",
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+                        },
+                        onExtraButtonClick = {
+                            viewModel.toggleBoard()
                         },
                         actions = {
                             Row(
@@ -1839,7 +1711,18 @@ fun ChatScreen(
                         ) { _, item ->
                             val message = item.message
 
+                            val showDivider = firstUnreadMsgId != null && initialUnreadCount > 0 &&
+                                firstUnreadMsgId != uiState.messages.firstOrNull()?.msgId
+
+                            if (showDivider && message.msgId == firstUnreadMsgId) {
+                                LaunchedEffect(Unit) {
+                                    hasJumpedToUnread = true
+                                }
+                                UnreadDivider()
+                            }
+
                             MessageBubble(
+                                modifier = Modifier.animateItem(),
                                 message = message,
                                 roleLabel = item.roleLabel,
                                 onRecall = { viewModel.showRecallDialog(message.msgId) },
@@ -1998,10 +1881,6 @@ fun ChatScreen(
                                     viewModel.createExpression(it)
                                 }
                             )
-
-                            if (message.msgId == firstUnreadMsgId) {
-                                UnreadDivider()
-                            }
                         }
 
                         if (uiState.isLoadingMore) {
@@ -2024,6 +1903,9 @@ fun ChatScreen(
                         listHeightPx = listHeightPx,
                         composerHeightPx = composerHeightPx,
                         showMyAvatar = showMyBubbleAvatarSetting,
+                        dividerMsgId = if (firstUnreadMsgId != null && initialUnreadCount > 0 &&
+                            firstUnreadMsgId != uiState.messages.firstOrNull()?.msgId
+                        ) firstUnreadMsgId else null,
                         onAvatarClick = { message ->
                             ConversationDetailActivity.start(
                                 context = context,
@@ -2044,7 +1926,7 @@ fun ChatScreen(
                     )
 
                     AnimatedVisibility(
-                        visible = firstUnreadMsgId != null && !hasJumpedToUnread,
+                        visible = firstUnreadMsgId != null && !hasJumpedToUnread && initialUnreadCount > 0,
                         enter = fadeIn() + expandVertically(),
                         exit = fadeOut() + shrinkVertically(),
                         modifier = Modifier
@@ -2056,16 +1938,14 @@ fun ChatScreen(
                     ) {
                         BadgedBox(
                             badge = {
-                                if (initialUnreadCount > 0) {
-                                    Badge(
-                                        containerColor = MaterialTheme.colorScheme.error,
-                                        contentColor = MaterialTheme.colorScheme.onError
-                                    ) {
-                                        Text(
-                                            text = if (initialUnreadCount > 99) "99+" else initialUnreadCount.toString(),
-                                            fontSize = 10.sp
-                                        )
-                                    }
+                                Badge(
+                                    containerColor = MaterialTheme.colorScheme.error,
+                                    contentColor = MaterialTheme.colorScheme.onError
+                                ) {
+                                    Text(
+                                        text = if (initialUnreadCount > 99) "99+" else initialUnreadCount.toString(),
+                                        fontSize = 10.sp
+                                    )
                                 }
                             }
                         ) {
@@ -2073,9 +1953,7 @@ fun ChatScreen(
                                 onClick = {
                                     val targetId = firstUnreadMsgId ?: return@SmallFloatingActionButton
                                     scope.launch {
-                                        val existingIdx = displayItems.indexOfFirst {
-                                            it.message.msgId == targetId
-                                        }
+                                        val existingIdx = displayItems.indexOfFirst { it.message.msgId == targetId }
                                         if (existingIdx >= 0) {
                                             listState.animateScrollToItem(existingIdx)
                                         } else if (viewModel.loadQuotedMessage(targetId)) {
