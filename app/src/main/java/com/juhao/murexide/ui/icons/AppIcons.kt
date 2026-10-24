@@ -25,6 +25,8 @@ object AppIcons {
     val Article get() = MaterialSymbols.Rounded.Article
     val AttachFile get() = MaterialSymbols.Rounded.Attach_file
     val AudioFile get() = MaterialSymbols.Rounded.Audio_file
+    val BugReport get() = MaterialSymbols.Rounded.Bug_report
+    val BatteryPlus get() = MaterialSymbols.Rounded.Battery_plus
     val BrightnessAuto get() = MaterialSymbols.Rounded.Brightness_auto
     val LightMode get() = MaterialSymbols.Rounded.Light_mode
     val DarkMode get() = MaterialSymbols.Rounded.Dark_mode

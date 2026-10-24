@@ -100,6 +100,7 @@ class ChatViewModel(
         private const val TAG = "ChatViewModel"
         private const val RECALL_CONFIRMATION_GRACE_MS = 1_500L
         private const val HISTORY_PAGE_SIZE = 20
+        const val UNREAD_JUMP_CONFIRM_THRESHOLD = 200
     }
 
     private var uploadJob: Job? = null
@@ -148,9 +149,6 @@ class ChatViewModel(
     private val downloadCalls = mutableMapOf<String, okhttp3.Call>()
     private val downloadedFileUris = mutableMapOf<String, String>()
 
-    private val _lastVisibleMsgId = MutableStateFlow<String?>(null)
-    val lastVisibleMsgId: StateFlow<String?> = _lastVisibleMsgId.asStateFlow()
-
     private var historyCursorMessageId: String? = null
     private var cachedHistoryCursor: MessageItem? = null
     private var isUsingCachedHistory = false
@@ -162,20 +160,42 @@ class ChatViewModel(
     private var draftSaveJob: Job? = null
     private var draftRestored = false
 
-    private var initialLastVisibleMsgId: String? = null
-    private var lastVisibleInitialized = false
+    private var conversationTotalUnread: Int = 0
+    private var openedUnreadCount: Int = 0
+    private var jumpTargetIndex: Int = -1
+    private var isJumping: Boolean = false
+    private var hasJumpedToUnread: Boolean = false
+    private var pendingUnreadJumpAfterLoad: Boolean = false
+    
+    private var initialUnreadCountApplied = false
+
+    fun setInitialUnreadCount(count: Int) {
+        if (initialUnreadCountApplied) return
+        if (count < 0) return
+        initialUnreadCountApplied = true
+        conversationTotalUnread = count
+        openedUnreadCount = count
+        recomputeJumpTargetIndex()
+        if (count > 0 && _uiState.value.messages.isNotEmpty()) {
+            maybeAutoLoadForUnreadJump(historyLoadGeneration)
+        }
+    }
+    
+    private fun applyInitialUnreadCount() {
+        if (initialUnreadCountApplied) {
+            recomputeJumpTargetIndex()
+        } else {
+            conversationTotalUnread = 0
+            openedUnreadCount = 0
+            jumpTargetIndex = -1
+        }
+    }
 
     private val conversationKey = ConversationKey(chatId = chatId, chatType = chatType)
 
     init {
         ActiveConversationRegistry.activate(this, conversationKey)
         setupWebSocket()
-        viewModelScope.launch {
-            val stored = accountStorage.getLastVisibleMsgId(chatId, chatType)
-            initialLastVisibleMsgId = stored
-            _lastVisibleMsgId.value = stored
-            lastVisibleInitialized = true
-        }
         loadMessages()
 
         viewModelScope.launch {
@@ -198,12 +218,12 @@ class ChatViewModel(
             loadBackground()
             when (chatType) {
                 1 -> loadUserInfo()
-                2 -> { 
+                2 -> {
                     loadGroupInfo()
                     loadBoard()
-                    loadInstructionData() 
+                    loadInstructionData()
                 }
-                3 -> { 
+                3 -> {
                     loadBotInfo()
                     loadBoard()
                     loadInstructionData()
@@ -420,6 +440,8 @@ class ChatViewModel(
                 initialCachedMessages = cached
             }
 
+            applyInitialUnreadCount()
+            
             repository.getMessageList(
                 token = token,
                 chatId = chatId,
@@ -446,7 +468,8 @@ class ChatViewModel(
                     )
                 }
 
-                maybePrefetchUntilUnread(loadGeneration)
+                recomputeJumpTargetIndex()
+                maybeAutoLoadForUnreadJump(loadGeneration)
             }.onFailure { error ->
                 if (loadGeneration != historyLoadGeneration) return@onFailure
                 cachedHistoryCursor = initialCachedMessages.lastOrNull()
@@ -463,7 +486,8 @@ class ChatViewModel(
                             error = null
                         )
                     }
-                    maybePrefetchUntilUnread(loadGeneration)
+                    recomputeJumpTargetIndex()
+                    maybeAutoLoadForUnreadJump(loadGeneration)
                     return@onFailure
                 }
                 _uiState.update {
@@ -478,49 +502,49 @@ class ChatViewModel(
         }
     }
 
-    private fun maybePrefetchUntilUnread(loadGeneration: Long) {
+    private fun recomputeJumpTargetIndex() {
+        if (openedUnreadCount <= 0) {
+            jumpTargetIndex = -1
+            return
+        }
+        val list = _uiState.value.messages
+        if (list.isEmpty()) {
+            jumpTargetIndex = -1
+            return
+        }
+        val idx = (openedUnreadCount - 1).coerceIn(0, list.size - 1)
+        jumpTargetIndex = idx
+    }
+
+    private fun maybeAutoLoadForUnreadJump(loadGeneration: Long) {
+        if (openedUnreadCount <= 0) return
+        if (openedUnreadCount <= UNREAD_JUMP_CONFIRM_THRESHOLD) return
+
         viewModelScope.launch {
-            val unread = resolveConversationUnreadCount() ?: return@launch
-            if (loadGeneration != historyLoadGeneration) return@launch
-
-            if (unread <= 0) {
-                return@launch
-            }
-
-            val current = _uiState.value.messages
-            if (current.isEmpty()) return@launch
-
-            if (unread <= current.size) {
-                return@launch
-            }
-
-            var remaining = unread
-            while (remaining > 0 && _uiState.value.hasMore) {
+            while (isActive) {
                 if (loadGeneration != historyLoadGeneration) return@launch
-                val beforeSize = _uiState.value.messages.size
+                val list = _uiState.value.messages
+                if (list.isEmpty()) return@launch
+                if (openedUnreadCount <= list.size) {
+                    recomputeJumpTargetIndex()
+                    return@launch
+                }
+                if (!_uiState.value.hasMore) {
+                    recomputeJumpTargetIndex()
+                    return@launch
+                }
+                val beforeSize = list.size
                 historyLoadMutex.withLock {
                     if (loadGeneration != historyLoadGeneration) return@launch
                     loadOlderMessagesUntil()
                 }
                 if (loadGeneration != historyLoadGeneration) return@launch
                 val added = _uiState.value.messages.size - beforeSize
-                if (added <= 0) break
-                remaining -= added
+                if (added <= 0) {
+                    recomputeJumpTargetIndex()
+                    return@launch
+                }
             }
-        }
-    }
-
-    private suspend fun resolveConversationUnreadCount(): Int? {
-        val accountId = LocalCache.currentAccountId() ?: return null
-        return LocalCache.getCachedConversation(accountId, chatId, chatType)?.unreadMessage
-    }
-
-    fun updateLastVisibleMsgId(msgId: String) {
-        if (msgId.isBlank()) return
-        if (_lastVisibleMsgId.value == msgId) return
-        _lastVisibleMsgId.value = msgId
-        viewModelScope.launch(Dispatchers.IO) {
-            accountStorage.saveLastVisibleMsgId(chatId, chatType, msgId)
         }
     }
 
@@ -609,15 +633,11 @@ class ChatViewModel(
         draftSaveJob?.cancel()
         val text = _uiState.value.inputText
         val sending = _uiState.value.isSending
-        val lastVisible = _lastVisibleMsgId.value
         kotlinx.coroutines.GlobalScope.launch(Dispatchers.IO) {
             if (!sending && text.isNotBlank()) {
                 accountStorage.saveDraft(chatId, chatType, text)
             } else {
                 accountStorage.clearDraft(chatId, chatType)
-            }
-            if (!lastVisible.isNullOrBlank()) {
-                accountStorage.saveLastVisibleMsgId(chatId, chatType, lastVisible)
             }
         }
         ActiveConversationRegistry.deactivate(this)
@@ -641,9 +661,7 @@ class ChatViewModel(
                 if (it.messages.none { m -> m.msgId == messageId }) {
                     _toastMessage.emit("未找到目标消息")
                 }
-                it.copy(
-                    locatingMessage = false,
-                )
+                it.copy(locatingMessage = false)
             }
         }
     }
@@ -1752,6 +1770,12 @@ class ChatViewModel(
         _uiState.update {
             it.copy(messages = upsertNewestMessage(it.messages, resolvedMessage))
         }
+
+        if (!hasJumpedToUnread && openedUnreadCount > 0) {
+            conversationTotalUnread += 1
+            openedUnreadCount += 1
+            recomputeJumpTargetIndex()
+        }
     }
 
     private fun withCurrentUserProfileFallback(message: MessageItem): MessageItem {
@@ -2142,6 +2166,62 @@ class ChatViewModel(
             }
         }
     }
+
+    fun getOpenedUnreadCount(): Int = openedUnreadCount
+
+    fun getJumpTargetIndex(): Int = jumpTargetIndex
+
+    fun shouldShowUnreadJumpButton(): Boolean =
+        !hasJumpedToUnread && openedUnreadCount > 0 && jumpTargetIndex >= 0
+
+    fun shouldConfirmUnreadJump(): Boolean =
+        !hasJumpedToUnread && openedUnreadCount > UNREAD_JUMP_CONFIRM_THRESHOLD
+
+    suspend fun jumpToUnread(onProgress: (current: Int, total: Int) -> Unit = { _, _ -> }): Boolean {
+        if (hasJumpedToUnread) return true
+        if (openedUnreadCount <= 0) {
+            hasJumpedToUnread = true
+            return true
+        }
+        if (isJumping) return false
+
+        isJumping = true
+        try {
+            val loadGeneration = historyLoadGeneration
+            var safety = 0
+            while (currentCoroutineContext().isActive && safety < 5000) {
+                safety++
+                if (loadGeneration != historyLoadGeneration) return false
+                val list = _uiState.value.messages
+                if (list.isEmpty()) break
+                if (openedUnreadCount <= list.size) break
+                if (!_uiState.value.hasMore) break
+                onProgress(list.size, openedUnreadCount)
+                val before = list.size
+                historyLoadMutex.withLock {
+                    if (loadGeneration != historyLoadGeneration) return false
+                    loadOlderMessagesUntil()
+                }
+                if (loadGeneration != historyLoadGeneration) return false
+                if (_uiState.value.messages.size - before <= 0) break
+            }
+
+            val list = _uiState.value.messages
+            if (list.isEmpty()) {
+                hasJumpedToUnread = true
+                return true
+            }
+            val target = (openedUnreadCount - 1).coerceIn(0, list.size - 1)
+            jumpTargetIndex = target
+            onProgress(target, openedUnreadCount)
+            hasJumpedToUnread = true
+            return true
+        } finally {
+            isJumping = false
+        }
+    }
+
+    fun isJumpedToUnread(): Boolean = hasJumpedToUnread
 }
 
 sealed class ButtonEvent {

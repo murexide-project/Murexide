@@ -10,13 +10,13 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.background
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.core.net.toUri
 import com.juhao.murexide.R
 import com.juhao.murexide.ui.components.*
@@ -28,7 +28,7 @@ fun AboutScreen(
     onBack: () -> Unit
 ) {
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
-    
+
     val context = LocalContext.current
     val scrollState = rememberScrollState()
 
@@ -52,46 +52,43 @@ fun AboutScreen(
                 .padding(padding)
                 .verticalScroll(scrollState)
         ) {
-            // 应用信息
             SettingsGroup {
                 Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.64f))
-                        .padding(vertical = 12.dp),
+                    modifier = Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Spacer(modifier = Modifier.height(8.dp))
-                    
+
                     Surface(
-                        modifier = Modifier.size(64.dp),
+                        modifier = Modifier.size(72.dp),
                         shape = MaterialShapes.Cookie12Sided.toShape(),
                         color = MaterialTheme.colorScheme.primaryContainer
                     ) {
                         Icon(
                             imageVector = AppFilledIcons.ChatBubble,
                             contentDescription = null,
-                            modifier = Modifier.requiredSize(32.dp),
+                            modifier = Modifier.requiredSize(36.dp),
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
 
                     Text(
                         text = stringResource(R.string.app_name),
-                        style = MaterialTheme.typography.bodyLarge
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
                     )
-                    
-                    Spacer(modifier = Modifier.height(4.dp))
-                    
-                    Text(
-                        text = "版本号: ${context.getAppVersionInfo().versionName}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+
+                    AssistChip(
+                        label = {
+                            Text(
+                                context.getAppVersionInfo().versionName,
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        },
+                        onClick = { }
                     )
-                    
-                    Spacer(modifier = Modifier.height(2.dp))
-                    
+
                     Text(
                         text = "一个云湖第三方客户端",
                         style = MaterialTheme.typography.bodySmall,
@@ -100,7 +97,6 @@ fun AboutScreen(
                 }
             }
 
-            // 贡献者信息
             SettingsGroup(title = "贡献者") {
                 SettingsItem(
                     icon = AppIcons.Person,
@@ -119,7 +115,6 @@ fun AboutScreen(
                 )
             }
 
-            // 版权信息
             SettingsGroup(title = "许可证") {
                 SettingsItemCell(
                     icon = AppIcons.Book,
@@ -129,7 +124,6 @@ fun AboutScreen(
                 )
             }
 
-            // 链接信息
             SettingsGroup(title = "相关链接") {
                 SettingsItem(
                     icon = AppIcons.Code,
@@ -137,6 +131,21 @@ fun AboutScreen(
                     subtitle = "访问项目源码",
                     onClick = {
                         context.startActivity(Intent(Intent.ACTION_VIEW, "https://github.com/murexide-project/Murexide".toUri()))
+                    }
+                )
+                SettingsItem(
+                    icon = AppIcons.BugReport,
+                    title = "问题反馈",
+                    subtitle = "提交 Issue",
+                    onClick = {
+                        context.startActivity(Intent(Intent.ACTION_VIEW, "https://github.com/murexide-project/Murexide/issues".toUri()))
+                    }
+                )
+                SettingsItem(
+                    icon = AppIcons.People,
+                    title = "交流群",
+                    onClick = {
+                        context.startActivity(Intent(Intent.ACTION_VIEW, "yunhu://chat-add?id=476660997&type=group".toUri()))
                     }
                 )
             }

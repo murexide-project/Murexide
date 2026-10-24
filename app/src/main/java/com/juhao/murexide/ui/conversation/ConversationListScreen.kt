@@ -55,6 +55,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.juhao.murexide.ui.conversationdetail.ConversationDetailActivity
+import com.juhao.murexide.ui.conversationdetail.NewConversationActivity
 
 @Composable
 fun ConversationListScreen(
@@ -247,6 +248,19 @@ fun ConversationListScreen(
                         onDismissRequest = { showCreateMenu = false },
                         shape = MenuDefaults.standaloneGroupShape
                     ) {
+                        DropdownMenuItem(
+                            text = { Text("添加会话") },
+                            onClick = {
+                                showCreateMenu = false
+                                NewConversationActivity.start(context)
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    AppIcons.Add,
+                                    contentDescription = null
+                                )
+                            }
+                        )
                         DropdownMenuItem(
                             text = { Text("创建群聊") },
                             onClick = {

@@ -93,7 +93,7 @@ fun AppearancePage() {
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier.fillMaxWidth()
         ) {
-            ThemeCard()
+            ConversationListPreview(squareAvatar = squareAvatar)
         }
     }
 
@@ -627,59 +627,182 @@ private fun ThemeColorBall(
 }
 
 @Composable
-private fun ThemeCard() {
+private fun ConversationListPreview(squareAvatar: Boolean) {
     val scheme = MaterialTheme.colorScheme
+
     Column(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Card(
-            modifier = Modifier
-                .width(128.dp)
-                .height(256.dp),
-            shape = MaterialTheme.shapes.large,
-            border = BorderStroke(1.dp, scheme.primary),
+            modifier = Modifier.width(240.dp),
+            shape = MaterialTheme.shapes.extraLarge,
+            border = BorderStroke(1.dp, scheme.outlineVariant.copy(alpha = 0.5f)),
             colors = CardDefaults.cardColors(containerColor = scheme.surface)
         ) {
-            Box(modifier = Modifier.fillMaxSize()) {
-                Box(
+            Column(modifier = Modifier.fillMaxSize()) {
+                Row(
                     modifier = Modifier
-                        .padding(start = 12.dp, top = 12.dp)
-                        .size(width = 48.dp, height = 16.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(scheme.onSurfaceVariant)
-                )
-
-                Box(
-                    modifier = Modifier
-                        .padding(start = 12.dp, top = 36.dp)
-                        .size(width = 56.dp, height = 80.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(scheme.secondaryContainer)
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
+                    Text(
+                        text = "消息",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = scheme.onSurface
+                    )
+                    Spacer(Modifier.weight(1f))
                     Box(
                         modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(4.dp)
-                            .size(width = 16.dp, height = 12.dp)
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(scheme.secondary)
+                            .size(24.dp)
+                            .clip(CircleShape)
+                            .background(scheme.primaryContainer)
                     )
                 }
 
-                Box(
+                HorizontalDivider(
+                    color = scheme.outlineVariant.copy(alpha = 0.5f)
+                )
+
+                ConversationPreviewItem(
+                    name = "设计团队",
+                    message = "明天上午十点开会",
+                    time = "10:24",
+                    unread = 3,
+                    avatarColor = scheme.primaryContainer,
+                    avatarContentColor = scheme.onPrimaryContainer,
+                    squareAvatar = squareAvatar
+                )
+                ConversationPreviewItem(
+                    name = "Alex",
+                    message = "好的，收到 👍",
+                    time = "09:15",
+                    unread = 0,
+                    avatarColor = scheme.secondaryContainer,
+                    avatarContentColor = scheme.onSecondaryContainer,
+                    squareAvatar = squareAvatar
+                )
+                ConversationPreviewItem(
+                    name = "项目组",
+                    message = "[图片]",
+                    time = "昨天",
+                    unread = 12,
+                    avatarColor = scheme.tertiaryContainer,
+                    avatarContentColor = scheme.onTertiaryContainer,
+                    squareAvatar = squareAvatar
+                )
+
+                Spacer(Modifier.height(16.dp))
+
+                Row(
                     modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(horizontal = 4.dp, vertical = 4.dp)
                         .fillMaxWidth()
-                        .height(40.dp)
-                        .background(scheme.surfaceContainer)
+                        .padding(horizontal = 32.dp, vertical = 12.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Box(
                         modifier = Modifier
-                            .align(Alignment.Center)
                             .size(20.dp)
                             .clip(CircleShape)
                             .background(scheme.primary)
+                    )
+                    Box(
+                        modifier = Modifier
+                            .size(20.dp)
+                            .clip(CircleShape)
+                            .background(scheme.outlineVariant)
+                    )
+                    Box(
+                        modifier = Modifier
+                            .size(20.dp)
+                            .clip(CircleShape)
+                            .background(scheme.outlineVariant)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ConversationPreviewItem(
+    name: String,
+    message: String,
+    time: String,
+    unread: Int,
+    avatarColor: Color,
+    avatarContentColor: Color,
+    squareAvatar: Boolean
+) {
+    val scheme = MaterialTheme.colorScheme
+    val avatarShape = if (squareAvatar) RoundedCornerShape(8.dp) else CircleShape
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(36.dp)
+                .clip(avatarShape)
+                .background(avatarColor),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = AppIcons.Person,
+                contentDescription = null,
+                tint = avatarContentColor,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+
+        Spacer(Modifier.width(10.dp))
+
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = name,
+                style = MaterialTheme.typography.bodyMedium,
+                color = scheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodySmall,
+                color = scheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+
+        Spacer(Modifier.width(8.dp))
+
+        Column(
+            horizontalAlignment = Alignment.End
+        ) {
+            Text(
+                text = time,
+                style = MaterialTheme.typography.labelSmall,
+                color = scheme.onSurfaceVariant
+            )
+            if (unread > 0) {
+                Spacer(Modifier.height(4.dp))
+                Box(
+                    modifier = Modifier
+                        .defaultMinSize(minWidth = 16.dp, minHeight = 16.dp)
+                        .clip(CircleShape)
+                        .background(scheme.error),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = if (unread > 99) "99+" else unread.toString(),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = scheme.onError,
+                        modifier = Modifier.padding(horizontal = 4.dp)
                     )
                 }
             }

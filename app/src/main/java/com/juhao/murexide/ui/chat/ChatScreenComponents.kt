@@ -330,22 +330,22 @@ internal fun computeAvatarPlacements(
     for (info in visible) {
         val item = items.getOrNull(info.index) ?: continue
         val message = item.message
-    
+
         if (message.contentType == MessageItem.CONTENT_TYPE_TIP) {
             currentGroup = null
             continue
         }
-    
+
         val bottomInset = if (item.isFirstFromSender) bubbleInsetPx else 0f
         val topInset = if (item.isLastFromSender) bubbleInsetPx else 0f
-    
+
         val rawBottom = (listHeightPx - composerHeightPx - info.offset).toFloat()
         val rawTop = rawBottom - info.size.toFloat()
 
         val dividerExtra = if (message.msgId == dividerMsgId) dividerHeightPx else 0f
 
-        val cellBottom = rawBottom - dividerExtra - bottomInset
-        val cellTop = rawTop + topInset
+        val cellBottom = rawBottom - bottomInset
+        val cellTop = rawTop + dividerExtra + topInset
 
         val isMine = message.isMine
         val sameSender = currentGroup != null &&

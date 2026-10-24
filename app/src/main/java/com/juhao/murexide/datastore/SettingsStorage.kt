@@ -55,6 +55,8 @@ class SettingsStorage(private val context: Context) {
 
         private val HIDE_LAUNCHER_KEY = booleanPreferencesKey("hide_launcher")
 
+        private val WS_ENABLED_KEY = booleanPreferencesKey("ws_enabled")
+
         private const val LAUNCHER_ALIAS_SUFFIX = ".LauncherAlias"
         private const val DEFAULT_SECRET_CODE = "2468"
     }
@@ -171,6 +173,10 @@ class SettingsStorage(private val context: Context) {
     val cacheEnabledFlow = preferenceFlow(CACHE_ENABLED_KEY, true)
     suspend fun getCacheEnabled() = getPreference(CACHE_ENABLED_KEY, true)
     suspend fun setCacheEnabled(enabled: Boolean) = setPreference(CACHE_ENABLED_KEY, enabled)
+
+    val wsEnabledFlow = preferenceFlow(WS_ENABLED_KEY, true)
+    suspend fun getWsEnabled() = getPreference(WS_ENABLED_KEY, true)
+    suspend fun setWsEnabled(enabled: Boolean) = setPreference(WS_ENABLED_KEY, enabled)
 
     val hideLauncherFlow = preferenceFlow(HIDE_LAUNCHER_KEY, false)
 

@@ -250,7 +250,6 @@ fun ChatScreen(
     val scope = rememberCoroutineScope()
     val clipboardManager = LocalClipboard.current
     val uiState by viewModel.screenState.collectAsState()
-    val lastVisibleMsgId by viewModel.lastVisibleMsgId.collectAsState()
     val themeColor by UiState.themeColor
     val chatBackgroundColor = if (themeColor == "WHITE") {
         MaterialTheme.colorScheme.surfaceContainer
@@ -460,22 +459,24 @@ fun ChatScreen(
     var highlightRequest by remember { mutableIntStateOf(0) }
     var quoteJumpJob by remember { mutableStateOf<Job?>(null) }
 
-    var firstUnreadMsgId by remember { mutableStateOf<String?>(null) }
+    var jumpConfirmVisible by remember { mutableStateOf(false) }
+    var jumpProgress by remember { mutableStateOf<Pair<Int, Int>?>(null) }
+    
+    LaunchedEffect(initialUnreadCount) {
+        viewModel.setInitialUnreadCount(initialUnreadCount)
+    }
 
-    LaunchedEffect(
-        lastVisibleMsgId,
-        initialUnreadCount,
-        uiState.messages.size,
-        uiState.messages.firstOrNull()?.msgId
+    val showUnreadJumpButton = !viewModel.isJumpedToUnread() &&
+        viewModel.getOpenedUnreadCount() > 0 &&
+        viewModel.getJumpTargetIndex() >= 0
+
+    val unreadDividerMsgId = remember(
+        viewModel.getJumpTargetIndex(),
+        uiState.messages,
+        uiState.hasNewer
     ) {
-        if (uiState.messages.isEmpty()) return@LaunchedEffect
-        if (firstUnreadMsgId != null) return@LaunchedEffect
-
-        val resolved = lastVisibleMsgId
-            ?: uiState.messages.getOrNull(initialUnreadCount - 1)?.msgId
-        if (resolved != null) {
-            firstUnreadMsgId = resolved
-        }
+        if (uiState.hasNewer) null
+        else uiState.messages.getOrNull(viewModel.getJumpTargetIndex())?.msgId
     }
 
     val downloadingFiles by viewModel.downloadingFiles.collectAsState()
@@ -705,16 +706,6 @@ fun ChatScreen(
             }
     }
 
-    LaunchedEffect(listState, displayItems) {
-        snapshotFlow {
-            val visibleItems = listState.layoutInfo.visibleItemsInfo
-            if (visibleItems.isEmpty()) null
-            else visibleItems.firstOrNull()?.key as? String
-        }.collect { topMsgId ->
-            topMsgId?.let { viewModel.updateLastVisibleMsgId(it) }
-        }
-    }
-
     LaunchedEffect(searchTargetMsgId, searchTargetMsgSeq) {
         val target = searchTargetMsgId ?: return@LaunchedEffect
         if (target.isBlank()) return@LaunchedEffect
@@ -811,6 +802,59 @@ fun ChatScreen(
             onTargetClick = forwardViewModel::toggleTarget,
             onSend = forwardViewModel::send
         )
+    }
+
+    if (jumpConfirmVisible) {
+        AlertDialog(
+            onDismissRequest = { jumpConfirmVisible = false },
+            title = { Text("跳转到未读消息") },
+            text = {
+                Text("需要加载 ${viewModel.getOpenedUnreadCount()} 条未读消息，可能耗时较长，确定开始跳转？")
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    jumpConfirmVisible = false
+                    scope.launch {
+                        viewModel.jumpToUnread { current, total ->
+                            jumpProgress = current to total
+                        }
+                        jumpProgress = null
+                        val target = viewModel.getJumpTargetIndex()
+                        if (target >= 0) {
+                            listState.animateScrollToItem(target)
+                        }
+                        hasJumpedToUnread = true
+                    }
+                }) {
+                    Text("确定")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { jumpConfirmVisible = false }) {
+                    Text("取消")
+                }
+            }
+        )
+    }
+
+    jumpProgress?.let { (current, total) ->
+        if (current < total) {
+            AlertDialog(
+                onDismissRequest = { },
+                title = { Text("正在加载未读消息") },
+                text = {
+                    Column {
+                        Text("已加载 $current / $total 条")
+                        Spacer(Modifier.height(8.dp))
+                        LinearProgressIndicator(
+                            progress = { if (total > 0) current.toFloat() / total else 0f },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                },
+                confirmButton = { }
+            )
+        }
     }
 
     LiquidGlassMagnifierHost(
@@ -1711,16 +1755,6 @@ fun ChatScreen(
                         ) { _, item ->
                             val message = item.message
 
-                            val showDivider = firstUnreadMsgId != null && initialUnreadCount > 0 &&
-                                firstUnreadMsgId != uiState.messages.firstOrNull()?.msgId
-
-                            if (showDivider && message.msgId == firstUnreadMsgId) {
-                                LaunchedEffect(Unit) {
-                                    hasJumpedToUnread = true
-                                }
-                                UnreadDivider()
-                            }
-
                             MessageBubble(
                                 modifier = Modifier.animateItem(),
                                 message = message,
@@ -1881,6 +1915,13 @@ fun ChatScreen(
                                     viewModel.createExpression(it)
                                 }
                             )
+                            
+                            if (unreadDividerMsgId != null && message.msgId == unreadDividerMsgId) {
+                                LaunchedEffect(Unit) {
+                                    hasJumpedToUnread = true
+                                }
+                                UnreadDivider()
+                            }
                         }
 
                         if (uiState.isLoadingMore) {
@@ -1903,9 +1944,7 @@ fun ChatScreen(
                         listHeightPx = listHeightPx,
                         composerHeightPx = composerHeightPx,
                         showMyAvatar = showMyBubbleAvatarSetting,
-                        dividerMsgId = if (firstUnreadMsgId != null && initialUnreadCount > 0 &&
-                            firstUnreadMsgId != uiState.messages.firstOrNull()?.msgId
-                        ) firstUnreadMsgId else null,
+                        dividerMsgId = unreadDividerMsgId,
                         onAvatarClick = { message ->
                             ConversationDetailActivity.start(
                                 context = context,
@@ -1926,7 +1965,7 @@ fun ChatScreen(
                     )
 
                     AnimatedVisibility(
-                        visible = firstUnreadMsgId != null && !hasJumpedToUnread && initialUnreadCount > 0,
+                        visible = showUnreadJumpButton && !hasJumpedToUnread,
                         enter = fadeIn() + expandVertically(),
                         exit = fadeOut() + shrinkVertically(),
                         modifier = Modifier
@@ -1942,8 +1981,9 @@ fun ChatScreen(
                                     containerColor = MaterialTheme.colorScheme.error,
                                     contentColor = MaterialTheme.colorScheme.onError
                                 ) {
+                                    val unread = viewModel.getOpenedUnreadCount()
                                     Text(
-                                        text = if (initialUnreadCount > 99) "99+" else initialUnreadCount.toString(),
+                                        text = if (unread > 99) "99+" else unread.toString(),
                                         fontSize = 10.sp
                                     )
                                 }
@@ -1951,23 +1991,21 @@ fun ChatScreen(
                         ) {
                             SmallFloatingActionButton(
                                 onClick = {
-                                    val targetId = firstUnreadMsgId ?: return@SmallFloatingActionButton
-                                    scope.launch {
-                                        val existingIdx = displayItems.indexOfFirst { it.message.msgId == targetId }
-                                        if (existingIdx >= 0) {
-                                            listState.animateScrollToItem(existingIdx)
-                                        } else if (viewModel.loadQuotedMessage(targetId)) {
-                                            val idx = withTimeoutOrNull(2_000.milliseconds) {
-                                                snapshotFlow {
-                                                    displayItems.indexOfFirst { it.message.msgId == targetId }
-                                                }.first { it >= 0 }
+                                    if (viewModel.shouldConfirmUnreadJump()) {
+                                        jumpConfirmVisible = true
+                                    } else {
+                                        scope.launch {
+                                            viewModel.jumpToUnread { current, total ->
+                                                jumpProgress = current to total
                                             }
-                                            if (idx != null) {
-                                                listState.animateScrollToItem(idx)
+                                            jumpProgress = null
+                                            val target = viewModel.getJumpTargetIndex()
+                                            if (target >= 0) {
+                                                listState.animateScrollToItem(target)
                                             }
+                                            hasJumpedToUnread = true
+                                            liveUnreadCount = 0
                                         }
-                                        liveUnreadCount = 0
-                                        hasJumpedToUnread = true
                                     }
                                 },
                                 shape = CircleShape

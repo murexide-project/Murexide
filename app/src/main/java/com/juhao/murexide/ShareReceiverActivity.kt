@@ -42,7 +42,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 sealed class SharePayload {
-    data class Text(val text: String) : SharePayload()
+    data class Text(
+        val text: String,
+        val isHtml: Boolean = false
+    ) : SharePayload()
     data class Images(val uris: List<Uri>) : SharePayload()
     data class Video(val uri: Uri) : SharePayload()
     data class File(val uri: Uri) : SharePayload()
@@ -136,11 +139,14 @@ class ShareReceiverActivity : ComponentActivity() {
         }
 
         return when {
-            type.startsWith("text/") && !text.isNullOrBlank() -> SharePayload.Text(text)
+            type == "text/html" && !text.isNullOrBlank() ->
+                SharePayload.Text(text, isHtml = true)
+            type.startsWith("text/") && !text.isNullOrBlank() ->
+                SharePayload.Text(text, isHtml = false)
             type.startsWith("image/") && uri != null -> SharePayload.Images(listOf(uri))
             type.startsWith("video/") && uri != null -> SharePayload.Video(uri)
             uri != null -> SharePayload.File(uri)
-            !text.isNullOrBlank() -> SharePayload.Text(text)
+            !text.isNullOrBlank() -> SharePayload.Text(text, isHtml = false)
             else -> null
         }
     }
@@ -383,7 +389,13 @@ private object ShareDispatcher {
         chatType: Int,
         payload: SharePayload
     ): Boolean = when (payload) {
-        is SharePayload.Text -> sendText(token, chatId, chatType, payload.text)
+        is SharePayload.Text -> sendText(
+            token = token,
+            chatId = chatId,
+            chatType = chatType,
+            text = payload.text,
+            isHtml = payload.isHtml
+        )
         is SharePayload.Images -> sendImages(context, token, chatId, chatType, payload.uris)
         is SharePayload.Video -> sendVideo(context, token, chatId, chatType, payload.uri)
         is SharePayload.File -> sendFile(context, token, chatId, chatType, payload.uri)
@@ -392,14 +404,19 @@ private object ShareDispatcher {
         }
     }
 
-    private suspend fun sendText(token: String, chatId: String, chatType: Int, text: String): Boolean =
-        repository.sendMessage(
-            token = token,
-            chatId = chatId,
-            chatType = chatType,
-            content = MessageContent(text = text),
-            contentType = MessageItem.CONTENT_TYPE_TEXT
-        ).isSuccess
+    private suspend fun sendText(
+        token: String,
+        chatId: String,
+        chatType: Int,
+        text: String,
+        isHtml: Boolean
+    ): Boolean = repository.sendMessage(
+        token = token,
+        chatId = chatId,
+        chatType = chatType,
+        content = MessageContent(text = text),
+        contentType = if (isHtml) MessageItem.CONTENT_TYPE_HTML else MessageItem.CONTENT_TYPE_TEXT
+    ).isSuccess
 
     private suspend fun sendImages(
         context: Context,

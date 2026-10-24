@@ -15,15 +15,24 @@ import com.juhao.murexide.repository.GroupMemberRepository
 import com.juhao.murexide.repository.GroupRepository
 import com.juhao.murexide.repository.InstructionRepository
 import com.juhao.murexide.repository.MessageRepository
+import com.juhao.murexide.repository.ShareRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-/** State holder for the Telegram-style conversation profile. */
+data class ShareLinkDialogState(
+    val isOpen: Boolean = false,
+    val isLoading: Boolean = false,
+    val url: String = "",
+    val chatName: String = "",
+    val chatType: Int = 0,
+    val error: String? = null
+)
+
 class ConversationDetailViewModel(
-    private val token: String,
+    val token: String,
     private val chatId: String,
     private val chatType: Int,
     fallbackName: String = "",
@@ -34,7 +43,8 @@ class ConversationDetailViewModel(
     private val groupRepository: GroupRepository = GroupRepository(),
     private val instructionRepository: InstructionRepository = InstructionRepository(),
     private val messageRepository: MessageRepository = MessageRepository(),
-    private val communityRepository: CommunityRepository = CommunityRepository(token)
+    private val communityRepository: CommunityRepository = CommunityRepository(token),
+    private val shareRepository: ShareRepository = ShareRepository()
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(
@@ -50,12 +60,46 @@ class ConversationDetailViewModel(
     )
     val uiState: StateFlow<ConversationDetailUiState> = _uiState.asStateFlow()
 
+    private val _shareState = MutableStateFlow(ShareLinkDialogState())
+    val shareState: StateFlow<ShareLinkDialogState> = _shareState.asStateFlow()
+
     init {
         loadDetail()
         if (chatType == 1) {
             loadCreatedBoards()
         }
         checkAdded()
+    }
+
+    fun openShareDialog() {
+        val detail = _uiState.value.detail ?: return
+        _shareState.value = ShareLinkDialogState(
+            isOpen = true,
+            isLoading = true,
+            chatName = detail.name,
+            chatType = detail.chatType
+        )
+        viewModelScope.launch {
+            shareRepository.createShareLink(
+                token = token,
+                chatId = detail.chatId,
+                chatType = detail.chatType,
+                chatName = detail.name
+            ).onSuccess { created ->
+                val url = "https://yhfx.jwznb.com/share?key=${created.key}&ts=${created.ts}"
+                _shareState.update {
+                    it.copy(isLoading = false, url = url)
+                }
+            }.onFailure { error ->
+                _shareState.update {
+                    it.copy(isLoading = false, error = error.message ?: "创建分享链接失败")
+                }
+            }
+        }
+    }
+
+    fun closeShareDialog() {
+        _shareState.value = ShareLinkDialogState()
     }
 
     fun loadDetail() {
@@ -409,6 +453,41 @@ class ConversationDetailViewModel(
                 .onFailure { error ->
                     _uiState.update { it.copy(message = error.message ?: "管理员设置失败") }
                 }
+        }
+    }
+    
+    private fun String.escapeHtml(): String = this
+        .replace("&", "&amp;")
+        .replace("\"", "&quot;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+    
+    fun buildShareCardHtml(): String? {
+        val detail = _uiState.value.detail ?: return null
+        val type = when (detail.chatType) {
+            1 -> "user"
+            2 -> "group"
+            3 -> "bot"
+            else -> "user"
+        }
+        val avatar = detail.avatarUrl.escapeHtml()
+        val name = detail.name.ifBlank { "会话" }.escapeHtml()
+        val chatId = detail.chatId.escapeHtml()
+    
+        return buildString {
+            append("<a href=\"yunhu://chat-add?id=$chatId&type=$type\" style=\"display:block;text-decoration:none;color:inherit;-webkit-tap-highlight-color:transparent;border:none;outline:none;\">")
+            append("<table cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"max-width:280px;border-collapse:collapse;border:none;\"><tr>")
+            append("<td style=\"width:44px;padding:0;vertical-align:middle;border:none;\">")
+            append("<div style=\"width:44px;height:44px;border-radius:10px;overflow:hidden;border:none;outline:none;\">")
+            append("<img src=\"$avatar\" width=\"44\" height=\"44\" style=\"display:block;width:44px;height:44px;min-width:44px;min-height:44px;max-width:44px;max-height:44px;border-radius:10px;object-fit:cover;border:0;outline:none;padding:0;margin:0;\" alt=\"\">")
+            append("</div>")
+            append("</td>")
+            append("<td style=\"padding:0 0 0 10px;vertical-align:middle;border:none;\">")
+            append("<div style=\"font-size:15px;font-weight:600;line-height:20px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;\">$name</div>")
+            append("<div style=\"font-size:12px;line-height:16px;margin-top:2px;opacity:0.65;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;\">点击查看会话信息</div>")
+            append("</td>")
+            append("</tr></table>")
+            append("</a>")
         }
     }
 

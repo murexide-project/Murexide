@@ -33,7 +33,8 @@ fun SettingsScreen(
         2 -> "消息气泡设置"
         3 -> "行为设置"
         4 -> "更新"
-        5 -> "账号设置"
+        5 -> "WebSocket 设置"
+        7 -> "账号设置"
         6 -> "截图设置"
         else -> "设置"
     }
@@ -73,7 +74,8 @@ fun SettingsScreen(
                 2 -> BubblePage()
                 3 -> ActionPage()
                 4 -> UpdatePage()
-                5 -> AccountPage(onLogout = onLogout)
+                5 -> WebSocketPage()
+                7 -> AccountPage(onLogout = onLogout)
                 6 -> ScreenshotPage()
                 else -> MainScreen()
             }
@@ -138,12 +140,23 @@ private fun MainScreen() {
             }
         )
         SettingsItem(
+            icon = AppIcons.Link,
+            title = "WebSocket",
+            subtitle = "连接状态、自动重连开关",
+            onClick = {
+                val intent = Intent(context, SettingsActivity::class.java).apply {
+                    putExtra("page", 5)
+                }
+                context.startActivity(intent)
+            }
+        )
+        SettingsItem(
             icon = AppIcons.Person,
             title = "账号",
             subtitle = "切换账号、提取 Token、退出登录",
             onClick = {
                 val intent = Intent(context, SettingsActivity::class.java).apply{
-                    putExtra("page", 5)
+                    putExtra("page", 7)
                 }
                 context.startActivity(intent)
             }

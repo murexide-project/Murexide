@@ -188,8 +188,15 @@ class MyApplication : Application(), ImageLoaderFactory {
 
         connectivityManager.registerNetworkCallback(networkRequest, object : ConnectivityManager.NetworkCallback() {
             override fun onAvailable(network: Network) {
-                Log.d("MyApplication", "Network onAvailable, triggering WS reconnect")
-                WebSocketManager.getInstance().manualReconnect()
+                Log.d("MyApplication", "Network onAvailable, checking WS toggle")
+                applicationScope.launch {
+                    if (settingsStorage.getWsEnabled()) {
+                        Log.d("MyApplication", "WebSocket enabled, triggering reconnect")
+                        WebSocketManager.getInstance().manualReconnect()
+                    } else {
+                        Log.d("MyApplication", "WebSocket disabled, skip reconnect")
+                    }
+                }
             }
 
             override fun onLost(network: Network) {
@@ -204,12 +211,17 @@ class MyApplication : Application(), ImageLoaderFactory {
             accountStorage.currentAccountFlow.collect { account ->
                 LocalCache.setActiveAccount(account?.id)
                 if (account != null && account.token.isNotEmpty()) {
-                    Log.d("MyApplication", "Account found, connecting WS")
-                    WebSocketManager.getInstance().connect(
-                        userId = account.id,
-                        token = account.token,
-                        deviceId = DeviceIdProvider.get(this@MyApplication)
-                    )
+                    if (settingsStorage.getWsEnabled()) {
+                        Log.d("MyApplication", "Account found, connecting WS")
+                        WebSocketManager.getInstance().connect(
+                            userId = account.id,
+                            token = account.token,
+                            deviceId = DeviceIdProvider.get(this@MyApplication)
+                        )
+                    } else {
+                        Log.d("MyApplication", "WebSocket disabled by user, skip connect")
+                        WebSocketManager.getInstance().disconnect()
+                    }
                 } else {
                     Log.d("MyApplication", "No account, disconnecting WS")
                     WebSocketManager.getInstance().disconnect()

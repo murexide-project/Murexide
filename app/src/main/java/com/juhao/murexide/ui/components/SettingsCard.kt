@@ -12,15 +12,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.shape.RoundedCornerShape
 
-/**
- * 设置组容器 (Card 样式)
- */
 @Composable
 fun SettingsGroup(
     title: String = "",
@@ -51,9 +49,6 @@ fun SettingsGroup(
     }
 }
 
-/**
- * 标准设置项 (带箭头)
- */
 @Composable
 fun SettingsItem(
     icon: ImageVector? = null,
@@ -66,13 +61,14 @@ fun SettingsItem(
     ListItem(
         onClick = onClick,
         enabled = isEnabled,
+        verticalAlignment = Alignment.CenterVertically,
         leadingContent = {
             if (icon != null) {
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
                     tint = if (isDestructive) MaterialTheme.colorScheme.error
-                    else MaterialTheme.colorScheme.onSurface,
+                    else LocalContentColor.current,
                     modifier = Modifier.size(24.dp)
                 )
             }
@@ -81,12 +77,12 @@ fun SettingsItem(
             AutoMirroredIcon(
                 AppIcons.NavigateNext,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(20.dp)
             )
         },
         colors = ListItemDefaults.colors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.64f)
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.64f),
+            disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.32f)
         )
     ) {
         Column(
@@ -96,7 +92,7 @@ fun SettingsItem(
                 text = title,
                 style = MaterialTheme.typography.bodyLarge,
                 color = if (isDestructive) MaterialTheme.colorScheme.error
-                else MaterialTheme.colorScheme.onSurface,
+                else Color.Unspecified,
                 fontWeight = FontWeight.Normal
             )
             if (subtitle != null) {
@@ -105,7 +101,7 @@ fun SettingsItem(
                     text = subtitle,
                     style = MaterialTheme.typography.bodySmall,
                     color = if (isDestructive) MaterialTheme.colorScheme.error.copy(alpha = 0.9f)
-                    else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f),
+                    else Color.Unspecified,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -114,9 +110,6 @@ fun SettingsItem(
     }
 }
 
-/**
- * 标准设置项
- */
 @Composable
 fun SettingsItemCell(
     icon: ImageVector? = null,
@@ -130,13 +123,14 @@ fun SettingsItemCell(
     ListItem(
         onClick = onClick,
         enabled = isEnabled,
+        verticalAlignment = Alignment.CenterVertically,
         leadingContent = {
             if (icon != null) {
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
                     tint = if (isDestructive) MaterialTheme.colorScheme.error
-                    else MaterialTheme.colorScheme.onSurface,
+                    else LocalContentColor.current,
                     modifier = Modifier.size(24.dp)
                 )
             }
@@ -144,18 +138,18 @@ fun SettingsItemCell(
         trailingContent = {
             if (endIcon != null) {
                 Spacer(modifier = Modifier.width(16.dp))
-                
                 Icon(
                     imageVector = endIcon,
                     contentDescription = null,
                     modifier = Modifier.size(22.dp),
                     tint = if (isDestructive) MaterialTheme.colorScheme.error
-                    else MaterialTheme.colorScheme.onSurfaceVariant
+                    else LocalContentColor.current
                 )
             }
         },
         colors = ListItemDefaults.colors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.64f),
+            disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.32f)
         )
     ) {
         Column(
@@ -165,7 +159,7 @@ fun SettingsItemCell(
                 text = title,
                 style = MaterialTheme.typography.bodyLarge,
                 color = if (isDestructive) MaterialTheme.colorScheme.error
-                else MaterialTheme.colorScheme.onSurface,
+                else Color.Unspecified,
                 fontWeight = FontWeight.Normal
             )
             if (subtitle != null) {
@@ -174,7 +168,7 @@ fun SettingsItemCell(
                     text = subtitle,
                     style = MaterialTheme.typography.bodySmall,
                     color = if (isDestructive) MaterialTheme.colorScheme.error.copy(alpha = 0.9f)
-                    else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f),
+                    else Color.Unspecified,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -183,9 +177,6 @@ fun SettingsItemCell(
     }
 }
 
-/**
- * 带 Switch 的设置项
- */
 @Composable
 fun SettingsSwitchItem(
     icon: ImageVector? = null,
@@ -199,13 +190,14 @@ fun SettingsSwitchItem(
     ListItem(
         onClick = { onCheckedChange(!checked) },
         enabled = isEnabled,
+        verticalAlignment = Alignment.CenterVertically,
         leadingContent = {
             if (icon != null) {
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
                     tint = if (isDestructive) MaterialTheme.colorScheme.error
-                    else MaterialTheme.colorScheme.onSurface,
+                    else LocalContentColor.current,
                     modifier = Modifier.size(24.dp)
                 )
             }
@@ -219,6 +211,7 @@ fun SettingsSwitchItem(
         },
         colors = ListItemDefaults.colors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.64f),
+            disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.32f)
         )
     ) {
         Column(
@@ -228,7 +221,7 @@ fun SettingsSwitchItem(
                 text = title,
                 style = MaterialTheme.typography.bodyLarge,
                 color = if (isDestructive) MaterialTheme.colorScheme.error
-                else MaterialTheme.colorScheme.onSurface,
+                else Color.Unspecified,
                 fontWeight = FontWeight.Normal
             )
             if (subtitle != null) {
@@ -237,7 +230,7 @@ fun SettingsSwitchItem(
                     text = subtitle,
                     style = MaterialTheme.typography.bodySmall,
                     color = if (isDestructive) MaterialTheme.colorScheme.error.copy(alpha = 0.9f)
-                    else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f),
+                    else Color.Unspecified,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -246,9 +239,6 @@ fun SettingsSwitchItem(
     }
 }
 
-/**
- * 带下拉选择的设置项
- */
 @Composable
 fun SettingsDropdownItem(
     icon: ImageVector? = null,
@@ -260,16 +250,16 @@ fun SettingsDropdownItem(
     onOptionSelected: (String) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
-    
+
     ListItem(
         onClick = { expanded = true },
         enabled = isEnabled,
+        verticalAlignment = Alignment.CenterVertically,
         leadingContent = {
             if (icon != null) {
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.size(24.dp)
                 )
             }
@@ -279,10 +269,9 @@ fun SettingsDropdownItem(
                 Icon(
                     imageVector = AppIcons.KeyboardArrowDown,
                     contentDescription = "选择",
-                    modifier = Modifier.size(20.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    modifier = Modifier.size(20.dp)
                 )
-                
+
                 DropdownMenu(
                     expanded = expanded,
                     onDismissRequest = { expanded = false },
@@ -305,6 +294,7 @@ fun SettingsDropdownItem(
         },
         colors = ListItemDefaults.colors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.64f),
+            disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.32f)
         )
     ) {
         Column(
@@ -313,7 +303,6 @@ fun SettingsDropdownItem(
             Text(
                 text = title,
                 style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurface,
                 fontWeight = FontWeight.Normal
             )
             if (subtitle != null) {
@@ -321,7 +310,6 @@ fun SettingsDropdownItem(
                 Text(
                     text = subtitle,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f),
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -329,7 +317,6 @@ fun SettingsDropdownItem(
         }
     }
 }
-
 
 @Composable
 fun CustomItemCell(

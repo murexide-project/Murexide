@@ -12,45 +12,19 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
@@ -116,10 +90,15 @@ fun CreationScreen(
     viewModel: CreationViewModel
 ) {
     val state by viewModel.uiState.collectAsState()
+    
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
+    val scrollState = rememberScrollState()
+    
     val context = androidx.compose.ui.platform.LocalContext.current
     val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri != null) viewModel.uploadAvatar(context, uri)
     }
+    
     LaunchedEffect(viewModel) {
         viewModel.events.collectLatest { event ->
             when (event) {
@@ -128,10 +107,13 @@ fun CreationScreen(
             }
         }
     }
+    
     Scaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             TopAppBar(
                 title = { Text(kind.title) },
+                scrollBehavior = scrollBehavior,
                 navigationIcon = { IconButton(onClick = onBack) { AutoMirroredIcon(AppIcons.ArrowBack, "返回") } }
             )
         },
@@ -156,11 +138,11 @@ fun CreationScreen(
             )
         }
     ) { padding ->
-        val introductionScrollState = rememberScrollState()
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
+                .verticalScroll(scrollState)
                 .padding(horizontal = 20.dp, vertical = 20.dp)
         ) {
             Card(
@@ -230,8 +212,7 @@ fun CreationScreen(
                         textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .verticalScroll(introductionScrollState)
-                            .heightIn(min = 96.dp, max = 180.dp),
+                            .heightIn(min = 96.dp),
                         decorationBox = { innerTextField ->
                             Box {
                                 if (state.introduction.isBlank()) {

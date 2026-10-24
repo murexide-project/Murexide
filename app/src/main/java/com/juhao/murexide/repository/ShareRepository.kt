@@ -1,5 +1,8 @@
 package com.juhao.murexide.repository
 
+import com.juhao.murexide.data.ShareCreateRequest
+import com.juhao.murexide.data.ShareCreateResponse
+import com.juhao.murexide.data.ShareCreated
 import com.juhao.murexide.data.ShareInfo
 import com.juhao.murexide.data.ShareInfoRequest
 import com.juhao.murexide.data.ShareInfoResponse
@@ -60,4 +63,50 @@ class ShareRepository {
                 Result.failure(e)
             }
         }
+
+    suspend fun createShareLink(
+        token: String,
+        chatId: String,
+        chatType: Int,
+        chatName: String
+    ): Result<ShareCreated> = withContext(Dispatchers.IO) {
+        try {
+            val bodyJson = shareJson.encodeToString(
+                ShareCreateRequest.serializer(),
+                ShareCreateRequest(
+                    chatId = chatId,
+                    chatType = chatType,
+                    chatName = chatName
+                )
+            )
+            val request = Request.Builder()
+                .url("${NetworkClient.BASE_URL}/v1/share/create")
+                .post(bodyJson.toRequestBody(jsonMediaType))
+                .header("token", token)
+                .build()
+
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    return@use Result.failure(
+                        Exception("HTTP error: ${response.code}")
+                    )
+                }
+                val bodyStr = response.body.string()
+                val parsed = shareJson.decodeFromString(
+                    ShareCreateResponse.serializer(),
+                    bodyStr
+                )
+                val data = parsed.data
+                if (parsed.code == 1 && data != null) {
+                    Result.success(data)
+                } else {
+                    Result.failure(
+                        Exception(parsed.msg.ifBlank { "创建分享链接失败" })
+                    )
+                }
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 }

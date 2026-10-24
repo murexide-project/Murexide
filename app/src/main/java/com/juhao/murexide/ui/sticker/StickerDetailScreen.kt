@@ -38,9 +38,7 @@ import com.juhao.murexide.data.StickerItem
 import com.juhao.murexide.data.StickerPack
 import com.juhao.murexide.data.resolveStickerUrl
 import com.juhao.murexide.ui.icons.AppIcons
-import com.juhao.murexide.ui.components.ExpressiveDropdownMenu
-import com.juhao.murexide.ui.components.fullImagePreviewItem
-import com.juhao.murexide.ui.components.showImageViewer
+import com.juhao.murexide.ui.components.*
 
 private const val GRID_COLUMNS = 4
 
@@ -239,17 +237,16 @@ fun StickerDetailScreen(
                     }
 
                     state.error != null && state.pack == null -> {
-                        Column(
-                            modifier = Modifier.fillMaxSize(),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center
-                        ) {
-                            Text("加载失败", color = MaterialTheme.colorScheme.error)
-                            Spacer(Modifier.height(8.dp))
-                            Text(state.error ?: "")
-                            Spacer(Modifier.height(16.dp))
-                            Button(onClick = { viewModel.load() }) { Text("重试") }
-                        }
+                        EmptyPlaceholder(
+                            icon = AppIcons.Warning,
+                            title = "加载失败",
+                            subtitle = state.error,
+                            primaryButton = {
+                                Button(onClick = viewModel::load) {
+                                    Text("重试")
+                                }
+                            }
+                        )
                     }
 
                     else -> {

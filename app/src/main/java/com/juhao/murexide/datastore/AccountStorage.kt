@@ -31,8 +31,7 @@ data class UserAccount(
     val id: String = "1",
     val token: String = "",
     val isValidated: Boolean = false,
-    val drafts: Map<String, String> = emptyMap(),
-    val lastVisibleMsgIds: Map<String, String> = emptyMap()
+    val drafts: Map<String, String> = emptyMap()
 )
 
 internal fun upsertAccountInList(
@@ -421,31 +420,5 @@ class AccountStorage private constructor(context: Context) {
 
     val currentDraftsFlow: Flow<Map<String, String>> = currentAccountFlow
         .map { it?.drafts ?: emptyMap() }
-        .distinctUntilChanged()
-
-    suspend fun saveLastVisibleMsgId(chatId: String, chatType: Int, msgId: String) {
-        if (msgId.isBlank()) return
-        updateStoredAccounts { stored ->
-            val currentId = stored.currentUserId ?: return@updateStoredAccounts stored
-            stored.copy(
-                accounts = stored.accounts.map { account ->
-                    if (account.id == currentId) {
-                        val key = "${chatType}_$chatId"
-                        account.copy(
-                            lastVisibleMsgIds = account.lastVisibleMsgIds + (key to msgId)
-                        )
-                    } else account
-                }
-            )
-        }
-    }
-
-    suspend fun getLastVisibleMsgId(chatId: String, chatType: Int): String? {
-        val account = getCurrentAccount() ?: return null
-        return account.lastVisibleMsgIds["${chatType}_$chatId"]
-    }
-
-    val currentLastVisibleMsgIdsFlow: Flow<Map<String, String>> = currentAccountFlow
-        .map { it?.lastVisibleMsgIds ?: emptyMap() }
         .distinctUntilChanged()
 }

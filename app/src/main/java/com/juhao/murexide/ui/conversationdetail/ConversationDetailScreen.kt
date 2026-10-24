@@ -1,6 +1,7 @@
 package com.juhao.murexide.ui.conversationdetail
 
 import android.content.ClipData
+import android.content.Intent
 import android.widget.Toast
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -58,18 +59,13 @@ import com.juhao.murexide.data.BotItem
 import com.juhao.murexide.data.ConversationDetail
 import com.juhao.murexide.data.GroupMember
 import com.juhao.murexide.data.MessageItem
-import com.juhao.murexide.ui.components.Avatar
-import com.juhao.murexide.ui.components.CapsuleTabBar
-import com.juhao.murexide.ui.components.ExpressiveDropdownMenu
-import com.juhao.murexide.ui.components.MediaViewerPagination
-import com.juhao.murexide.ui.components.imageMessagePreviewItem
-import com.juhao.murexide.ui.components.showImageViewer
-import com.juhao.murexide.ui.components.videoMessagePreviewItem
+import com.juhao.murexide.ui.components.*
 import com.juhao.murexide.ui.icons.AppIcons
 import com.juhao.murexide.ui.icons.AppFilledIcons
 import com.juhao.murexide.ui.icons.AutoMirroredIcon
 import com.juhao.murexide.ui.chat.components.formatVideoDuration
 import com.juhao.murexide.ui.chatsearch.ChatSearchActivity
+import com.juhao.murexide.ui.share.ShareReceiverActivity
 import com.juhao.murexide.ui.theme.LiquidGlassSurface
 import com.juhao.murexide.ui.theme.LocalLiquidGlassBackdrop
 import com.juhao.murexide.ui.theme.LocalLiquidGlassEnabled
@@ -100,6 +96,7 @@ fun ConversationDetailScreen(
     currentUserId: String
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val shareState by viewModel.shareState.collectAsStateWithLifecycle()
     LaunchedEffect(refreshSignal) {
         if (refreshSignal > 0) viewModel.loadDetail()
     }
@@ -118,7 +115,7 @@ fun ConversationDetailScreen(
                 groupListState.firstVisibleItemScrollOffset >= groupNameBottomOffset
         }
     }
-    
+
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
 
     LaunchedEffect(state.message) {
@@ -190,6 +187,14 @@ fun ConversationDetailScreen(
                             Icon(AppIcons.Edit, "编辑机器人")
                         }
                     }
+                    IconButton(
+                        onClick = {
+                            showMore = false
+                            viewModel.openShareDialog()
+                        }
+                    ) {
+                        Icon(AppIcons.Share, null)
+                    }
                     Box {
                         IconButton(
                             onClick = { showMore = true },
@@ -248,7 +253,16 @@ fun ConversationDetailScreen(
                         Alignment.Center
                     ) { CircularProgressIndicator() }
 
-                    detail == null -> ErrorContent(state.error ?: "加载失败", viewModel::loadDetail)
+                    detail == null || state.error != null -> EmptyPlaceholder(
+                        icon = AppIcons.Warning,
+                        title = "加载失败",
+                        subtitle = state.error,
+                        primaryButton = {
+                            Button(onClick = viewModel::loadDetail) {
+                                Text("重试")
+                            }
+                        }
+                    )
                     detail.chatType == 2 -> GroupConversationDetail(
                         modifier = Modifier.padding(padding),
                         detail = detail,
@@ -385,6 +399,165 @@ fun ConversationDetailScreen(
         onConfirmAdminToggle = viewModel::confirmAdminToggle
     )
 
+    ShareLinkSheet(
+        shareState = shareState,
+        onDismiss = viewModel::closeShareDialog,
+        onRetry = viewModel::openShareDialog,
+        onShareCard = {
+            val html = viewModel.buildShareCardHtml()
+            viewModel.closeShareDialog()
+            if (html == null) {
+                Toast.makeText(context, "无法生成分享卡片", Toast.LENGTH_SHORT).show()
+            } else {
+                val intent = Intent(context, ShareReceiverActivity::class.java).apply {
+                    action = Intent.ACTION_SEND
+                    type = "text/html"
+                    putExtra(Intent.EXTRA_TEXT, html)
+                }
+                context.startActivity(intent)
+            }
+        }
+    )
+
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ShareLinkSheet(
+    shareState: ShareLinkDialogState,
+    onDismiss: () -> Unit,
+    onRetry: () -> Unit,
+    onShareCard: () -> Unit
+) {
+    if (!shareState.isOpen) return
+
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val clipboard = LocalClipboard.current
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = "分享会话",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(Modifier.height(6.dp))
+            Text(
+                text = shareState.chatName,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.height(20.dp))
+
+            when {
+                shareState.isLoading -> {
+                    CircularProgressIndicator(Modifier.size(40.dp), strokeWidth = 3.dp)
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        "正在创建分享链接…",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                shareState.error != null -> {
+                    Icon(
+                        AppIcons.Warning,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(40.dp)
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        text = shareState.error,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.error,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(Modifier.height(20.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = onDismiss,
+                            modifier = Modifier.weight(1f)
+                        ) { Text("关闭") }
+                        Button(
+                            onClick = onRetry,
+                            modifier = Modifier.weight(1f)
+                        ) { Text("重试") }
+                    }
+                }
+
+                else -> {
+                    LiquidGlassSurface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        color = detailGlassColor(MaterialTheme.colorScheme.surfaceContainerHigh),
+                        blurRadius = 6.dp
+                    ) {
+                        SelectionContainer {
+                            Text(
+                                text = shareState.url,
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.padding(16.dp)
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(20.dp))
+
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Button(
+                            onClick = {
+                                scope.launch {
+                                    clipboard.setClipEntry(
+                                        ClipEntry(
+                                            ClipData.newPlainText(
+                                                "分享链接",
+                                                shareState.url
+                                            )
+                                        )
+                                    )
+                                    Toast.makeText(context, "链接已复制", Toast.LENGTH_SHORT).show()
+                                }
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(48.dp)
+                        ) {
+                            Icon(AppIcons.ContentCopy, null, Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text("复制链接")
+                        }
+
+                        OutlinedButton(
+                            onClick = onShareCard,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(48.dp)
+                        ) {
+                            Icon(AppIcons.Share, null, Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text("直接分享")
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 @Composable
@@ -1470,7 +1643,7 @@ private fun MemberRow(
     onAdminToggle: () -> Unit
 ) {
     var expanded by remember(member.userId) { mutableStateOf(false) }
-    
+
     ListItem(
         onClick = onClick,
         leadingContent = {
@@ -1847,18 +2020,8 @@ private fun LoadingContent() =
 
 @Composable
 private fun EmptyContent(text: String) = Box(Modifier.fillMaxSize(), Alignment.Center) {
-    Text(
-        text,
-        color = resolvedLiquidGlassContentColor(MaterialTheme.colorScheme.onSurfaceVariant)
+    EmptyPlaceholder(
+        icon = AppIcons.Info,
+        title = text
     )
-}
-
-@Composable
-private fun ErrorContent(message: String, retry: () -> Unit) = Column(
-    Modifier.fillMaxSize(),
-    horizontalAlignment = Alignment.CenterHorizontally,
-    verticalArrangement = Arrangement.Center
-) {
-    Text(message, color = MaterialTheme.colorScheme.error)
-    TextButton(onClick = retry) { Text("重试") }
 }
