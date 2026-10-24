@@ -15,6 +15,7 @@ import androidx.compose.ui.unit.dp
 import com.juhao.murexide.ui.components.*
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import com.juhao.murexide.ui.about.AboutActivity
+import com.juhao.murexide.ui.settings.userbot.UserBotActivity
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -24,10 +25,10 @@ fun SettingsScreen(
     onLogout: () -> Unit = {}
 ) {
     val scrollState = rememberScrollState()
-        
+
     val context = LocalContext.current
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
-    
+
     val title = when (page) {
         1 -> "外观设置"
         2 -> "消息气泡设置"
@@ -85,19 +86,18 @@ fun SettingsScreen(
     }
 }
 
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun MainScreen() {
     val context = LocalContext.current
-    
+
     SettingsGroup {
         SettingsItem(
             icon = AppIcons.Style,
             title = "应用外观",
             subtitle = "主题模式、主题颜色、液态玻璃等",
             onClick = {
-                val intent = Intent(context, SettingsActivity::class.java).apply{
+                val intent = Intent(context, SettingsActivity::class.java).apply {
                     putExtra("page", 1)
                 }
                 context.startActivity(intent)
@@ -108,21 +108,21 @@ private fun MainScreen() {
             title = "消息气泡",
             subtitle = "自定义气泡透明度、圆角大小、控件显示等",
             onClick = {
-                val intent = Intent(context, SettingsActivity::class.java).apply{
+                val intent = Intent(context, SettingsActivity::class.java).apply {
                     putExtra("page", 2)
                 }
                 context.startActivity(intent)
             }
         )
     }
-    
+
     SettingsGroup {
         SettingsItem(
             icon = AppIcons.DragClick,
             title = "行为",
             subtitle = "大屏模式、截图、通知等",
             onClick = {
-                val intent = Intent(context, SettingsActivity::class.java).apply{
+                val intent = Intent(context, SettingsActivity::class.java).apply {
                     putExtra("page", 3)
                 }
                 context.startActivity(intent)
@@ -133,7 +133,7 @@ private fun MainScreen() {
             title = "更新",
             subtitle = "检查更新、更新频道",
             onClick = {
-                val intent = Intent(context, SettingsActivity::class.java).apply{
+                val intent = Intent(context, SettingsActivity::class.java).apply {
                     putExtra("page", 4)
                 }
                 context.startActivity(intent)
@@ -151,11 +151,19 @@ private fun MainScreen() {
             }
         )
         SettingsItem(
+            icon = AppIcons.SmartToy,
+            title = "用户 Bot",
+            subtitle = "关键词自动回复、自动撤回",
+            onClick = {
+                UserBotActivity.start(context)
+            }
+        )
+        SettingsItem(
             icon = AppIcons.Person,
             title = "账号",
             subtitle = "切换账号、提取 Token、退出登录",
             onClick = {
-                val intent = Intent(context, SettingsActivity::class.java).apply{
+                val intent = Intent(context, SettingsActivity::class.java).apply {
                     putExtra("page", 7)
                 }
                 context.startActivity(intent)

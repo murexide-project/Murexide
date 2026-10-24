@@ -1041,7 +1041,7 @@ fun ChatScreen(
                                 )
                             }
                         },
-                        extraButton = if (selectionMode) null else {
+                        extraButton = if (selectionMode || uiState.boardPanel.boards.isEmpty()) null else {
                             {
                                 Icon(
                                     imageVector = if (uiState.boardPanel.isExpanded) {

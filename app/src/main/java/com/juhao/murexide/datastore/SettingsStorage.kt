@@ -25,37 +25,31 @@ class SettingsStorage(private val context: Context) {
     companion object {
         private val THEME_MODE_KEY = stringPreferencesKey("theme_mode")
         private val THEME_COLOR_KEY = stringPreferencesKey("theme_color")
-
         private val NOTIFICATION_ENABLED_KEY = booleanPreferencesKey("notification_enabled")
-
         private val SQUARE_AVATAR_KEY = booleanPreferencesKey("square_avatar")
         private val BIG_SCREEN_KEY = booleanPreferencesKey("big_screen")
         private val UPDATE_CHANNEL_KEY = stringPreferencesKey("update_channel")
-
         private val FLOAT_BOTTOM_BAR_KEY = booleanPreferencesKey("float_bottom_bar")
         private val SHOW_STICKY_KEY = booleanPreferencesKey("show_sticky")
-
         private val MSG_SHOW_TAGS_KEY = booleanPreferencesKey("msg_show_tags")
         private val BUBBLE_CORNER_RADIUS_KEY = floatPreferencesKey("bubble_corner_radius")
         private val BUBBLE_OPACITY_KEY = floatPreferencesKey("bubble_opacity")
-
         private val SHOW_BACKGROUND_KEY = booleanPreferencesKey("show_background")
         private val BACKGROUND_OPACITY_KEY = floatPreferencesKey("background_opacity")
-
         private val SHOW_MY_BUBBLE_AVATAR_KEY = booleanPreferencesKey("show_my_bubble_avatar")
         private val LIQUID_GLASS_ENABLED_KEY = booleanPreferencesKey("liquid_glass_enabled")
         private val LIQUID_GLASS_BLUR_KEY = floatPreferencesKey("liquid_glass_blur")
-
         private val SCREENSHOT_HIDE_SENDER_INFO_KEY = booleanPreferencesKey("screenshot_hide_sender_info")
         private val SCREENSHOT_HIDE_MY_INFO_KEY = booleanPreferencesKey("screenshot_hide_my_info")
         private val SCREENSHOT_HIDE_SESSION_INFO_KEY = booleanPreferencesKey("screenshot_hide_session_info")
         private val SCREENSHOT_HIDE_IMAGES_KEY = booleanPreferencesKey("screenshot_hide_images")
-
         private val CACHE_ENABLED_KEY = booleanPreferencesKey("cache_enabled")
-
         private val HIDE_LAUNCHER_KEY = booleanPreferencesKey("hide_launcher")
-
         private val WS_ENABLED_KEY = booleanPreferencesKey("ws_enabled")
+        private val USER_BOT_ENABLED_KEY = booleanPreferencesKey("user_bot_enabled")
+        private val USER_BOT_RULES_KEY = stringPreferencesKey("user_bot_rules")
+        private val USER_BOT_TIP_SHOWN_KEY = booleanPreferencesKey("user_bot_tip_shown")
+        private val USER_BOT_RECALL_SENDER_IDS_KEY = stringPreferencesKey("user_bot_recall_sender_ids")
 
         private const val LAUNCHER_ALIAS_SUFFIX = ".LauncherAlias"
         private const val DEFAULT_SECRET_CODE = "2468"
@@ -177,6 +171,22 @@ class SettingsStorage(private val context: Context) {
     val wsEnabledFlow = preferenceFlow(WS_ENABLED_KEY, true)
     suspend fun getWsEnabled() = getPreference(WS_ENABLED_KEY, true)
     suspend fun setWsEnabled(enabled: Boolean) = setPreference(WS_ENABLED_KEY, enabled)
+
+    val userBotEnabledFlow = preferenceFlow(USER_BOT_ENABLED_KEY, false)
+    suspend fun getUserBotEnabled() = getPreference(USER_BOT_ENABLED_KEY, false)
+    suspend fun setUserBotEnabled(enabled: Boolean) = setPreference(USER_BOT_ENABLED_KEY, enabled)
+
+    val userBotRulesFlow = preferenceFlow(USER_BOT_RULES_KEY, "")
+    suspend fun getUserBotRules() = getPreference(USER_BOT_RULES_KEY, "")
+    suspend fun setUserBotRules(rules: String) = setPreference(USER_BOT_RULES_KEY, rules)
+
+    val userBotTipShownFlow = preferenceFlow(USER_BOT_TIP_SHOWN_KEY, false)
+    suspend fun getUserBotTipShown() = getPreference(USER_BOT_TIP_SHOWN_KEY, false)
+    suspend fun setUserBotTipShown(shown: Boolean) = setPreference(USER_BOT_TIP_SHOWN_KEY, shown)
+
+    val userBotRecallSenderIdsFlow = preferenceFlow(USER_BOT_RECALL_SENDER_IDS_KEY, "")
+    suspend fun getUserBotRecallSenderIds() = getPreference(USER_BOT_RECALL_SENDER_IDS_KEY, "")
+    suspend fun setUserBotRecallSenderIds(ids: String) = setPreference(USER_BOT_RECALL_SENDER_IDS_KEY, ids)
 
     val hideLauncherFlow = preferenceFlow(HIDE_LAUNCHER_KEY, false)
 

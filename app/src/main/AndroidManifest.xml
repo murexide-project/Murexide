@@ -200,6 +200,10 @@
             </intent-filter>
         </activity>
         <activity
+            android:name=".ui.settings.userbot.UserBotActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Murexide" />
+        <activity
             android:name=".ui.conversationdetail.NewConversationActivity"
             android:exported="false"
             android:theme="@style/Theme.Murexide"

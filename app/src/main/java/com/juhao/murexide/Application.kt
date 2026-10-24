@@ -28,6 +28,7 @@ import com.juhao.murexide.data.local.CacheSyncCoordinator
 import com.juhao.murexide.network.NetworkClient
 import com.juhao.murexide.network.WebSocketManager
 import com.juhao.murexide.repository.ConversationRepository
+import com.juhao.murexide.ui.settings.userbot.UserBotManager
 import com.juhao.murexide.ui.theme.UiCache
 import com.juhao.murexide.ui.theme.UiState
 import com.juhao.murexide.ui.components.MurexideBigImageHelper
@@ -60,6 +61,7 @@ class MyApplication : Application(), ImageLoaderFactory {
         }
         NotificationHelper.createNotificationChannel(this)
         AppForegroundState.init(this)
+        UserBotManager.start(this)
         observeAvatarSetting()
         initWebSocket()
         syncLauncherVisibility()
