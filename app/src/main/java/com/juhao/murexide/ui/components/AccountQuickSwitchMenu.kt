@@ -36,17 +36,19 @@ import com.juhao.murexide.datastore.AccountStorage
 import com.juhao.murexide.datastore.UserAccount
 import com.juhao.murexide.ui.icons.AppIcons
 import com.juhao.murexide.ui.login.LoginActivity
-import com.juhao.murexide.ui.theme.LocalLiquidGlassBlur
 import com.juhao.murexide.ui.theme.ProvideLiquidGlassContentColor
-import com.juhao.murexide.ui.theme.liquidGlass
-import com.juhao.murexide.ui.theme.liquidGlassHighlightEnabled
+import com.juhao.murexide.ui.theme.liquidglass.glassControl
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.blur.materials.HazeMaterials
+import dev.chrisbanes.haze.HazeInput
+import dev.chrisbanes.haze.blur.hazeBlur
 import kotlinx.coroutines.launch
 
-/** 主页“我的”导航项长按后展示的快捷账号切换菜单。 */
 @Composable
 fun AccountQuickSwitchMenu(
     expanded: Boolean,
     accounts: List<UserAccount>,
+    hazeState: HazeState,
     currentAccountId: String,
     onDismissRequest: () -> Unit,
     modifier: Modifier = Modifier
@@ -58,11 +60,14 @@ fun AccountQuickSwitchMenu(
     DropdownMenu(
         expanded = expanded,
         onDismissRequest = onDismissRequest,
-        modifier = modifier,
-        shape = MaterialTheme.shapes.extraLarge,
-        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-        tonalElevation = 6.dp,
-        shadowElevation = 8.dp
+        modifier = modifier.hazeBlur(
+            input = HazeInput.Sources(hazeState),
+            style = HazeMaterials.thin().then {
+                blurRadius(28.dp)
+                noiseFactor(0f)
+            }
+        ),
+        shape = MaterialTheme.shapes.extraLarge
     ) {
         DropdownMenuItem(
             text = {
@@ -177,7 +182,6 @@ private fun QuickSwitchAvatar(account: UserAccount, isCurrentAccount: Boolean) {
     }
 }
 
-/** 液态玻璃主题下，主页“我的”导航项长按后展示的快捷账号切换菜单（同窗口全屏覆盖层实现）。 */
 @Composable
 fun AccountQuickSwitchGlassMenu(
     expanded: Boolean,
@@ -192,10 +196,8 @@ fun AccountQuickSwitchGlassMenu(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val accountStorage = AccountStorage.getInstance(context.applicationContext)
-    val blur = LocalLiquidGlassBlur.current
-    val glassColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.6f)
+    val hazeState = remember { HazeState() }
     val shape = RoundedCornerShape(28.dp)
-    val showHighlight = liquidGlassHighlightEnabled()
 
     BackHandler(enabled = expanded, onBack = onDismissRequest)
 
@@ -221,18 +223,16 @@ fun AccountQuickSwitchGlassMenu(
                     .padding(cardPadding)
                     .width(IntrinsicSize.Max)
                     .widthIn(max = 320.dp)
-                    .liquidGlass(
-                        enabled = true,
-                        backdrop = backdrop,
+                    .glassControl(
                         shape = shape,
-                        surfaceColor = glassColor,
-                        blurRadius = 6.dp * blur,
-                        lensHeight = 12.dp,
-                        lensAmount = 22.dp,
-                        showHighlight = showHighlight,
+                        liquidBackdrop = backdrop,
+                        hazeState = hazeState,
+                        useGlassBar = backdrop != null,
+                        isInteractive = true,
                     )
                     .padding(8.dp),
             ) {
+                val glassColor = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.8f)
                 ProvideLiquidGlassContentColor(
                     glassColor = glassColor,
                     preferredColor = MaterialTheme.colorScheme.onSurface,

@@ -41,6 +41,7 @@ import com.juhao.murexide.ui.community.ba.CreatePostActivity
 import com.juhao.murexide.ui.components.*
 import com.juhao.murexide.ui.theme.LocalLiquidGlassBlur
 import com.juhao.murexide.ui.theme.LocalLiquidGlassEnabled
+import com.juhao.murexide.ui.theme.liquidglass.glassControl
 import com.juhao.murexide.ui.theme.UiState
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.backdrops.layerBackdrop
@@ -55,6 +56,7 @@ import dev.chrisbanes.haze.blur.hazeBlur
 import dev.chrisbanes.haze.blur.materials.HazeMaterials
 import dev.chrisbanes.haze.hazeSource
 import kotlinx.coroutines.launch
+import com.kyant.backdrop.backdrops.emptyBackdrop
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -136,6 +138,7 @@ fun PostDetailScreen(
     if (showInputSheet) {
         CommentInputSheet(
             onDismiss = { showInputSheet = false },
+            liquidGlassEnabled = liquidGlassEnabled,
             onSend = { text ->
                 viewModel.submitComment(text) { success ->
                     if (success) {
@@ -386,28 +389,11 @@ private fun CommentBottomBar(
     val useGlassBar = liquidGlassEnabled && liquidBackdrop != null
     val glassSurfaceColor = barColor.copy(alpha = 0.8f)
 
-    fun Modifier.glassControl(shape: Shape): Modifier =
-        if (useGlassBar) {
-            drawBackdrop(
-                backdrop = liquidBackdrop,
-                shape = { shape },
-                effects = {
-                    vibrancy()
-                    blur(1.dp.toPx() * liquidGlassBlur)
-                    lens(16.dp.toPx(), 32.dp.toPx())
-                },
-                onDrawSurface = {
-                    drawRect(glassSurfaceColor)
-                },
-            )
-        } else {
-            shadow(2.dp, shape)
-                .clip(shape)
-                .hazeBlur(
-                    input = HazeInput.Sources(hazeState),
-                    style = barStyle
-                )
-        }
+    @Composable
+    fun Modifier.glassControl(
+        shape: Shape,
+        isInteractive: Boolean = true
+    ): Modifier = glassControl(shape, liquidBackdrop, hazeState, useGlassBar, isInteractive)
 
     Box(modifier = Modifier.fillMaxWidth()) {
         Box(
@@ -429,9 +415,9 @@ private fun CommentBottomBar(
                 .fillMaxWidth()
                 .navigationBarsPadding()
                 .imePadding()
-                .padding(horizontal = 6.dp, vertical = 6.dp),
+                .padding(horizontal = 12.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Row(
                 modifier = Modifier
@@ -526,6 +512,7 @@ private fun BottomBarAction(
 @Composable
 private fun CommentInputSheet(
     onDismiss: () -> Unit,
+    liquidGlassEnabled: Boolean,
     onSend: (String) -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -570,12 +557,13 @@ private fun CommentInputSheet(
                 }
             )
 
-            Button(
+            StyledButton(
                 onClick = {
                     if (canSend) {
                         onSend(text.trim())
                     }
                 },
+                backdrop = if (liquidGlassEnabled) emptyBackdrop() else null,
                 enabled = canSend,
                 modifier = Modifier
                     .align(Alignment.End)

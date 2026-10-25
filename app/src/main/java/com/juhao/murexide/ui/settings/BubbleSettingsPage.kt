@@ -12,7 +12,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.juhao.murexide.ui.components.*
 import com.juhao.murexide.datastore.SettingsStorage
-import com.juhao.murexide.ui.theme.liquidglass.LiquidGlassSlider
 import com.juhao.murexide.data.MessageItem
 import com.juhao.murexide.data.MessageTag
 import com.juhao.murexide.ui.chat.components.MessageBubble
@@ -170,7 +169,7 @@ fun BubblePage() {
                 
                 Spacer(modifier = Modifier.height(4.dp))
                 
-                LiquidGlassSlider(
+                Slider(
                     value = bubbleCornerRadius,
                     onValueChange = { bubbleCornerRadius = it },
                     onValueChangeFinished = {
@@ -239,7 +238,7 @@ fun BubblePage() {
                 
                 Spacer(modifier = Modifier.height(4.dp))
                 
-                LiquidGlassSlider(
+                Slider(
                     value = bubbleOpacity,
                     onValueChange = { bubbleOpacity = it },
                     onValueChangeFinished = {

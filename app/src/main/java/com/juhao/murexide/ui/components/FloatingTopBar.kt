@@ -6,7 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -15,9 +15,12 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.util.fastCoerceAtMost
+import androidx.compose.ui.util.lerp
 import com.juhao.murexide.ui.theme.LocalLiquidGlassBlur
 import com.juhao.murexide.ui.theme.LocalLiquidGlassEnabled
 import com.kyant.backdrop.Backdrop
+import com.juhao.murexide.ui.theme.liquidglass.glassControl
 import com.kyant.backdrop.drawBackdrop
 import com.kyant.backdrop.effects.blur
 import com.kyant.backdrop.effects.lens
@@ -26,6 +29,11 @@ import dev.chrisbanes.haze.HazeInput
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.blur.hazeBlur
 import dev.chrisbanes.haze.blur.materials.HazeMaterials
+import kotlin.math.abs
+import kotlin.math.atan2
+import kotlin.math.cos
+import kotlin.math.sin
+import kotlin.math.tanh
 
 @Composable
 internal fun FloatingTopBar(
@@ -52,28 +60,11 @@ internal fun FloatingTopBar(
     val useGlassBar = liquidGlassEnabled && liquidBackdrop != null
     val glassSurfaceColor = topBarColor.copy(alpha = 0.8f)
 
-    fun Modifier.glassControl(shape: Shape): Modifier =
-        if (useGlassBar) {
-            drawBackdrop(
-                backdrop = liquidBackdrop,
-                shape = { shape },
-                effects = {
-                    vibrancy()
-                    blur(1.dp.toPx() * liquidGlassBlur)
-                    lens(16.dp.toPx(), 32.dp.toPx())
-                },
-                onDrawSurface = {
-                    drawRect(glassSurfaceColor)
-                },
-            )
-        } else {
-            shadow(2.dp, shape)
-                .clip(shape)
-                .hazeBlur(
-                    input = HazeInput.Sources(hazeState),
-                    style = topBarStyle
-                )
-        }
+    @Composable
+    fun Modifier.glassControl(
+        shape: Shape,
+        isInteractive: Boolean = true
+    ): Modifier = glassControl(shape, liquidBackdrop, hazeState, useGlassBar, isInteractive)
 
     Box(modifier = Modifier.fillMaxWidth()) {
         if (showOverlay) {
@@ -115,9 +106,11 @@ internal fun FloatingTopBar(
                 modifier = Modifier
                     .weight(1f)
                     .height(controlSize)
-                    .glassControl(RoundedCornerShape(24.dp))
+                    .glassControl(RoundedCornerShape(24.dp), false)
                     .clip(RoundedCornerShape(24.dp))
-                    .clickable(onClick = onTitleClick)
+                    .clickable(
+                        onClick = onTitleClick
+                    )
                     .padding(start = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(4.dp)

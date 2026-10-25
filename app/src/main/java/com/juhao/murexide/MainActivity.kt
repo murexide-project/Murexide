@@ -90,7 +90,6 @@ import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.juhao.murexide.ui.theme.LocalLiquidGlassEnabled
 import com.juhao.murexide.ui.theme.LocalLiquidGlassBlur
 import com.juhao.murexide.ui.theme.liquidGlass
-import com.juhao.murexide.ui.theme.liquidGlassHighlightEnabled
 import com.juhao.murexide.ui.theme.liquidGlassContentColor
 import com.juhao.murexide.ui.theme.liquidglass.LiquidBottomTabs
 
@@ -216,7 +215,6 @@ private fun TelegramFloatingNavigationBar(
 ) {
     val liquidGlassEnabled = LocalLiquidGlassEnabled.current
     val liquidGlassBlur = LocalLiquidGlassBlur.current
-    val showGlassHighlight = liquidGlassHighlightEnabled()
     val shape = RoundedCornerShape(32.dp)
     val navigationBarHeight = 64.dp
     val indicatorInset = 5.dp
@@ -239,8 +237,7 @@ private fun TelegramFloatingNavigationBar(
             surfaceColor = navigationSurfaceColor,
             blurRadius = 16.dp * liquidGlassBlur,
             lensHeight = 12.dp,
-            lensAmount = 22.dp,
-            showHighlight = showGlassHighlight
+            lensAmount = 22.dp
         )
     } else {
         Modifier
@@ -308,8 +305,7 @@ private fun TelegramFloatingNavigationBar(
                                     surfaceColor = selectedIndicatorColor.copy(alpha = 0.48f),
                                     blurRadius = 6.dp * liquidGlassBlur,
                                     lensHeight = 6.dp,
-                                    lensAmount = 10.dp,
-                                    showHighlight = showGlassHighlight
+                                    lensAmount = 10.dp
                                 )
                             } else {
                                 Modifier
@@ -372,6 +368,7 @@ private fun TelegramFloatingNavigationBar(
                                 AccountQuickSwitchMenu(
                                     expanded = showAccountMenu,
                                     accounts = accounts,
+                                    hazeState = hazeState,
                                     currentAccountId = currentAccountId,
                                     onDismissRequest = onDismissAccountMenu
                                 )
@@ -513,6 +510,7 @@ fun MainScreen(account: UserAccount) {
                                     AccountQuickSwitchMenu(
                                         expanded = showAccountMenu && !liquidGlassEnabled,
                                         accounts = loggedInAccounts,
+                                        hazeState = hazeState,
                                         currentAccountId = account.id,
                                         onDismissRequest = { showAccountMenu = false }
                                     )
@@ -594,6 +592,7 @@ fun MainScreen(account: UserAccount) {
                                         AccountQuickSwitchMenu(
                                             expanded = showAccountMenu && !liquidGlassEnabled,
                                             accounts = loggedInAccounts,
+                                            hazeState = hazeState,
                                             currentAccountId = account.id,
                                             onDismissRequest = { showAccountMenu = false }
                                         )

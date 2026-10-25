@@ -47,8 +47,7 @@ fun Modifier.liquidGlass(
     surfaceColor: Color,
     blurRadius: Dp = 6.dp,
     lensHeight: Dp = 0.dp,
-    lensAmount: Dp = 0.dp,
-    showHighlight: Boolean = true,
+    lensAmount: Dp = 0.dp
 ): Modifier {
     if (!enabled || backdrop == null) {
         return clip(shape).background(surfaceColor)
@@ -64,11 +63,7 @@ fun Modifier.liquidGlass(
                 lens(lensHeight.toPx(), lensAmount.toPx())
             }
         },
-        highlight = if (showHighlight) {
-            { Highlight.Plain }
-        } else {
-            null
-        },
+        highlight = { Highlight.Plain },
         shadow = { Shadow(radius = 3.dp, alpha = 0.08f) },
         innerShadow = { InnerShadow(radius = 2.dp, alpha = 0.08f) },
         onDrawSurface = {
@@ -141,43 +136,3 @@ internal fun resolvedLiquidGlassContentColor(fallbackColor: Color): Color {
         minimumContrast = context.minimumContrast,
     )
 }
-
-@Composable
-fun LiquidGlassSurface(
-    modifier: Modifier = Modifier,
-    shape: Shape,
-    color: Color,
-    contentColor: Color = MaterialTheme.colorScheme.onSurface,
-    blurRadius: Dp = 6.dp,
-    lensHeight: Dp = 0.dp,
-    lensAmount: Dp = 0.dp,
-    content: @Composable () -> Unit,
-) {
-    Box(
-        modifier = modifier.liquidGlass(
-            enabled = LocalLiquidGlassEnabled.current,
-            backdrop = LocalLiquidGlassBackdrop.current,
-            shape = shape,
-            surfaceColor = color,
-            blurRadius = blurRadius * LocalLiquidGlassBlur.current,
-            lensHeight = lensHeight,
-            lensAmount = lensAmount,
-            showHighlight = liquidGlassHighlightEnabled(),
-        ),
-        content = {
-            ProvideLiquidGlassContentColor(
-                glassColor = color,
-                preferredColor = contentColor,
-            ) {
-                content()
-            }
-        }
-    )
-}
-
-@Composable
-fun liquidGlassHighlightEnabled(): Boolean =
-    MaterialTheme.colorScheme.background.liquidGlassLuminance() > 0.5f
-
-private fun Color.liquidGlassLuminance(): Float =
-    (0.2126f * red) + (0.7152f * green) + (0.0722f * blue)

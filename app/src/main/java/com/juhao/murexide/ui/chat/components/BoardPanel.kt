@@ -15,6 +15,7 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PrimaryScrollableTabRow
 import androidx.compose.material3.Tab
@@ -32,7 +33,6 @@ import com.juhao.murexide.data.BoardItem
 import com.juhao.murexide.ui.components.MarkdownText
 import com.juhao.murexide.ui.components.LiteHtmlContent
 import com.juhao.murexide.ui.theme.resolvedLiquidGlassContentColor
-import com.juhao.murexide.ui.theme.liquidglass.LiquidGlassSelectionContainer
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -130,7 +130,7 @@ private fun BoardContent(
             }
         }
 
-        LiquidGlassSelectionContainer {
+        SelectionContainer {
             when (board.contentType) {
                 BoardItem.CONTENT_TYPE_MARKDOWN -> MarkdownText(
                     markdown = board.content,

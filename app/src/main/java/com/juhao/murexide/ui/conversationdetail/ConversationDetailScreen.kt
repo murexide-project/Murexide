@@ -66,12 +66,10 @@ import com.juhao.murexide.ui.icons.AutoMirroredIcon
 import com.juhao.murexide.ui.chat.components.formatVideoDuration
 import com.juhao.murexide.ui.chatsearch.ChatSearchActivity
 import com.juhao.murexide.ui.share.ShareReceiverActivity
-import com.juhao.murexide.ui.theme.LiquidGlassSurface
 import com.juhao.murexide.ui.theme.LocalLiquidGlassBackdrop
 import com.juhao.murexide.ui.theme.LocalLiquidGlassEnabled
 import com.juhao.murexide.ui.theme.liquidGlass
 import com.juhao.murexide.ui.theme.resolvedLiquidGlassContentColor
-import com.juhao.murexide.ui.theme.liquidglass.LiquidGlassSlider
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import kotlinx.coroutines.launch
 
@@ -500,11 +498,10 @@ private fun ShareLinkSheet(
                 }
 
                 else -> {
-                    LiquidGlassSurface(
+                    Surface(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(16.dp),
-                        color = detailGlassColor(MaterialTheme.colorScheme.surfaceContainerHigh),
-                        blurRadius = 6.dp
+                        color = detailGlassColor(MaterialTheme.colorScheme.surfaceContainerHigh)
                     ) {
                         SelectionContainer {
                             Text(
@@ -1173,16 +1170,13 @@ private fun UserHeader(
             )
         }
         if (detail.introduction.isNotBlank()) {
-            LiquidGlassSurface(
+            Surface(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 12.dp, vertical = 8.dp)
                     .clickable(onClick = onIntroductionClick),
                 shape = RoundedCornerShape(18.dp),
-                color = detailGlassColor(MaterialTheme.colorScheme.surfaceContainerHigh),
-                blurRadius = 6.dp,
-                lensHeight = 6.dp,
-                lensAmount = 12.dp
+                color = detailGlassColor(MaterialTheme.colorScheme.surfaceContainerHigh)
             ) {
                 IntroductionContent(
                     introduction = detail.introduction,
@@ -1401,16 +1395,13 @@ private fun GroupHeader(
         Spacer(Modifier.height(8.dp))
         GroupIdentityInfo(detail)
         if (detail.introduction.isNotBlank()) {
-            LiquidGlassSurface(
+            Surface(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 12.dp, vertical = 8.dp)
                     .clickable(onClick = onIntroductionClick),
                 shape = RoundedCornerShape(18.dp),
-                color = detailGlassColor(MaterialTheme.colorScheme.surfaceContainerHigh),
-                blurRadius = 6.dp,
-                lensHeight = 6.dp,
-                lensAmount = 12.dp
+                color = detailGlassColor(MaterialTheme.colorScheme.surfaceContainerHigh)
             ) {
                 IntroductionContent(
                     introduction = detail.introduction,
@@ -1436,15 +1427,12 @@ private fun GroupIdentityInfo(detail: ConversationDetail) {
         }
     }
 
-    LiquidGlassSurface(
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 12.dp),
         shape = RoundedCornerShape(18.dp),
-        color = detailGlassColor(MaterialTheme.colorScheme.surfaceContainerHigh),
-        blurRadius = 6.dp,
-        lensHeight = 6.dp,
-        lensAmount = 12.dp
+        color = detailGlassColor(MaterialTheme.colorScheme.surfaceContainerHigh)
     ) {
         Row(
             modifier = Modifier
@@ -1786,7 +1774,7 @@ private fun MemberManagementDialogs(
                 } else {
                     Column {
                         Text("禁言时长：${gagOptions[selectedGagIndex].second}")
-                        LiquidGlassSlider(
+                        Slider(
                             value = selectedGagIndex.toFloat(),
                             onValueChange = { selectedGagIndex = it.toInt() },
                             valueRange = 0f..gagOptions.lastIndex.toFloat(),
@@ -1940,13 +1928,12 @@ private fun DetailCardSegment(
         isBottom -> RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp)
         else -> RectangleShape
     }
-    LiquidGlassSurface(
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 12.dp),
         shape = shape,
-        color = detailGlassColor(cardColor),
-        blurRadius = 6.dp
+        color = detailGlassColor(cardColor)
     ) {
         if (minHeight == null) {
             Column { content() }

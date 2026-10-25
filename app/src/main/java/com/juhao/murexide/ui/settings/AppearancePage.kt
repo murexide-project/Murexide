@@ -59,7 +59,6 @@ import com.juhao.murexide.ui.theme.PinkLightColorScheme
 import com.juhao.murexide.ui.theme.IndigoLightColorScheme
 import com.juhao.murexide.ui.theme.BrownLightColorScheme
 import com.juhao.murexide.ui.theme.GrayLightColorScheme
-import com.juhao.murexide.ui.theme.liquidglass.LiquidGlassSlider
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
@@ -193,7 +192,7 @@ fun AppearancePage() {
                             }
                         }
                         Spacer(modifier = Modifier.height(4.dp))
-                        LiquidGlassSlider(
+                        Slider(
                             value = liquidGlassBlur,
                             onValueChange = { liquidGlassBlur = it },
                             onValueChangeFinished = {
@@ -279,7 +278,7 @@ fun AppearancePage() {
 
                     Spacer(modifier = Modifier.height(4.dp))
 
-                    LiquidGlassSlider(
+                    Slider(
                         value = backgroundOpacity,
                         onValueChange = { backgroundOpacity = it },
                         onValueChangeFinished = {

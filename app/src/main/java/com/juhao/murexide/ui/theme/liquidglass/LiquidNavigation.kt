@@ -132,7 +132,7 @@ fun LiquidBottomTabs(
                     animationScope.launch { offsetAnimation.animateTo(0f, spring(1f, 300f, 0.5f)) }
                 },
                 onDrag = { _, dragAmount ->
-                    dragToValue(
+                    updateValue(
                         (targetValue + dragAmount.x / tabWidth * if (isLtr) 1f else -1f)
                             .fastCoerceIn(0f, (tabsCount - 1).toFloat()),
                     )
