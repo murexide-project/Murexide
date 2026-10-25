@@ -86,6 +86,7 @@ fun ConversationDetailScreen(
     onEnterChat: (ConversationDetail) -> Unit,
     onEditGroup: (ConversationDetail) -> Unit = {},
     onEditBot: (ConversationDetail) -> Unit = {},
+    onOpenTagManage: (ConversationDetail) -> Unit = {},
     onOpenMember: (GroupMember) -> Unit = {},
     onOpenBoard: (BaItem) -> Unit = {},
     onInviteBotToGroup: (ConversationDetail) -> Unit = {},
@@ -221,6 +222,16 @@ fun ConversationDetailScreen(
                                     }
                                 )
                             }
+                            if (group != null && group.permissionLevel >= 2) {
+                                DropdownMenuItem(
+                                    text = { Text("标签管理") },
+                                    leadingIcon = { Icon(AppIcons.Tag, null) },
+                                    onClick = {
+                                        showMore = false
+                                        onOpenTagManage(group)
+                                    }
+                                )
+                            }
                             DropdownMenuItem(
                                 text = { Text("刷新") },
                                 leadingIcon = { Icon(AppIcons.Refresh, null) },
@@ -285,6 +296,8 @@ fun ConversationDetailScreen(
                         onMute = viewModel::toggleMute,
                         onLeave = { showLeaveConfirm = true },
                         onTabSelected = viewModel::selectTab,
+                        memberKeyword = state.memberKeyword,
+                        onMemberSearch = viewModel::searchMembers,
                         onLoadMembers = { viewModel.loadMembers() },
                         onLoadHistory = viewModel::loadMoreHistory,
                         onOpenMember = onOpenMember,
@@ -582,6 +595,8 @@ private fun GroupConversationDetail(
     onMute: () -> Unit,
     onLeave: () -> Unit,
     onTabSelected: (Int) -> Unit,
+    memberKeyword: String,
+    onMemberSearch: (String) -> Unit,
     onLoadMembers: () -> Unit,
     onLoadHistory: () -> Unit,
     onOpenMember: (GroupMember) -> Unit,
@@ -595,6 +610,7 @@ private fun GroupConversationDetail(
     var introductionExpanded by remember(detail.introduction) { mutableStateOf(false) }
     val cardColor = MaterialTheme.colorScheme.surfaceContainerHigh
     val mediaRows = media.chunked(3)
+
     LaunchedEffect(
         listState,
         selectedTab,
@@ -669,7 +685,29 @@ private fun GroupConversationDetail(
                 }
             }
             when (selectedTab) {
-                0 -> when {
+                0 -> {
+                    item(key = "members-search") {
+                        DetailCardSegment(cardColor = cardColor) {
+                            OutlinedTextField(
+                                value = memberKeyword,
+                                onValueChange = onMemberSearch,
+                                placeholder = { Text("搜索成员") },
+                                leadingIcon = { Icon(AppIcons.Search, contentDescription = null) },
+                                trailingIcon = {
+                                    if (memberKeyword.isNotEmpty()) {
+                                        IconButton(onClick = { onMemberSearch("") }) {
+                                            Icon(AppIcons.Close, contentDescription = "清除")
+                                        }
+                                    }
+                                },
+                                singleLine = true,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 12.dp, vertical = 8.dp)
+                            )
+                        }
+                    }
+                    when {
                     isLoadingMembers && members.isEmpty() -> item(key = "members-loading") {
                         DetailCardSegment(
                             cardColor,
@@ -719,6 +757,7 @@ private fun GroupConversationDetail(
                             }
                         }
                     }
+                }
                 }
 
                 1 -> when {

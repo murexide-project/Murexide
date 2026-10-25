@@ -150,8 +150,7 @@ fun StyledSwitch(
                 Icon(
                     imageVector = AppIcons.Check,
                     contentDescription = null,
-                    modifier = Modifier.size(SwitchDefaults.IconSize),
-                    tint = MaterialTheme.colorScheme.primary
+                    modifier = Modifier.size(SwitchDefaults.IconSize)
                 )
             }
         },

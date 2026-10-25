@@ -88,6 +88,13 @@ class ConversationDetailActivity : ComponentActivity() {
                                 groupAvatar = detail.avatarUrl
                             )
                         },
+                        onOpenTagManage = { detail ->
+                            GroupTagActivity.start(
+                                context = this,
+                                groupId = detail.chatId,
+                                groupName = detail.name
+                            )
+                        },
                         onEditBot = { detail ->
                             editBotLauncher.launch(
                                 BotSettingsActivity.intent(

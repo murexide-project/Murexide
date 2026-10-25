@@ -16,6 +16,8 @@ import com.juhao.murexide.repository.GroupRepository
 import com.juhao.murexide.repository.InstructionRepository
 import com.juhao.murexide.repository.MessageRepository
 import com.juhao.murexide.repository.ShareRepository
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -62,6 +64,8 @@ class ConversationDetailViewModel(
 
     private val _shareState = MutableStateFlow(ShareLinkDialogState())
     val shareState: StateFlow<ShareLinkDialogState> = _shareState.asStateFlow()
+
+    private var memberSearchJob: Job? = null
 
     init {
         loadDetail()
@@ -196,12 +200,24 @@ class ConversationDetailViewModel(
         }
     }
 
+    fun searchMembers(keyword: String) {
+        val state = _uiState.value
+        if (state.memberKeyword == keyword) return
+        _uiState.update { it.copy(memberKeyword = keyword) }
+        memberSearchJob?.cancel()
+        memberSearchJob = viewModelScope.launch {
+            delay(300)
+            loadMembers(refresh = true)
+        }
+    }
+
     fun loadMembers(refresh: Boolean = false) {
         val current = _uiState.value
         if (chatType != 2 || current.isAdded != true || current.isLoadingMembers ||
             current.isLoadingMoreMembers || (!refresh && !current.hasMoreMembers)
         ) return
         val page = if (refresh) 1 else current.membersPage
+        val keyword = current.memberKeyword
         _uiState.update {
             it.copy(
                 isLoadingMembers = page == 1,
@@ -212,30 +228,31 @@ class ConversationDetailViewModel(
             )
         }
         viewModelScope.launch {
-            memberRepository.listMembers(token, chatId, page = page).onSuccess { pageItems ->
-                _uiState.update {
-                    val merged = (if (page == 1) emptyList() else it.members)
-                        .plus(pageItems)
-                        .distinctBy(GroupMember::userId)
-                    it.copy(
-                        members = merged,
-                        isLoadingMembers = false,
-                        isLoadingMoreMembers = false,
-                        membersPage = page + 1,
-                        hasMoreMembers = pageItems.size >= 50,
-                        error = null
-                    )
+            memberRepository.listMembers(token, chatId, page = page, keywords = keyword)
+                .onSuccess { pageItems ->
+                    _uiState.update {
+                        val merged = (if (page == 1) emptyList() else it.members)
+                            .plus(pageItems)
+                            .distinctBy(GroupMember::userId)
+                        it.copy(
+                            members = merged,
+                            isLoadingMembers = false,
+                            isLoadingMoreMembers = false,
+                            membersPage = page + 1,
+                            hasMoreMembers = pageItems.size >= 50,
+                            error = null
+                        )
+                    }
+                }.onFailure { error ->
+                    _uiState.update {
+                        it.copy(
+                            isLoadingMembers = false,
+                            isLoadingMoreMembers = false,
+                            error = error.message ?: "成员加载失败",
+                            message = error.message ?: "成员加载失败"
+                        )
+                    }
                 }
-            }.onFailure { error ->
-                _uiState.update {
-                    it.copy(
-                        isLoadingMembers = false,
-                        isLoadingMoreMembers = false,
-                        error = error.message ?: "成员加载失败",
-                        message = error.message ?: "成员加载失败"
-                    )
-                }
-            }
         }
     }
 

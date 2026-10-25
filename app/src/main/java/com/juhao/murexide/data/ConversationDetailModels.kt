@@ -59,6 +59,7 @@ data class ConversationDetailUiState(
     val message: String? = null,
     val selectedTab: Int = 0,
     val members: List<GroupMember> = emptyList(),
+    val memberKeyword: String = "",
     val isLoadingMembers: Boolean = false,
     val isLoadingMoreMembers: Boolean = false,
     val membersPage: Int = 1,
