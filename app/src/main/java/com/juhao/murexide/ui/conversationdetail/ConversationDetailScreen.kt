@@ -258,11 +258,12 @@ fun ConversationDetailScreen(
                 val detail = state.detail
                 when {
                     detail == null && state.isLoading -> Box(
-                        Modifier.fillMaxSize(),
+                        Modifier.fillMaxSize().padding(padding),
                         Alignment.Center
                     ) { CircularProgressIndicator() }
 
                     detail == null || state.error != null -> EmptyPlaceholder(
+                        modifier = Modifier.padding(padding),
                         icon = AppIcons.Warning,
                         title = "加载失败",
                         subtitle = state.error,

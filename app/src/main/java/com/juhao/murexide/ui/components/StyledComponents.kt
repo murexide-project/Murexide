@@ -163,7 +163,6 @@ fun StyledSwitch(
 @Composable
 fun StyledTopBar(
     title: @Composable (() -> Unit),
-    scrollBehavior: TopAppBarScrollBehavior? = null,
     navigationIcon: @Composable (() -> Unit) = {},
     actions: @Composable (RowScope.() -> Unit) = {}
 ) {
@@ -176,17 +175,16 @@ fun StyledTopBar(
                 .background(
                     Brush.verticalGradient(
                         colors = listOf(
-                            topBarColor.copy(alpha = 0.8f),
-                            topBarColor.copy(alpha = 0.6f),
+                            topBarColor,
+                            topBarColor.copy(alpha = 0.75f),
                             Color.Transparent
                         )
                     )
                 )
         )
 
-        LargeTopAppBar(
+        CenterAlignedTopAppBar(
             title = title,
-            scrollBehavior = scrollBehavior,
             navigationIcon = navigationIcon,
             colors = TopAppBarDefaults.topAppBarColors(
                 containerColor = Color.Transparent,

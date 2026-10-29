@@ -33,7 +33,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import com.juhao.murexide.MainActivity
 import com.juhao.murexide.datastore.AccountStorage
 import com.juhao.murexide.datastore.UserAccount
@@ -52,8 +51,6 @@ fun Greeting(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
-
     val accountStorage = remember(context.applicationContext) {
         AccountStorage.getInstance(context.applicationContext)
     }
@@ -62,11 +59,9 @@ fun Greeting(
     val currentAccount = accountStorage.currentTokenFlow.collectAsState(initial = "").value
 
     Scaffold(
-        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             StyledTopBar(
                 title = { Text(if (isChooseMode) "现有账号" else "切换账号") },
-                scrollBehavior = scrollBehavior,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         AutoMirroredIcon(AppIcons.ArrowBack, contentDescription = "返回")

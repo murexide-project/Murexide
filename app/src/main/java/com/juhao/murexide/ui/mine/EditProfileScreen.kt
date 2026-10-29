@@ -15,12 +15,12 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.juhao.murexide.ui.components.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.withContext
@@ -48,7 +48,6 @@ fun EditProfileScreen(
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
-    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
     val scrollState = rememberScrollState()
     val applicationContext = context.applicationContext
     val regions by produceState(
@@ -143,16 +142,14 @@ fun EditProfileScreen(
     }
 
     Scaffold(
-        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            TopAppBar(
+            StyledTopBar(
                 title = { Text("编辑资料") },
                 navigationIcon = {
                     IconButton(onClick = onBackClick, enabled = !isSaving) {
                         AutoMirroredIcon(AppIcons.ArrowBack, contentDescription = "返回")
                     }
                 },
-                scrollBehavior = scrollBehavior,
                 actions = {
                     TextButton(
                         onClick = saveChanges,
@@ -323,9 +320,9 @@ private fun EditProfileContent(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(paddingValues)
             .imePadding()
             .verticalScroll(scrollState)
+            .padding(paddingValues)
             .padding(horizontal = 16.dp)
     ) {
         Spacer(modifier = Modifier.height(8.dp))

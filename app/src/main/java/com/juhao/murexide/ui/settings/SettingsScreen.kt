@@ -13,7 +13,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.juhao.murexide.ui.components.*
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import com.juhao.murexide.ui.about.AboutActivity
 import com.juhao.murexide.ui.settings.userbot.UserBotActivity
 
@@ -27,7 +26,6 @@ fun SettingsScreen(
     val scrollState = rememberScrollState()
 
     val context = LocalContext.current
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
     val title = when (page) {
         1 -> "外观设置"
@@ -41,11 +39,9 @@ fun SettingsScreen(
     }
 
     Scaffold(
-        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             StyledTopBar(
                 title = { Text(title) },
-                scrollBehavior = scrollBehavior,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         AutoMirroredIcon(AppIcons.ArrowBack, contentDescription = "返回")

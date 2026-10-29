@@ -12,7 +12,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -49,8 +48,6 @@ fun MineScreen(
     val scrollState = rememberScrollState()
     val uiState by viewModel.uiState.collectAsState()
     
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
-
     val avatarLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri ->
@@ -68,11 +65,9 @@ fun MineScreen(
     }
 
     Scaffold(
-        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             StyledTopBar(
                 title = { Text("我的") },
-                scrollBehavior = scrollBehavior,
                 actions = {
                     IconButton(onClick = onSettingsClick) {
                         Icon(AppIcons.Settings, contentDescription = "设置")

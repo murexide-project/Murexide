@@ -25,7 +25,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -33,9 +32,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.juhao.murexide.data.GroupMember
 import com.juhao.murexide.data.GroupTag
-import com.juhao.murexide.ui.components.Avatar
-import com.juhao.murexide.ui.components.EmptyPlaceholder
-import com.juhao.murexide.ui.components.ExpressiveDropdownMenu
+import com.juhao.murexide.ui.components.*
 import com.juhao.murexide.ui.icons.AppIcons
 import com.juhao.murexide.ui.icons.AutoMirroredIcon
 
@@ -103,7 +100,6 @@ private fun TagListPage(
     onBack: () -> Unit
 ) {
     val listState = rememberLazyListState()
-    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
     var searchVisible by remember { mutableStateOf(false) }
 
     LoadMoreEffect(
@@ -114,27 +110,40 @@ private fun TagListPage(
     )
 
     Scaffold(
-        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            TopAppBar(
-                title = { Text("标签管理") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        AutoMirroredIcon(AppIcons.ArrowBack, contentDescription = "返回")
-                    }
-                },
-                actions = {
-                    IconButton(
-                        onClick = {
-                            searchVisible = !searchVisible
-                            if (!searchVisible) viewModel.searchTags("")
+            Column {
+                StyledTopBar(
+                    title = { Text("标签管理") },
+                    navigationIcon = {
+                        IconButton(onClick = onBack) {
+                            AutoMirroredIcon(AppIcons.ArrowBack, contentDescription = "返回")
                         }
-                    ) {
-                        Icon(AppIcons.Search, contentDescription = "搜索标签")
+                    },
+                    actions = {
+                        IconButton(
+                            onClick = {
+                                searchVisible = !searchVisible
+                                if (!searchVisible) viewModel.searchTags("")
+                            }
+                        ) {
+                            Icon(AppIcons.Search, contentDescription = "搜索标签")
+                        }
                     }
-                },
-                scrollBehavior = scrollBehavior
-            )
+                )
+                
+                if (searchVisible) {
+                    OutlinedTextField(
+                        value = state.keyword,
+                        onValueChange = viewModel::searchTags,
+                        placeholder = { Text("搜索标签") },
+                        leadingIcon = { Icon(AppIcons.Search, contentDescription = null) },
+                        singleLine = true,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                    )
+                }
+            }
         },
         floatingActionButton = {
             ExtendedFloatingActionButton(
@@ -145,29 +154,16 @@ private fun TagListPage(
         }
     ) { padding ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
+            modifier = Modifier.fillMaxSize()
         ) {
-            if (searchVisible) {
-                OutlinedTextField(
-                    value = state.keyword,
-                    onValueChange = viewModel::searchTags,
-                    placeholder = { Text("搜索标签") },
-                    leadingIcon = { Icon(AppIcons.Search, contentDescription = null) },
-                    singleLine = true,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp)
-                )
-            }
             when {
                 state.isLoading && state.tags.isEmpty() -> Box(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.fillMaxSize().padding(padding),
                     contentAlignment = Alignment.Center
                 ) { CircularProgressIndicator() }
 
                 state.tags.isEmpty() && state.error != null -> EmptyPlaceholder(
+                    modifier = Modifier.padding(padding),
                     icon = AppIcons.Warning,
                     title = "加载失败",
                     subtitle = state.error,
@@ -177,6 +173,7 @@ private fun TagListPage(
                 )
 
                 state.tags.isEmpty() -> EmptyPlaceholder(
+                    modifier = Modifier.padding(padding),
                     icon = AppIcons.Tag,
                     title = "暂无标签",
                     subtitle = "创建标签后可以为群成员添加标识"
@@ -185,7 +182,7 @@ private fun TagListPage(
                 else -> LazyColumn(
                     state = listState,
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(bottom = 96.dp)
+                    contentPadding = padding
                 ) {
                     items(state.tags, key = { it.id }) { tag ->
                         TagRow(
@@ -297,7 +294,6 @@ private fun TagMemberPage(
     viewModel: GroupTagViewModel
 ) {
     val listState = rememberLazyListState()
-    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
 
     LaunchedEffect(tag.id) { listState.scrollToItem(0) }
 
@@ -311,56 +307,56 @@ private fun TagMemberPage(
     )
 
     Scaffold(
-        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text(
-                            text = tag.tag,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Text(
-                            text = "已添加 ${state.boundUserIds.size} 人",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+            Column {
+                StyledTopBar(
+                    title = {
+                        Column {
+                            Text(
+                                text = tag.tag,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Text(
+                                text = "已添加 ${state.boundUserIds.size} 人",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = viewModel::closeTag) {
+                            AutoMirroredIcon(AppIcons.ArrowBack, contentDescription = "返回")
+                        }
                     }
-                },
-                navigationIcon = {
-                    IconButton(onClick = viewModel::closeTag) {
-                        AutoMirroredIcon(AppIcons.ArrowBack, contentDescription = "返回")
-                    }
-                },
-                scrollBehavior = scrollBehavior
-            )
+                )
+                
+                OutlinedTextField(
+                    value = state.memberKeyword,
+                    onValueChange = viewModel::searchMembers,
+                    placeholder = { Text("搜索成员") },
+                    leadingIcon = { Icon(AppIcons.Search, contentDescription = null) },
+                    singleLine = true,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                )
+            }
         }
     ) { padding ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
+            modifier = Modifier.fillMaxSize()
         ) {
-            OutlinedTextField(
-                value = state.memberKeyword,
-                onValueChange = viewModel::searchMembers,
-                placeholder = { Text("搜索成员") },
-                leadingIcon = { Icon(AppIcons.Search, contentDescription = null) },
-                singleLine = true,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
-            )
             when {
                 state.isLoadingMembers && state.members.isEmpty() -> Box(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.fillMaxSize().padding(padding),
                     contentAlignment = Alignment.Center
                 ) { CircularProgressIndicator() }
 
                 state.members.isEmpty() -> EmptyPlaceholder(
+                    modifier = Modifier.padding(padding),
                     icon = AppIcons.Group,
                     title = "暂无成员",
                     subtitle = "换一个关键词试试"
@@ -369,7 +365,7 @@ private fun TagMemberPage(
                 else -> LazyColumn(
                     state = listState,
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(bottom = 24.dp)
+                    contentPadding = padding
                 ) {
                     items(state.members, key = { it.userId }) { member ->
                         TagMemberRow(
