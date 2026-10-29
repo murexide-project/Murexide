@@ -201,8 +201,8 @@ private fun MineContent(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(paddingValues)
             .verticalScroll(scrollState)
+            .padding(paddingValues)
     ) {
         ProfileCard(
             userInfo = userInfo,

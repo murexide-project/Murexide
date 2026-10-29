@@ -2,6 +2,7 @@ package com.juhao.murexide.ui.components
 
 import com.juhao.murexide.ui.icons.AppIcons
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -10,6 +11,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.isSpecified
 import androidx.compose.ui.semantics.Role
@@ -165,12 +167,34 @@ fun StyledTopBar(
     navigationIcon: @Composable (() -> Unit) = {},
     actions: @Composable (RowScope.() -> Unit) = {}
 ) {
-    LargeTopAppBar(
-        title = title,
-        scrollBehavior = scrollBehavior,
-        navigationIcon = navigationIcon,
-        actions = actions
-    )
+    val topBarColor = MaterialTheme.colorScheme.surface
+
+    Box(modifier = Modifier.fillMaxWidth()) {
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            topBarColor.copy(alpha = 0.8f),
+                            topBarColor.copy(alpha = 0.6f),
+                            Color.Transparent
+                        )
+                    )
+                )
+        )
+
+        LargeTopAppBar(
+            title = title,
+            scrollBehavior = scrollBehavior,
+            navigationIcon = navigationIcon,
+            colors = TopAppBarDefaults.topAppBarColors(
+                containerColor = Color.Transparent,
+                scrolledContainerColor = Color.Transparent
+            ),
+            actions = actions
+        )
+    }
 }
 
 @Composable

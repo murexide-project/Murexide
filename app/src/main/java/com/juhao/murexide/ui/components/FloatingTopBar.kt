@@ -52,13 +52,12 @@ internal fun FloatingTopBar(
     val liquidGlassBlur = LocalLiquidGlassBlur.current
     val controlSize = 48.dp
     val buttonShape = CircleShape
-    val topBarColor = MaterialTheme.colorScheme.surfaceContainer
+    val topBarColor = MaterialTheme.colorScheme.surface
     val topBarStyle = HazeMaterials.thin().then {
         blurRadius(32.dp)
         noiseFactor(0f)
     }
     val useGlassBar = liquidGlassEnabled && liquidBackdrop != null
-    val glassSurfaceColor = topBarColor.copy(alpha = 0.8f)
 
     @Composable
     fun Modifier.glassControl(

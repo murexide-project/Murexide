@@ -75,10 +75,9 @@ fun Greeting(
             )
         }
     ) { innerPadding ->
-        LazyColumn (
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = innerPadding
         ) {
             if (!isChooseMode) {
                 item {

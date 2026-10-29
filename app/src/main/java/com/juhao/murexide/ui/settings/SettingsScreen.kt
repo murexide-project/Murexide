@@ -67,8 +67,8 @@ fun SettingsScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
                 .verticalScroll(scrollState)
+                .padding(padding)
         ) {
             when (page) {
                 1 -> AppearancePage()
