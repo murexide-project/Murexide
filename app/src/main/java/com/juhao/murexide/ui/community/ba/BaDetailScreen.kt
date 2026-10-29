@@ -20,7 +20,7 @@ import androidx.compose.ui.unit.sp
 import com.juhao.murexide.data.BaDetail
 import com.juhao.murexide.ui.community.PostCard
 import com.juhao.murexide.ui.community.detail.PostDetailActivity
-import com.juhao.murexide.ui.components.Avatar
+import com.juhao.murexide.ui.components.*
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -45,7 +45,7 @@ fun BaDetailScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            StyledTopBar(
                 title = { Text(uiState.ba?.name ?: "分区") },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
@@ -67,16 +67,16 @@ fun BaDetailScreen(
             }
         }
     ) { innerPadding ->
-        Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+        Box(modifier = Modifier.fillMaxSize()) {
             when {
                 uiState.isLoadingInfo && uiState.ba == null -> {
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Box(Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center) {
                         ContainedLoadingIndicator()
                     }
                 }
 
                 uiState.ba == null -> {
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Box(Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center) {
                         Text(uiState.error ?: "加载失败", color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
@@ -86,7 +86,7 @@ fun BaDetailScreen(
                     onRefresh = { viewModel.refresh() },
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
+                    LazyColumn(state = listState, modifier = Modifier.fillMaxSize(), contentPadding = innerPadding) {
                         item(key = "ba_header") {
                             BaHeader(ba = uiState.ba!!, onFollowClick = { viewModel.toggleFollow() })
                             HorizontalDivider()

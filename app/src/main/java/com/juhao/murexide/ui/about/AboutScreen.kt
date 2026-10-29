@@ -44,8 +44,8 @@ fun AboutScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
                 .verticalScroll(scrollState)
+                .padding(padding)
         ) {
             SettingsGroup {
                 Column(

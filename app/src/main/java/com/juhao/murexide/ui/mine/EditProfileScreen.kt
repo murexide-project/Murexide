@@ -151,10 +151,9 @@ fun EditProfileScreen(
                     }
                 },
                 actions = {
-                    TextButton(
+                    IconButton(
                         onClick = saveChanges,
-                        enabled = canSave,
-                        contentPadding = PaddingValues(horizontal = 12.dp)
+                        enabled = canSave
                     ) {
                         if (isSaving) {
                             CircularProgressIndicator(
@@ -164,12 +163,9 @@ fun EditProfileScreen(
                         } else {
                             Icon(
                                 imageVector = AppIcons.Check,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp)
+                                contentDescription = null
                             )
                         }
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(if (isSaving) "保存中" else "保存")
                     }
                 }
             )

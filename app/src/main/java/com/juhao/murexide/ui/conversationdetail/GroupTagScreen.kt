@@ -311,7 +311,7 @@ private fun TagMemberPage(
             Column {
                 StyledTopBar(
                     title = {
-                        Column {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(
                                 text = tag.tag,
                                 style = MaterialTheme.typography.titleMedium,
