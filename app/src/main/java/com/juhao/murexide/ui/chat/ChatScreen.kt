@@ -113,8 +113,6 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
-import dev.chrisbanes.haze.blur.materials.HazeMaterials
-import dev.chrisbanes.haze.HazeInput
 import dev.chrisbanes.haze.blur.hazeBlur
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
@@ -859,12 +857,7 @@ fun ChatScreen(
         modifier = Modifier.fillMaxSize(),
         containerColor = chatBackgroundColor,
         snackbarHost = {
-            SnackbarHost(
-                hostState = snackbarHostState,
-                modifier = Modifier.padding(
-                    bottom = with(LocalDensity.current) { composerHeightPx.toDp() }
-                )
-            )
+            SnackbarHost(hostState = snackbarHostState)
         },
         topBar = {
             Column(

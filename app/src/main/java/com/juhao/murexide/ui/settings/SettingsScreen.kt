@@ -38,26 +38,22 @@ fun SettingsScreen(
         else -> "设置"
     }
 
-    Scaffold(
-        topBar = {
-            StyledTopBar(
-                title = { Text(title) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        AutoMirroredIcon(AppIcons.ArrowBack, contentDescription = "返回")
-                    }
-                },
-                actions = {
-                    if (page == 0) {
-                        IconButton(onClick = {
-                            val intent = Intent(context, AboutActivity::class.java)
-                            context.startActivity(intent)
-                        }) {
-                            Icon(AppIcons.Info, contentDescription = "关于")
-                        }
-                    }
+    StyledScaffold(
+        title = { Text(title) },
+        navigationIcon = {
+            IconButton(onClick = onBack) {
+                AutoMirroredIcon(AppIcons.ArrowBack, contentDescription = "返回")
+            }
+        },
+        actions = {
+            if (page == 0) {
+                IconButton(onClick = {
+                    val intent = Intent(context, AboutActivity::class.java)
+                    context.startActivity(intent)
+                }) {
+                    Icon(AppIcons.Info, contentDescription = "关于")
                 }
-            )
+            }
         }
     ) { padding ->
         Column(

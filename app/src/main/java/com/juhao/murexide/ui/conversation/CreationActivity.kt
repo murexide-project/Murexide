@@ -24,14 +24,12 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.juhao.murexide.datastore.AccountStorage
-import com.juhao.murexide.ui.components.Avatar
-import com.juhao.murexide.ui.components.StyledSwitch
+import com.juhao.murexide.ui.components.*
 import com.juhao.murexide.ui.conversationdetail.ConversationDetailActivity
 import com.juhao.murexide.ui.icons.AppIcons
 import com.juhao.murexide.ui.icons.AutoMirroredIcon
@@ -91,7 +89,6 @@ fun CreationScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
     
-    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
     val scrollState = rememberScrollState()
     
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -108,15 +105,9 @@ fun CreationScreen(
         }
     }
     
-    Scaffold(
-        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
-        topBar = {
-            TopAppBar(
-                title = { Text(kind.title) },
-                scrollBehavior = scrollBehavior,
-                navigationIcon = { IconButton(onClick = onBack) { AutoMirroredIcon(AppIcons.ArrowBack, "返回") } }
-            )
-        },
+    StyledScaffold(
+        title = { Text(kind.title) },
+        navigationIcon = { IconButton(onClick = onBack) { AutoMirroredIcon(AppIcons.ArrowBack, "返回") } },
         floatingActionButton = {
             FloatingActionButton(
                 onClick = viewModel::create,
@@ -141,8 +132,8 @@ fun CreationScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
                 .verticalScroll(scrollState)
+                .padding(padding)
                 .padding(horizontal = 20.dp, vertical = 20.dp)
         ) {
             Card(

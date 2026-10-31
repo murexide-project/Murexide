@@ -39,13 +39,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.juhao.murexide.ui.icons.AppIcons
 import com.juhao.murexide.ui.icons.AutoMirroredIcon
 import com.juhao.murexide.ui.theme.MurexideTheme
+import com.juhao.murexide.ui.components.*
 import kotlinx.coroutines.launch
 
 class NewConversationActivity : ComponentActivity() {
@@ -101,7 +101,6 @@ private fun NewConversationScreen(
     onBack: () -> Unit,
     onConfirm: (chatId: String, chatType: Int) -> Unit
 ) {
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val scrollState = rememberScrollState()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -112,25 +111,19 @@ private fun NewConversationScreen(
     val currentOption = chatTypeOptions.firstOrNull { it.type == selectedType } ?: chatTypeOptions.first()
     val trimmedId = chatId.trim()
 
-    Scaffold(
-        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
-        topBar = {
-            LargeTopAppBar(
-                title = { Text("添加会话") },
-                scrollBehavior = scrollBehavior,
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        AutoMirroredIcon(AppIcons.ArrowBack, contentDescription = "返回")
-                    }
-                }
-            )
+    StyledScaffold(
+        title = { Text("添加会话") },
+        navigationIcon = {
+            IconButton(onClick = onBack) {
+                AutoMirroredIcon(AppIcons.ArrowBack, contentDescription = "返回")
+            }
         }
     ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
                 .verticalScroll(scrollState)
+                .padding(padding)
                 .padding(horizontal = 20.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {

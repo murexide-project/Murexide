@@ -131,6 +131,7 @@ fun ContactListScreen(
         if (newMessagesVisible) {
             NewMessagesScreen(
                 uiState = uiState,
+                innerPadding = innerPadding,
                 snackbarHostState = snackbarHostState,
                 onBack = { setNewMessagesVisible(false) },
                 onRefresh = { viewModel.loadRequests() },
@@ -631,6 +632,7 @@ private fun AlphabetFastScroller(
 @Composable
 private fun NewMessagesScreen(
     uiState: ContactUiState,
+    innerPadding: PaddingValues,
     snackbarHostState: SnackbarHostState,
     onBack: () -> Unit,
     onRefresh: () -> Unit,
@@ -643,33 +645,32 @@ private fun NewMessagesScreen(
         )
     }
 
-    Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        topBar = {
-            TopAppBar(
-                title = { Text("新消息") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        AutoMirroredIcon(AppIcons.ArrowBack, contentDescription = "返回通讯录")
-                    }
-                },
-                actions = {
-                    IconButton(onClick = onRefresh, enabled = !uiState.isRequestsLoading) {
-                        Icon(AppIcons.Refresh, contentDescription = "刷新新消息")
-                    }
-                }
+    StyledScaffold(
+        snackbarHost = {
+            SnackbarHost(
+                snackbarHostState,
+                modifier = Modifier.padding(innerPadding)
             )
+        },
+        title = { Text("新消息") },
+        navigationIcon = {
+            IconButton(onClick = onBack) {
+                AutoMirroredIcon(AppIcons.ArrowBack, contentDescription = "返回通讯录")
+            }
+        },
+        actions = {
+            IconButton(onClick = onRefresh, enabled = !uiState.isRequestsLoading) {
+                Icon(AppIcons.Refresh, contentDescription = "刷新新消息")
+            }
         }
     ) { paddingValues ->
         Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
+            modifier = Modifier.fillMaxSize()
         ) {
             when {
                 uiState.isRequestsLoading && requests.isEmpty() -> LoadingState(Modifier.fillMaxSize())
                 uiState.requestsError != null && requests.isEmpty() -> EmptyPlaceholder(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.fillMaxSize().padding(paddingValues),
                     icon = AppIcons.Warning,
                     title = "加载失败",
                     subtitle = uiState.requestsError,
@@ -680,14 +681,14 @@ private fun NewMessagesScreen(
                     }
                 )
                 requests.isEmpty() -> EmptyPlaceholder(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.fillMaxSize().padding(paddingValues),
                     icon = AppIcons.Inbox,
                     title = "暂无新消息",
                     subtitle = "好友和群聊申请、邀请会显示在这里"
                 )
                 else -> LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+                    contentPadding = paddingValues,
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     if (uiState.isRequestsLoading) {
@@ -715,6 +716,9 @@ private fun NewMessagesScreen(
                             onRespond = { accept -> onRespond(request.requestId, accept) }
                         )
                     }
+                    item {
+                        Spacer(Modifier.height(innerPadding.calculateBottomPadding()))
+                    }
                 }
             }
         }
@@ -733,7 +737,7 @@ private fun RequestSurface(
     }.joinToString(" · ")
 
     Surface(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
         shape = MaterialTheme.shapes.large,
         color = MaterialTheme.colorScheme.surfaceContainerLow,
         tonalElevation = 1.dp

@@ -52,40 +52,36 @@ fun CreatePostScreen(
         }
     }
 
-    Scaffold(
+    StyledScaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        topBar = {
-            StyledTopBar(
-                title = {
-                    Text(
-                        when {
-                            isEditMode -> "编辑文章"
-                            baName.isNotEmpty() -> "发布到 $baName"
-                            else -> "发布文章"
-                        }
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onClose) {
-                        Icon(AppIcons.Close, contentDescription = "关闭")
-                    }
-                },
-                actions = {
-                    IconButton(
-                        onClick = { viewModel.publish() },
-                        enabled = !uiState.isPublishing
-                    ) {
-                        if (uiState.isPublishing) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(18.dp),
-                                strokeWidth = 2.dp
-                            )
-                        } else {
-                            Icon(AppIcons.Check, contentDescription = "确定")
-                        }
-                    }
+        title = {
+            Text(
+                when {
+                    isEditMode -> "编辑文章"
+                    baName.isNotEmpty() -> "发布到 $baName"
+                    else -> "发布文章"
                 }
             )
+        },
+        navigationIcon = {
+            IconButton(onClick = onClose) {
+                Icon(AppIcons.Close, contentDescription = "关闭")
+            }
+        },
+        actions = {
+            IconButton(
+                onClick = { viewModel.publish() },
+                enabled = !uiState.isPublishing
+            ) {
+                if (uiState.isPublishing) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(18.dp),
+                        strokeWidth = 2.dp
+                    )
+                } else {
+                    Icon(AppIcons.Check, contentDescription = "确定")
+                }
+            }
         }
     ) { innerPadding ->
         Column(

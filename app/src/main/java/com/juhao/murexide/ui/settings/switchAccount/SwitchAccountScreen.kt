@@ -37,8 +37,7 @@ import com.juhao.murexide.MainActivity
 import com.juhao.murexide.datastore.AccountStorage
 import com.juhao.murexide.datastore.UserAccount
 import com.juhao.murexide.data.local.LocalCache
-import com.juhao.murexide.ui.components.Avatar
-import com.juhao.murexide.ui.components.StyledTopBar
+import com.juhao.murexide.ui.components.*
 import com.juhao.murexide.ui.login.LoginActivity
 import kotlinx.coroutines.launch
 
@@ -58,16 +57,12 @@ fun Greeting(
     val accounts = accountStorage.userAccountsFlow.collectAsState(initial = emptyList()).value
     val currentAccount = accountStorage.currentTokenFlow.collectAsState(initial = "").value
 
-    Scaffold(
-        topBar = {
-            StyledTopBar(
-                title = { Text(if (isChooseMode) "现有账号" else "切换账号") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        AutoMirroredIcon(AppIcons.ArrowBack, contentDescription = "返回")
-                    }
-                }
-            )
+    StyledScaffold(
+        title = { Text(if (isChooseMode) "现有账号" else "切换账号") },
+        navigationIcon = {
+            IconButton(onClick = onBack) {
+                AutoMirroredIcon(AppIcons.ArrowBack, contentDescription = "返回")
+            }
         }
     ) { innerPadding ->
         LazyColumn(

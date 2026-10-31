@@ -70,7 +70,6 @@ import com.juhao.murexide.ui.theme.LocalLiquidGlassBackdrop
 import com.juhao.murexide.ui.theme.LocalLiquidGlassEnabled
 import com.juhao.murexide.ui.theme.liquidGlass
 import com.juhao.murexide.ui.theme.resolvedLiquidGlassContentColor
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import kotlinx.coroutines.launch
 
 @Composable
@@ -86,7 +85,7 @@ fun ConversationDetailScreen(
     onEnterChat: (ConversationDetail) -> Unit,
     onEditGroup: (ConversationDetail) -> Unit = {},
     onEditBot: (ConversationDetail) -> Unit = {},
-    onOpenTagManage: (ConversationDetail) -> Unit = {},
+    onOpenTagManage: (ConversationDetail, Boolean) -> Unit = { _, _ -> },
     onOpenMember: (GroupMember) -> Unit = {},
     onOpenBoard: (BaItem) -> Unit = {},
     onInviteBotToGroup: (ConversationDetail) -> Unit = {},
@@ -115,8 +114,6 @@ fun ConversationDetailScreen(
         }
     }
 
-    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
-
     LaunchedEffect(state.message) {
         state.message?.let { message ->
             Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
@@ -127,127 +124,121 @@ fun ConversationDetailScreen(
         if (state.hasLeft) onLeaveGroup()
     }
 
-    Scaffold(
-        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+    StyledScaffold(
         snackbarHost = { SnackbarHost(snackbars) },
-        topBar = {
-            TopAppBar(
-                title = {
-                    val group = state.detail?.takeIf { it.chatType == 2 }
-                    if (group != null) {
-                        AnimatedVisibility(
-                            visible = showGroupTitleInAppBar,
-                            enter = fadeIn(animationSpec = tween(180)) +
-                                slideInVertically(
-                                    initialOffsetY = { height -> -height / 2 },
-                                    animationSpec = tween(180)
-                                ),
-                            exit = fadeOut(animationSpec = tween(140)) +
-                                slideOutVertically(
-                                    targetOffsetY = { height -> -height / 2 },
-                                    animationSpec = tween(140)
-                                )
-                        ) {
-                            Column {
-                                Text(
-                                    text = group.name,
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                                Text(
-                                    text = "${group.memberCount ?: 0} 位成员",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    maxLines = 1
-                                )
-                            }
-                        }
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBack) { AutoMirroredIcon(AppIcons.ArrowBack, "返回") }
-                },
-                scrollBehavior = scrollBehavior,
-                actions = {
-                    val currentDetail = state.detail
-                    val group = currentDetail?.takeIf { it.chatType == 2 }
-                    if ((group?.permissionLevel ?: 0) >= 2) {
-                        IconButton(onClick = { onEditGroup(group!!) }) {
-                            Icon(AppIcons.Edit, "编辑群聊")
-                        }
-                    }
-                    val bot = currentDetail?.takeIf {
-                        it.chatType == 3 && !it.createBy.isNullOrEmpty() && it.createBy == currentUserId
-                    }
-                    if (bot != null) {
-                        IconButton(onClick = { onEditBot(bot) }) {
-                            Icon(AppIcons.Edit, "编辑机器人")
-                        }
-                    }
-                    IconButton(
-                        onClick = {
-                            showMore = false
-                            viewModel.openShareDialog()
-                        }
-                    ) {
-                        Icon(AppIcons.Share, null)
-                    }
-                    Box {
-                        IconButton(
-                            onClick = { showMore = true },
-                            modifier = Modifier.size(44.dp)
-                        ) {
-                            Icon(AppIcons.MoreVert, contentDescription = "更多")
-                        }
-                        ExpressiveDropdownMenu(
-                            expanded = showMore,
-                            onDismissRequest = { showMore = false }
-                        ) {
-                            if (state.isAdded == true) {
-                                DropdownMenuItem(
-                                    text = { Text("搜索聊天记录") },
-                                    leadingIcon = { Icon(AppIcons.Search, null) },
-                                    onClick = {
-                                        showMore = false
-                                        currentDetail?.let { d ->
-                                            ChatSearchActivity.start(
-                                                context = context,
-                                                chatId = d.chatId,
-                                                chatType = d.chatType,
-                                                chatName = d.name
-                                            )
-                                        }
-                                    }
-                                )
-                            }
-                            if (group != null && group.permissionLevel >= 2) {
-                                DropdownMenuItem(
-                                    text = { Text("标签管理") },
-                                    leadingIcon = { Icon(AppIcons.Tag, null) },
-                                    onClick = {
-                                        showMore = false
-                                        onOpenTagManage(group)
-                                    }
-                                )
-                            }
-                            DropdownMenuItem(
-                                text = { Text("刷新") },
-                                leadingIcon = { Icon(AppIcons.Refresh, null) },
-                                onClick = {
-                                    showMore = false
-                                    viewModel.loadDetail()
-                                    if (group != null) {
-                                        viewModel.loadMembers(refresh = true)
-                                        viewModel.loadGroupBots(refresh = true)
-                                    }
-                                }
-                            )
-                        }
+        title = {
+            val group = state.detail?.takeIf { it.chatType == 2 }
+            if (group != null) {
+                AnimatedVisibility(
+                    visible = showGroupTitleInAppBar,
+                    enter = fadeIn(animationSpec = tween(180)) +
+                        slideInVertically(
+                            initialOffsetY = { height -> -height / 2 },
+                            animationSpec = tween(180)
+                        ),
+                    exit = fadeOut(animationSpec = tween(140)) +
+                        slideOutVertically(
+                            targetOffsetY = { height -> -height / 2 },
+                            animationSpec = tween(140)
+                        )
+                ) {
+                    Column {
+                        Text(
+                            text = group.name,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Text(
+                            text = "${group.memberCount ?: 0} 位成员",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1
+                        )
                     }
                 }
-            )
+            }
+        },
+        navigationIcon = {
+            IconButton(onClick = onBack) { AutoMirroredIcon(AppIcons.ArrowBack, "返回") }
+        },
+        actions = {
+            val currentDetail = state.detail
+            val group = currentDetail?.takeIf { it.chatType == 2 }
+            if ((group?.permissionLevel ?: 0) >= 2) {
+                IconButton(onClick = { onEditGroup(group!!) }) {
+                    Icon(AppIcons.Edit, "编辑群聊")
+                }
+            }
+            val bot = currentDetail?.takeIf {
+                it.chatType == 3 && !it.createBy.isNullOrEmpty() && it.createBy == currentUserId
+            }
+            if (bot != null) {
+                IconButton(onClick = { onEditBot(bot) }) {
+                    Icon(AppIcons.Edit, "编辑机器人")
+                }
+            }
+            IconButton(
+                onClick = {
+                    showMore = false
+                    viewModel.openShareDialog()
+                }
+            ) {
+                Icon(AppIcons.Share, null)
+            }
+            Box {
+                IconButton(
+                    onClick = { showMore = true },
+                    modifier = Modifier.size(44.dp)
+                ) {
+                    Icon(AppIcons.MoreVert, contentDescription = "更多")
+                }
+                ExpressiveDropdownMenu(
+                    expanded = showMore,
+                    onDismissRequest = { showMore = false }
+                ) {
+                    if (state.isAdded == true) {
+                        DropdownMenuItem(
+                            text = { Text("搜索聊天记录") },
+                            leadingIcon = { Icon(AppIcons.Search, null) },
+                            onClick = {
+                                showMore = false
+                                currentDetail?.let { d ->
+                                    ChatSearchActivity.start(
+                                        context = context,
+                                        chatId = d.chatId,
+                                        chatType = d.chatType,
+                                        chatName = d.name
+                                    )
+                                }
+                            }
+                        )
+                    }
+                    if (group != null) {
+                        DropdownMenuItem(
+                            text = { Text("群标签") },
+                            leadingIcon = { Icon(AppIcons.Tag, null) },
+                            onClick = {
+                                showMore = false
+                                onOpenTagManage(group, group.permissionLevel >= 2)
+                            }
+                        )
+                    }
+                    DropdownMenuItem(
+                        text = { Text("刷新") },
+                        leadingIcon = { Icon(AppIcons.Refresh, null) },
+                        onClick = {
+                            showMore = false
+                            viewModel.loadDetail()
+                            if (group != null) {
+                                viewModel.loadMembers(refresh = true)
+                                viewModel.loadGroupBots(refresh = true)
+                            }
+                        }
+                    )
+                }
+            }
         }
     ) { padding ->
         CompositionLocalProvider(LocalLiquidGlassBackdrop provides liquidBackdrop) {
@@ -274,7 +265,7 @@ fun ConversationDetailScreen(
                         }
                     )
                     detail.chatType == 2 -> GroupConversationDetail(
-                        modifier = Modifier.padding(padding),
+                        innerPadding = padding,
                         detail = detail,
                         listState = groupListState,
                         selectedTab = state.selectedTab,
@@ -319,7 +310,7 @@ fun ConversationDetailScreen(
                     )
 
                     detail.chatType == 1 -> UserConversationDetail(
-                        modifier = Modifier.padding(padding),
+                        innerPadding = padding,
                         detail = detail,
                         listState = userListState,
                         isCurrentUser = detail.chatId == currentUserId,
@@ -342,7 +333,7 @@ fun ConversationDetailScreen(
                     )
 
                     detail.chatType == 3 -> BotConversationDetail(
-                        modifier = Modifier.padding(padding),
+                        innerPadding = padding,
                         detail = detail,
                         isAdded = state.isAdded,
                         isAdding = state.isAdding,
@@ -360,7 +351,7 @@ fun ConversationDetailScreen(
                     )
 
                     else -> LegacyDetail(
-                        modifier = Modifier.padding(padding),
+                        innerPadding = padding,
                         detail = detail,
                         isAdded = state.isAdded,
                         isAdding = state.isAdding,
@@ -571,9 +562,11 @@ private fun ShareLinkSheet(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun GroupConversationDetail(
-    modifier: Modifier,
+    modifier: Modifier = Modifier,
+    innerPadding: PaddingValues,
     detail: ConversationDetail,
     listState: LazyListState,
     selectedTab: Int,
@@ -654,7 +647,7 @@ private fun GroupConversationDetail(
     LazyColumn(
         state = listState,
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(bottom = 16.dp)
+        contentPadding = innerPadding
     ) {
         item(key = "header") {
             GroupHeader(
@@ -689,9 +682,16 @@ private fun GroupConversationDetail(
                 0 -> {
                     item(key = "members-search") {
                         DetailCardSegment(cardColor = cardColor) {
-                            OutlinedTextField(
-                                value = memberKeyword,
-                                onValueChange = onMemberSearch,
+                            SearchBar(
+                                query = memberKeyword,
+                                onQueryChange = onMemberSearch,
+                                onSearch = {},
+                                active = false,
+                                onActiveChange = {},
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                                enabled = true,
                                 placeholder = { Text("搜索成员") },
                                 leadingIcon = { Icon(AppIcons.Search, contentDescription = null) },
                                 trailingIcon = {
@@ -701,11 +701,13 @@ private fun GroupConversationDetail(
                                         }
                                     }
                                 },
-                                singleLine = true,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 12.dp, vertical = 8.dp)
-                            )
+                                shape = SearchBarDefaults.inputFieldShape,
+                                colors = SearchBarDefaults.colors(),
+                                tonalElevation = SearchBarDefaults.TonalElevation,
+                                shadowElevation = SearchBarDefaults.ShadowElevation,
+                                windowInsets = WindowInsets(0),
+                                interactionSource = null
+                            ) {}
                         }
                     }
                     when {
@@ -844,7 +846,8 @@ private fun GroupConversationDetail(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun UserConversationDetail(
-    modifier: Modifier,
+    modifier: Modifier = Modifier,
+    innerPadding: PaddingValues,
     detail: ConversationDetail,
     listState: LazyListState,
     isCurrentUser: Boolean,
@@ -888,7 +891,7 @@ private fun UserConversationDetail(
     LazyColumn(
         state = listState,
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(bottom = 16.dp)
+        contentPadding = innerPadding
     ) {
         item(key = "user-header") {
             UserHeader(
@@ -969,7 +972,8 @@ private fun UserConversationDetail(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun BotConversationDetail(
-    modifier: Modifier,
+    modifier: Modifier = Modifier,
+    innerPadding: PaddingValues,
     detail: ConversationDetail,
     isAdded: Boolean?,
     isAdding: Boolean,
@@ -1008,7 +1012,7 @@ private fun BotConversationDetail(
     LazyColumn(
         state = listState,
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(bottom = 16.dp)
+        contentPadding = innerPadding
     ) {
         item(key = "bot-header") {
             UserHeader(
@@ -2009,14 +2013,15 @@ private fun AutoLoadingRow(loading: Boolean) {
 
 @Composable
 private fun LegacyDetail(
-    modifier: Modifier,
+    modifier: Modifier = Modifier,
+    innerPadding: PaddingValues,
     detail: ConversationDetail,
     isAdded: Boolean?,
     isAdding: Boolean,
     onAdd: () -> Unit,
     onMessage: () -> Unit
 ) {
-    Column(modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(modifier.padding(innerPadding).padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         Avatar(url = detail.avatarUrl, size = 88.dp, canView = true)
         Spacer(Modifier.height(14.dp))
         Text(

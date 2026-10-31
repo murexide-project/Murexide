@@ -12,10 +12,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 /** 社区顶部三个 tab */
-enum class CommunityTab { RECOMMEND, ALL_BA, SUBSCRIBE, MANAGE }
+enum class CommunityTab { RECOMMEND, ALL_BA, MANAGE }
 
 /** 「全部分区」左侧侧边分类 */
-enum class BaSide { OFFICIAL, USER }
+enum class BaSide { OFFICIAL, USER, SUBSCRIBE }
 
 class CommunityViewModel(
     private val token: String
@@ -54,7 +54,6 @@ class CommunityViewModel(
         when (tab) {
             CommunityTab.RECOMMEND -> if (_uiState.value.posts.isEmpty()) loadRecommend()
             CommunityTab.ALL_BA -> if (_uiState.value.allBaList.isEmpty()) loadAllBa()
-            CommunityTab.SUBSCRIBE -> if (_uiState.value.subscribeBaList.isEmpty()) loadSubscribeBa()
             CommunityTab.MANAGE -> if (_uiState.value.manageBaList.isEmpty()) loadManageBa()
         }
     }
@@ -126,6 +125,7 @@ class CommunityViewModel(
             val typ = when (side) {
                 BaSide.OFFICIAL -> 2 // 热门（官方）
                 BaSide.USER -> 4     // 全部（含用户自建）
+                BaSide.SUBSCRIBE -> 1
             }
             repository.getBaList(typ = typ, size = 50, page = 1)
                 .onSuccess { list ->
@@ -133,19 +133,6 @@ class CommunityViewModel(
                 }
                 .onFailure { e ->
                     _uiState.value = _uiState.value.copy(isLoadingAllBa = false, error = e.message)
-                }
-        }
-    }
-
-    fun loadSubscribeBa() {
-        viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoadingSubscribeBa = true)
-            repository.getBaList(typ = 1, size = 50, page = 1)
-                .onSuccess { list ->
-                    _uiState.value = _uiState.value.copy(subscribeBaList = list, isLoadingSubscribeBa = false)
-                }
-                .onFailure { e ->
-                    _uiState.value = _uiState.value.copy(isLoadingSubscribeBa = false, error = e.message)
                 }
         }
     }
@@ -206,7 +193,6 @@ class CommunityViewModel(
         when (_uiState.value.currentTab) {
             CommunityTab.RECOMMEND -> loadRecommend()
             CommunityTab.ALL_BA -> loadAllBa()
-            CommunityTab.SUBSCRIBE -> loadSubscribeBa()
             CommunityTab.MANAGE -> loadManageBa()
         }
     }
@@ -226,9 +212,6 @@ data class CommunityUiState(
     val currentBaSide: BaSide = BaSide.OFFICIAL,
     val allBaList: List<BaItem> = emptyList(),
     val isLoadingAllBa: Boolean = false,
-    // 关注
-    val subscribeBaList: List<BaItem> = emptyList(),
-    val isLoadingSubscribeBa: Boolean = false,
     // 管理
     val manageBaList: List<BaItem> = emptyList(),
     val isLoadingManageBa: Boolean = false,

@@ -29,16 +29,12 @@ fun AboutScreen(
     val context = LocalContext.current
     val scrollState = rememberScrollState()
 
-    Scaffold(
-        topBar = {
-            StyledTopBar(
-                title = { Text("关于") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        AutoMirroredIcon(AppIcons.ArrowBack, contentDescription = "返回")
-                    }
-                }
-            )
+    StyledScaffold(
+        title = { Text("关于") },
+        navigationIcon = {
+            IconButton(onClick = onBack) {
+                AutoMirroredIcon(AppIcons.ArrowBack, contentDescription = "返回")
+            }
         }
     ) { padding ->
         Column(

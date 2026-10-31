@@ -27,6 +27,7 @@ class GroupTagActivity : ComponentActivity() {
 
         val groupId = intent.getStringExtra("group_id") ?: return finish()
         val groupName = intent.getStringExtra("group_name").orEmpty()
+        val isAdmin = intent.getBooleanExtra("is_admin", false)
 
         val accountStorage = AccountStorage.getInstance(this)
         val tokenState = mutableStateOf<String?>(null)
@@ -44,6 +45,7 @@ class GroupTagActivity : ComponentActivity() {
                 } else {
                     GroupTagScreen(
                         onBack = { finish() },
+                        isAdmin = isAdmin,
                         viewModel = viewModel(
                             factory = object : ViewModelProvider.Factory {
                                 @Suppress("UNCHECKED_CAST")
@@ -75,11 +77,13 @@ class GroupTagActivity : ComponentActivity() {
         fun start(
             context: Context,
             groupId: String,
-            groupName: String
+            groupName: String,
+            isAdmin: Boolean
         ) {
             val intent = Intent(context, GroupTagActivity::class.java).apply {
                 putExtra("group_id", groupId)
                 putExtra("group_name", groupName)
+                putExtra("is_admin", isAdmin)
             }
             context.startActivity(intent)
         }

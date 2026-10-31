@@ -43,16 +43,12 @@ fun BaDetailScreen(
         if (shouldLoadMore) viewModel.loadMore()
     }
 
-    Scaffold(
-        topBar = {
-            StyledTopBar(
-                title = { Text(uiState.ba?.name ?: "分区") },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        AutoMirroredIcon(AppIcons.ArrowBack, contentDescription = "返回")
-                    }
-                }
-            )
+    StyledScaffold(
+        title = { Text(uiState.ba?.name ?: "分区") },
+        navigationIcon = {
+            IconButton(onClick = onBackClick) {
+                AutoMirroredIcon(AppIcons.ArrowBack, contentDescription = "返回")
+            }
         },
         floatingActionButton = {
             val baId = uiState.ba?.id

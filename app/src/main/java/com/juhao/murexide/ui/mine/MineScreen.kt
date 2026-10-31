@@ -64,16 +64,12 @@ fun MineScreen(
         }
     }
 
-    Scaffold(
-        topBar = {
-            StyledTopBar(
-                title = { Text("我的") },
-                actions = {
-                    IconButton(onClick = onSettingsClick) {
-                        Icon(AppIcons.Settings, contentDescription = "设置")
-                    }
-                }
-            )
+    StyledScaffold(
+        title = { Text("我的") },
+        actions = {
+            IconButton(onClick = onSettingsClick) {
+                Icon(AppIcons.Settings, contentDescription = "设置")
+            }
         }
     ) {
         when (val state = uiState) {

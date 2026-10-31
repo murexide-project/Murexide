@@ -50,6 +50,7 @@ private fun tagColor(color: String): Color {
 
 @Composable
 fun GroupTagScreen(
+    isAdmin: Boolean,
     viewModel: GroupTagViewModel,
     onBack: () -> Unit
 ) {
@@ -64,9 +65,9 @@ fun GroupTagScreen(
 
     val activeTag = state.activeTag
     if (activeTag == null) {
-        TagListPage(state = state, viewModel = viewModel, onBack = onBack)
+        TagListPage(state = state, viewModel = viewModel, onBack = onBack, isAdmin = isAdmin)
     } else {
-        TagMemberPage(tag = activeTag, state = state, viewModel = viewModel)
+        TagMemberPage(tag = activeTag, state = state, viewModel = viewModel, isAdmin = isAdmin)
     }
 
     if (state.showEditor) {
@@ -95,12 +96,12 @@ fun GroupTagScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun TagListPage(
+    isAdmin: Boolean,
     state: GroupTagUiState,
     viewModel: GroupTagViewModel,
     onBack: () -> Unit
 ) {
     val listState = rememberLazyListState()
-    var searchVisible by remember { mutableStateOf(false) }
 
     LoadMoreEffect(
         listState = listState,
@@ -109,103 +110,97 @@ private fun TagListPage(
         onLoadMore = viewModel::loadMoreTags
     )
 
-    Scaffold(
-        topBar = {
-            Column {
-                StyledTopBar(
-                    title = { Text("标签管理") },
-                    navigationIcon = {
-                        IconButton(onClick = onBack) {
-                            AutoMirroredIcon(AppIcons.ArrowBack, contentDescription = "返回")
-                        }
-                    },
-                    actions = {
-                        IconButton(
-                            onClick = {
-                                searchVisible = !searchVisible
-                                if (!searchVisible) viewModel.searchTags("")
-                            }
-                        ) {
-                            Icon(AppIcons.Search, contentDescription = "搜索标签")
-                        }
-                    }
-                )
-                
-                if (searchVisible) {
-                    OutlinedTextField(
-                        value = state.keyword,
-                        onValueChange = viewModel::searchTags,
-                        placeholder = { Text("搜索标签") },
-                        leadingIcon = { Icon(AppIcons.Search, contentDescription = null) },
-                        singleLine = true,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp)
-                    )
-                }
+    StyledScaffold(
+        title = { Text("标签管理") },
+        navigationIcon = {
+            IconButton(onClick = onBack) {
+                AutoMirroredIcon(AppIcons.ArrowBack, contentDescription = "返回")
             }
         },
         floatingActionButton = {
-            ExtendedFloatingActionButton(
-                onClick = { viewModel.openEditor(null) },
-                icon = { Icon(AppIcons.Add, contentDescription = null) },
-                text = { Text("新建标签") }
-            )
+            if (isAdmin) {
+                ExtendedFloatingActionButton(
+                    onClick = { viewModel.openEditor(null) },
+                    icon = { Icon(AppIcons.Add, contentDescription = null) },
+                    text = { Text("新建标签") }
+                )
+            }
         }
     ) { padding ->
-        Column(
-            modifier = Modifier.fillMaxSize()
-        ) {
-            when {
-                state.isLoading && state.tags.isEmpty() -> Box(
-                    modifier = Modifier.fillMaxSize().padding(padding),
-                    contentAlignment = Alignment.Center
-                ) { CircularProgressIndicator() }
+        when {
+            state.isLoading && state.tags.isEmpty() -> Box(
+                Modifier.fillMaxSize().padding(padding),
+                Alignment.Center
+            ) { CircularProgressIndicator() }
 
-                state.tags.isEmpty() && state.error != null -> EmptyPlaceholder(
-                    modifier = Modifier.padding(padding),
-                    icon = AppIcons.Warning,
-                    title = "加载失败",
-                    subtitle = state.error,
-                    primaryButton = {
-                        Button(onClick = viewModel::loadTags) { Text("重试") }
-                    }
+            state.tags.isEmpty() && state.error != null -> EmptyPlaceholder(
+                modifier = Modifier.padding(padding),
+                icon = AppIcons.Warning,
+                title = "加载失败",
+                subtitle = state.error,
+                primaryButton = { Button(onClick = viewModel::loadTags) { Text("重试") } }
+            )
+
+            state.tags.isEmpty() -> EmptyPlaceholder(
+                modifier = Modifier.padding(padding),
+                icon = AppIcons.Tag,
+                title = "暂无标签",
+                subtitle = "创建标签后可以为群成员添加标识"
+            )
+
+            else -> LazyColumn(
+                state = listState,
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(
+                    top = padding.calculateTopPadding(),
+                    bottom = padding.calculateBottomPadding() + 88.dp
                 )
-
-                state.tags.isEmpty() -> EmptyPlaceholder(
-                    modifier = Modifier.padding(padding),
-                    icon = AppIcons.Tag,
-                    title = "暂无标签",
-                    subtitle = "创建标签后可以为群成员添加标识"
-                )
-
-                else -> LazyColumn(
-                    state = listState,
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = padding
-                ) {
-                    items(state.tags, key = { it.id }) { tag ->
-                        TagRow(
-                            tag = tag,
-                            onClick = { viewModel.openTag(tag) },
-                            onEdit = { viewModel.openEditor(tag) },
-                            onDelete = { viewModel.requestDelete(tag) }
-                        )
-                    }
-                    if (state.hasMore) {
-                        item(key = "tags-load-more") {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(52.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                if (state.isLoadingMore) {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier.size(22.dp),
-                                        strokeWidth = 2.dp
-                                    )
+            ) {
+                item(key = "tags-search") {
+                    SearchBar(
+                        query = state.keyword,
+                        onQueryChange = viewModel::searchTags,
+                        onSearch = {},
+                        active = false,
+                        onActiveChange = {},
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 4.dp),
+                        enabled = true,
+                        placeholder = { Text("搜索标签") },
+                        leadingIcon = { Icon(AppIcons.Search, contentDescription = null) },
+                        trailingIcon = {
+                            if (state.keyword.isNotEmpty()) {
+                                IconButton(onClick = { viewModel.searchTags("") }) {
+                                    Icon(AppIcons.Close, contentDescription = "清除")
                                 }
+                            }
+                        },
+                        shape = SearchBarDefaults.inputFieldShape,
+                        colors = SearchBarDefaults.colors(),
+                        tonalElevation = SearchBarDefaults.TonalElevation,
+                        shadowElevation = SearchBarDefaults.ShadowElevation,
+                        windowInsets = WindowInsets(0),
+                        interactionSource = null
+                    ) {}
+                }
+                items(state.tags, key = { it.id }) { tag ->
+                    TagRow(
+                        isAdmin = isAdmin,
+                        tag = tag,
+                        onClick = { viewModel.openTag(tag) },
+                        onEdit = { viewModel.openEditor(tag) },
+                        onDelete = { viewModel.requestDelete(tag) }
+                    )
+                }
+                if (state.hasMore) {
+                    item(key = "tags-load-more") {
+                        Box(Modifier.fillMaxWidth().height(52.dp), Alignment.Center) {
+                            if (state.isLoadingMore) {
+                                CircularProgressIndicator(
+                                    Modifier.size(22.dp),
+                                    strokeWidth = 2.dp
+                                )
                             }
                         }
                     }
@@ -217,6 +212,7 @@ private fun TagListPage(
 
 @Composable
 private fun TagRow(
+    isAdmin: Boolean,
     tag: GroupTag,
     onClick: () -> Unit,
     onEdit: () -> Unit,
@@ -227,42 +223,44 @@ private fun TagRow(
         onClick = onClick,
         leadingContent = {
             Box(
-                modifier = Modifier
+                Modifier
                     .size(36.dp)
                     .clip(CircleShape)
                     .background(tagColor(tag.color))
             )
         },
         trailingContent = {
-            Box {
-                IconButton(
-                    onClick = { expanded = true },
-                    modifier = Modifier.size(44.dp)
-                ) {
-                    Icon(AppIcons.MoreVert, contentDescription = "更多")
-                }
-                ExpressiveDropdownMenu(
-                    expanded = expanded,
-                    onDismissRequest = { expanded = false }
-                ) {
-                    DropdownMenuItem(
-                        text = { Text("编辑标签") },
-                        leadingIcon = { Icon(AppIcons.Edit, null) },
-                        onClick = {
-                            expanded = false
-                            onEdit()
-                        }
-                    )
-                    DropdownMenuItem(
-                        text = { Text("删除标签", color = MaterialTheme.colorScheme.error) },
-                        leadingIcon = {
-                            Icon(AppIcons.Delete, null, tint = MaterialTheme.colorScheme.error)
-                        },
-                        onClick = {
-                            expanded = false
-                            onDelete()
-                        }
-                    )
+            if (isAdmin) {
+                Box {
+                    IconButton(
+                        onClick = { expanded = true },
+                        modifier = Modifier.size(44.dp)
+                    ) {
+                        Icon(AppIcons.MoreVert, contentDescription = "更多")
+                    }
+                    ExpressiveDropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("编辑标签") },
+                            leadingIcon = { Icon(AppIcons.Edit, null) },
+                            onClick = {
+                                expanded = false
+                                onEdit()
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("删除标签", color = MaterialTheme.colorScheme.error) },
+                            leadingIcon = {
+                                Icon(AppIcons.Delete, null, tint = MaterialTheme.colorScheme.error)
+                            },
+                            onClick = {
+                                expanded = false
+                                onDelete()
+                            }
+                        )
+                    }
                 }
             }
         },
@@ -289,6 +287,7 @@ private fun TagRow(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun TagMemberPage(
+    isAdmin: Boolean,
     tag: GroupTag,
     state: GroupTagUiState,
     viewModel: GroupTagViewModel
@@ -306,89 +305,94 @@ private fun TagMemberPage(
         onLoadMore = viewModel::loadMoreMembers
     )
 
-    Scaffold(
-        topBar = {
-            Column {
-                StyledTopBar(
-                    title = {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = tag.tag,
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            Text(
-                                text = "已添加 ${state.boundUserIds.size} 人",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    },
-                    navigationIcon = {
-                        IconButton(onClick = viewModel::closeTag) {
-                            AutoMirroredIcon(AppIcons.ArrowBack, contentDescription = "返回")
-                        }
-                    }
-                )
-                
-                OutlinedTextField(
-                    value = state.memberKeyword,
-                    onValueChange = viewModel::searchMembers,
-                    placeholder = { Text("搜索成员") },
-                    leadingIcon = { Icon(AppIcons.Search, contentDescription = null) },
-                    singleLine = true,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp)
-                )
+    StyledScaffold(
+        title = {
+            Text(
+                text = tag.tag,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        },
+        subtitle = {
+            Text(
+                text = "已添加 ${state.boundUserIds.size} 人",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        },
+        navigationIcon = {
+            IconButton(onClick = viewModel::closeTag) {
+                AutoMirroredIcon(AppIcons.ArrowBack, contentDescription = "返回")
             }
         }
     ) { padding ->
-        Column(
-            modifier = Modifier.fillMaxSize()
-        ) {
-            when {
-                state.isLoadingMembers && state.members.isEmpty() -> Box(
-                    modifier = Modifier.fillMaxSize().padding(padding),
-                    contentAlignment = Alignment.Center
-                ) { CircularProgressIndicator() }
+        when {
+            state.isLoadingMembers && state.members.isEmpty() -> Box(
+                Modifier.fillMaxSize().padding(padding),
+                Alignment.Center
+            ) { CircularProgressIndicator() }
 
-                state.members.isEmpty() -> EmptyPlaceholder(
-                    modifier = Modifier.padding(padding),
-                    icon = AppIcons.Group,
-                    title = "暂无成员",
-                    subtitle = "换一个关键词试试"
+            state.members.isEmpty() -> EmptyPlaceholder(
+                modifier = Modifier.padding(padding),
+                icon = AppIcons.Group,
+                title = "暂无成员",
+                subtitle = "换一个关键词试试"
+            )
+
+            else -> LazyColumn(
+                state = listState,
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(
+                    top = padding.calculateTopPadding(),
+                    bottom = padding.calculateBottomPadding()
                 )
-
-                else -> LazyColumn(
-                    state = listState,
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = padding
-                ) {
-                    items(state.members, key = { it.userId }) { member ->
-                        TagMemberRow(
-                            member = member,
-                            bound = member.userId in state.boundUserIds,
-                            pending = state.pendingUserId == member.userId,
-                            onClick = { viewModel.toggleMember(member) }
-                        )
-                    }
-                    if (state.hasMoreMembers) {
-                        item(key = "members-load-more") {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(52.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                if (state.isLoadingMoreMembers) {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier.size(22.dp),
-                                        strokeWidth = 2.dp
-                                    )
+            ) {
+                item(key = "members-search") {
+                    SearchBar(
+                        query = state.memberKeyword,
+                        onQueryChange = viewModel::searchMembers,
+                        onSearch = {},
+                        active = false,
+                        onActiveChange = {},
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 4.dp),
+                        enabled = true,
+                        placeholder = { Text("搜索成员") },
+                        leadingIcon = { Icon(AppIcons.Search, contentDescription = null) },
+                        trailingIcon = {
+                            if (state.memberKeyword.isNotEmpty()) {
+                                IconButton(onClick = { viewModel.searchMembers("") }) {
+                                    Icon(AppIcons.Close, contentDescription = "清除")
                                 }
+                            }
+                        },
+                        shape = SearchBarDefaults.inputFieldShape,
+                        colors = SearchBarDefaults.colors(),
+                        tonalElevation = SearchBarDefaults.TonalElevation,
+                        shadowElevation = SearchBarDefaults.ShadowElevation,
+                        windowInsets = WindowInsets(0),
+                        interactionSource = null
+                    ) {}
+                }
+                items(state.members, key = { it.userId }) { member ->
+                    TagMemberRow(
+                        member = member,
+                        bound = member.userId in state.boundUserIds,
+                        pending = state.pendingUserId == member.userId,
+                        onClick = { if (isAdmin) viewModel.toggleMember(member) }
+                    )
+                }
+                if (state.hasMoreMembers) {
+                    item(key = "members-load-more") {
+                        Box(Modifier.fillMaxWidth().height(52.dp), Alignment.Center) {
+                            if (state.isLoadingMoreMembers) {
+                                CircularProgressIndicator(
+                                    Modifier.size(22.dp),
+                                    strokeWidth = 2.dp
+                                )
                             }
                         }
                     }
@@ -411,7 +415,7 @@ private fun TagMemberRow(
         trailingContent = {
             if (pending) {
                 CircularProgressIndicator(
-                    modifier = Modifier.size(20.dp),
+                    Modifier.size(20.dp),
                     strokeWidth = 2.dp
                 )
             } else {

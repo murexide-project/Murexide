@@ -8,7 +8,6 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
@@ -22,16 +21,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.juhao.murexide.ui.components.*
+import com.juhao.murexide.ui.components.CustomItemCell
+import com.juhao.murexide.ui.components.SettingsGroup
+import com.juhao.murexide.ui.components.SettingsSwitchItem
 import com.juhao.murexide.datastore.SettingsStorage
 import com.juhao.murexide.ui.theme.UiState
 import com.juhao.murexide.ui.theme.usesDarkTheme
@@ -114,19 +113,27 @@ fun AppearancePage() {
                     )
                 }
                 Spacer(modifier = Modifier.height(12.dp))
-                Box(
-                    modifier = Modifier.fillMaxWidth(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    ThemeModeButtonGroup(
-                        selectedMode = themeMode,
-                        onModeSelected = { value ->
-                            UiState.themeMode.value = value
-                            scope.launch { settingsStorage.setThemeMode(value) }
-                        }
-                    )
-                }
+                ThemeModeButtonGroup(
+                    selectedMode = themeMode,
+                    onModeSelected = { value ->
+                        UiState.themeMode.value = value
+                        scope.launch { settingsStorage.setThemeMode(value) }
+                    }
+                )
             }
+        }
+        if (isDark) {
+            SettingsSwitchItem(
+                icon = AppIcons.Contrast,
+                title = "纯黑模式",
+                subtitle = "使用纯黑背景，适合 OLED 屏幕",
+                checked = themeMode == "oled",
+                onCheckedChange = { enabled ->
+                    val value = if (enabled) "oled" else "dark"
+                    UiState.themeMode.value = value
+                    scope.launch { settingsStorage.setThemeMode(value) }
+                }
+            )
         }
         ThemeColorPicker(
             selectedColor = themeColor,
@@ -353,106 +360,39 @@ private fun themeColorScheme(value: String, isDark: Boolean): ColorScheme = when
 
 private data class ThemeModeOption(
     val value: String,
-    val label: String,
-    val checkedIcon: ImageVector,
-    val unCheckedIcon: ImageVector
+    val label: String
 )
 
 private val themeModeOptions = listOf(
-    ThemeModeOption(
-        value = "system",
-        label = "系统",
-        checkedIcon = AppFilledIcons.BrightnessAuto,
-        unCheckedIcon = AppIcons.BrightnessAuto
-    ),
-    ThemeModeOption(
-        value = "light",
-        label = "浅色",
-        checkedIcon = AppFilledIcons.LightMode,
-        unCheckedIcon = AppIcons.LightMode
-    ),
-    ThemeModeOption(
-        value = "dark",
-        label = "深色",
-        checkedIcon = AppFilledIcons.DarkMode,
-        unCheckedIcon = AppIcons.DarkMode
-    ),
-    ThemeModeOption(
-        value = "oled",
-        label = "纯黑",
-        checkedIcon = AppFilledIcons.Contrast,
-        unCheckedIcon = AppIcons.Contrast
-    )
+    ThemeModeOption("system", "系统"),
+    ThemeModeOption("light", "日间"),
+    ThemeModeOption("dark", "夜间")
 )
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun ThemeModeButtonGroup(
     selectedMode: String,
     onModeSelected: (String) -> Unit
 ) {
-    val interactionSources = remember {
-        List(themeModeOptions.size) { MutableInteractionSource() }
-    }
-    val layoutDirection = LocalLayoutDirection.current
+    val selectedIndex = themeModeOptions
+        .indexOfFirst { it.value == selectedMode }
+        .takeIf { it >= 0 }
+        ?: themeModeOptions.lastIndex
 
-    ButtonGroup(
-        overflowIndicator = { menuState ->
-            ButtonGroupDefaults.OverflowIndicator(menuState = menuState)
-        },
-        expandedRatio = 1f
-    ) {
+    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
         themeModeOptions.forEachIndexed { index, option ->
-            customItem(
-                buttonGroupContent = {
-                    val contentPadding = ButtonDefaults.ButtonWithIconContentPadding
-                    ToggleButton(
-                        checked = selectedMode == option.value,
-                        onCheckedChange = {
-                            onModeSelected(option.value)
-                        },
-                        shapes = when (index) {
-                            0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
-                            themeModeOptions.lastIndex ->
-                                ButtonGroupDefaults.connectedTrailingButtonShapes()
-                            else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
-                        },
-                        contentPadding = contentPadding,
-                        interactionSource = interactionSources[index],
-                        modifier = Modifier.animateWidth(
-                            interactionSource = interactionSources[index],
-                            compressionLimit =
-                                contentPadding.calculateEndPadding(layoutDirection)
-                        )
-                    ) {
-                        Icon(
-                            imageVector = if (selectedMode == option.value) {
-                                option.checkedIcon
-                            } else {
-                                option.unCheckedIcon
-                            },
-                            contentDescription = null
-                        )
-                        Spacer(Modifier.size(ToggleButtonDefaults.IconSpacing))
-                        Text(
-                            text = option.label,
-                            softWrap = false,
-                            maxLines = 1,
-                            overflow = TextOverflow.Visible
-                        )
-                    }
-                },
-                menuContent = {
-                    DropdownMenuItem(
-                        leadingIcon = {
-                            Icon(
-                                imageVector = option.checkedIcon,
-                                contentDescription = null
-                            )
-                        },
-                        text = { Text(option.label) },
-                        onClick = { onModeSelected(option.value) },
-                        interactionSource = interactionSources[index]
+            SegmentedButton(
+                selected = index == selectedIndex,
+                onClick = { onModeSelected(option.value) },
+                shape = SegmentedButtonDefaults.itemShape(
+                    index = index,
+                    count = themeModeOptions.size
+                ),
+                label = {
+                    Text(
+                        text = option.label,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
             )
@@ -758,7 +698,7 @@ private fun ConversationPreviewItem(
             )
         }
 
-        Spacer(Modifier.width(10.dp))
+        Spacer(modifier = Modifier.width(10.dp))
 
         Column(modifier = Modifier.weight(1f)) {
             Text(
@@ -768,7 +708,7 @@ private fun ConversationPreviewItem(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
-            Spacer(Modifier.height(2.dp))
+            Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = message,
                 style = MaterialTheme.typography.bodySmall,
@@ -778,7 +718,7 @@ private fun ConversationPreviewItem(
             )
         }
 
-        Spacer(Modifier.width(8.dp))
+        Spacer(modifier = Modifier.width(8.dp))
 
         Column(
             horizontalAlignment = Alignment.End
@@ -789,7 +729,7 @@ private fun ConversationPreviewItem(
                 color = scheme.onSurfaceVariant
             )
             if (unread > 0) {
-                Spacer(Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(4.dp))
                 Box(
                     modifier = Modifier
                         .defaultMinSize(minWidth = 16.dp, minHeight = 16.dp)

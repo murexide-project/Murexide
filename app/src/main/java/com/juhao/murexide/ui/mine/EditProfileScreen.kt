@@ -141,34 +141,30 @@ fun EditProfileScreen(
         )
     }
 
-    Scaffold(
-        topBar = {
-            StyledTopBar(
-                title = { Text("编辑资料") },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick, enabled = !isSaving) {
-                        AutoMirroredIcon(AppIcons.ArrowBack, contentDescription = "返回")
-                    }
-                },
-                actions = {
-                    IconButton(
-                        onClick = saveChanges,
-                        enabled = canSave
-                    ) {
-                        if (isSaving) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(18.dp),
-                                strokeWidth = 2.dp
-                            )
-                        } else {
-                            Icon(
-                                imageVector = AppIcons.Check,
-                                contentDescription = null
-                            )
-                        }
-                    }
+    StyledScaffold(
+        title = { Text("编辑资料") },
+        navigationIcon = {
+            IconButton(onClick = onBackClick, enabled = !isSaving) {
+                AutoMirroredIcon(AppIcons.ArrowBack, contentDescription = "返回")
+            }
+        },
+        actions = {
+            IconButton(
+                onClick = saveChanges,
+                enabled = canSave
+            ) {
+                if (isSaving) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(18.dp),
+                        strokeWidth = 2.dp
+                    )
+                } else {
+                    Icon(
+                        imageVector = AppIcons.Check,
+                        contentDescription = null
+                    )
                 }
-            )
+            }
         }
     ) { paddingValues ->
         when (val state = uiState) {

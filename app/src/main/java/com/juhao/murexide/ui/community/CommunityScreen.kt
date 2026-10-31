@@ -52,8 +52,7 @@ fun CommunityScreen(
 
     val tabs = listOf(
         CommunityTab.RECOMMEND to "推荐",
-        CommunityTab.ALL_BA to "全部",
-        CommunityTab.SUBSCRIBE to "关注",
+        CommunityTab.ALL_BA to "全部板块",
         CommunityTab.MANAGE to "管理"
     )
     val selectedIndex = tabs.indexOfFirst { it.first == uiState.currentTab }.coerceAtLeast(0)
@@ -109,13 +108,6 @@ fun CommunityScreen(
                     onBaClick = { ba -> BaDetailActivity.start(context, ba.id) }
                 )
 
-                CommunityTab.SUBSCRIBE -> SubscribeContent(
-                    innerPadding = innerPadding,
-                    baList = uiState.subscribeBaList,
-                    isLoading = uiState.isLoadingSubscribeBa,
-                    onBaClick = { ba -> BaDetailActivity.start(context, ba.id) }
-                )
-
                 CommunityTab.MANAGE -> ManageContent(
                     innerPadding = innerPadding,
                     baList = uiState.manageBaList,
@@ -139,7 +131,8 @@ fun AllBaContent(
 ) {
     val sides = listOf(
         BaSide.OFFICIAL to "官方",
-        BaSide.USER to "用户自建"
+        BaSide.USER to "用户自建",
+        BaSide.SUBSCRIBE to "关注",
     )
     Row(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -181,23 +174,6 @@ fun AllBaContent(
             )
         }
     }
-}
-
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
-@Composable
-fun SubscribeContent(
-    innerPadding: PaddingValues,
-    baList: List<BaItem>,
-    isLoading: Boolean,
-    onBaClick: (BaItem) -> Unit
-) {
-    BaList(
-        innerPadding = innerPadding,
-        baList = baList,
-        isLoading = isLoading,
-        emptyText = "你还没有关注分区",
-        onBaClick = onBaClick
-    )
 }
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -281,16 +257,16 @@ fun BaList(
     } else {
         LazyColumn(contentPadding = PaddingValues(bottom = innerPadding.calculateBottomPadding())) {
             items(baList) { ba ->
-                BaRow(ba = ba, onClick = { onBaClick(ba) })
+                BaRow(Modifier.animateItem(), ba = ba, onClick = { onBaClick(ba) })
             }
         }
     }
 }
 
 @Composable
-fun BaRow(ba: BaItem, onClick: () -> Unit) {
+fun BaRow(modifier: Modifier = Modifier, ba: BaItem, onClick: () -> Unit) {
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .clickable { onClick() }
             .padding(horizontal = 16.dp, vertical = 12.dp),
@@ -376,6 +352,7 @@ fun PostsList(
             ) {
                 items(posts) { post ->
                     PostCard(
+                        modifier = Modifier.animateItem(),
                         post = post,
                         onLikeClick = onLikeClick,
                         onCollectClick = onCollectClick,
@@ -404,13 +381,14 @@ fun PostsList(
 
 @Composable
 fun PostCard(
+    modifier: Modifier = Modifier,
     post: PostItem,
     onLikeClick: (Int) -> Unit,
     onCollectClick: (Int) -> Unit,
     onPostClick: (PostItem) -> Unit
 ) {
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 12.dp, vertical = 4.dp)
             .clip(RoundedCornerShape(24.dp))
