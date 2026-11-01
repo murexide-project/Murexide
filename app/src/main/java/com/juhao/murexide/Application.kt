@@ -35,7 +35,6 @@ import com.juhao.murexide.ui.components.MurexideBigImageHelper
 import com.juhao.murexide.ui.components.MurexideDownloadMediaHelper
 import com.juhao.murexide.ui.components.MurexideVideoFragmentCreate
 import com.juhao.murexide.utils.AppForegroundState
-import com.juhao.murexide.utils.DeviceIdProvider
 import com.juhao.murexide.utils.NotificationHelper
 import com.juhao.murexide.utils.isYunhuImageUrl
 import kotlinx.coroutines.CoroutineScope
@@ -43,6 +42,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import java.util.UUID
 
 class MyApplication : Application(), ImageLoaderFactory {
     private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
@@ -50,6 +50,8 @@ class MyApplication : Application(), ImageLoaderFactory {
     private val accountStorage by lazy { AccountStorage.getInstance(this) }
     private val conversationRepository by lazy { ConversationRepository() }
     private val settingsStorage by lazy { SettingsStorage(this) }
+
+    private val wsDeviceId: String = UUID.randomUUID().toString().replace("-", "")
 
     override fun onCreate() {
         super.onCreate()
@@ -218,7 +220,7 @@ class MyApplication : Application(), ImageLoaderFactory {
                         WebSocketManager.getInstance().connect(
                             userId = account.id,
                             token = account.token,
-                            deviceId = DeviceIdProvider.get(this@MyApplication)
+                            deviceId = wsDeviceId
                         )
                     } else {
                         Log.d("MyApplication", "WebSocket disabled by user, skip connect")

@@ -2,12 +2,16 @@ package com.juhao.murexide.ui.conversationdetail
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.juhao.murexide.data.BotItem
 import com.juhao.murexide.data.ConversationDetail
 import com.juhao.murexide.data.ConversationDetailUiState
+import com.juhao.murexide.data.GroupBotPermission
 import com.juhao.murexide.data.GroupMember
 import com.juhao.murexide.data.MessageItem
 import com.juhao.murexide.data.withCachedMuteState
 import com.juhao.murexide.data.local.LocalCache
+import com.juhao.murexide.repository.BotRepository
+import com.juhao.murexide.repository.ChatBackgroundRepository
 import com.juhao.murexide.repository.CommunityRepository
 import com.juhao.murexide.repository.ConversationDetailRepository
 import com.juhao.murexide.repository.FriendRepository
@@ -33,6 +37,11 @@ data class ShareLinkDialogState(
     val error: String? = null
 )
 
+data class BackgroundUploadState(
+    val isUploading: Boolean = false,
+    val error: String? = null
+)
+
 class ConversationDetailViewModel(
     val token: String,
     private val chatId: String,
@@ -46,7 +55,9 @@ class ConversationDetailViewModel(
     private val instructionRepository: InstructionRepository = InstructionRepository(),
     private val messageRepository: MessageRepository = MessageRepository(),
     private val communityRepository: CommunityRepository = CommunityRepository(token),
-    private val shareRepository: ShareRepository = ShareRepository()
+    private val shareRepository: ShareRepository = ShareRepository(),
+    private val botRepository: BotRepository = BotRepository(),
+    private val backgroundRepository: ChatBackgroundRepository = ChatBackgroundRepository()
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(
@@ -64,6 +75,9 @@ class ConversationDetailViewModel(
 
     private val _shareState = MutableStateFlow(ShareLinkDialogState())
     val shareState: StateFlow<ShareLinkDialogState> = _shareState.asStateFlow()
+
+    private val _backgroundUploadState = MutableStateFlow(BackgroundUploadState())
+    val backgroundUploadState: StateFlow<BackgroundUploadState> = _backgroundUploadState.asStateFlow()
 
     private var memberSearchJob: Job? = null
 
@@ -377,6 +391,28 @@ class ConversationDetailViewModel(
         }
     }
 
+    fun setChatBackground(fileName: String) {
+        viewModelScope.launch {
+            _backgroundUploadState.update { it.copy(isUploading = true, error = null) }
+            backgroundRepository.editBackground(
+                token = token,
+                userId = LocalCache.currentAccountId().orEmpty(),
+                chatId = chatId,
+                fileName = fileName
+            ).onSuccess {
+                _backgroundUploadState.update { it.copy(isUploading = false) }
+                _uiState.update { it.copy(message = "背景已更新") }
+            }.onFailure { error ->
+                _backgroundUploadState.update {
+                    it.copy(isUploading = false, error = error.message)
+                }
+                _uiState.update { it.copy(message = error.message ?: "设置背景失败") }
+            }
+        }
+    }
+
+    fun clearBackgroundError() = _backgroundUploadState.update { it.copy(error = null) }
+
     fun requestKickMember(member: GroupMember) {
         if (!canManageMember(member)) return
         _uiState.update { it.copy(kickTarget = member, showKickConfirm = true) }
@@ -472,13 +508,117 @@ class ConversationDetailViewModel(
                 }
         }
     }
-    
+
+    fun requestRemoveBot(bot: BotItem) {
+        if (!canManageBots()) return
+        _uiState.update { it.copy(removeBotTarget = bot, showRemoveBotConfirm = true) }
+    }
+
+    fun requestBotPermission(bot: BotItem) {
+        if (!canManageBots()) return
+        _uiState.update {
+            it.copy(
+                botPermissionTarget = bot,
+                showBotPermissionDialog = true,
+                isLoadingBotPermission = true,
+                botPermission = GroupBotPermission()
+            )
+        }
+        viewModelScope.launch {
+            botRepository.getGroupBotPermission(token, chatId, bot.id)
+                .onSuccess { permission ->
+                    _uiState.update {
+                        it.copy(botPermission = permission, isLoadingBotPermission = false)
+                    }
+                }
+                .onFailure { error ->
+                    _uiState.update {
+                        it.copy(
+                            isLoadingBotPermission = false,
+                            showBotPermissionDialog = false,
+                            botPermissionTarget = null,
+                            message = error.message ?: "获取机器人权限失败"
+                        )
+                    }
+                }
+        }
+    }
+
+    fun dismissBotDialogs() = _uiState.update {
+        it.copy(
+            removeBotTarget = null,
+            showRemoveBotConfirm = false,
+            botPermissionTarget = null,
+            showBotPermissionDialog = false,
+            isLoadingBotPermission = false
+        )
+    }
+
+    fun confirmRemoveBot() {
+        val target = _uiState.value.removeBotTarget ?: return
+        dismissBotDialogs()
+        viewModelScope.launch {
+            groupRepository.removeBot(token, chatId, target.id)
+                .onSuccess {
+                    _uiState.update { state ->
+                        state.copy(
+                            groupBots = state.groupBots.filterNot { it.id == target.id },
+                            message = "已移除 ${target.name}"
+                        )
+                    }
+                }
+                .onFailure { error ->
+                    _uiState.update { it.copy(message = error.message ?: "移除机器人失败") }
+                }
+        }
+    }
+
+    fun updateBotPermission(permission: GroupBotPermission) =
+        _uiState.update { it.copy(botPermission = permission) }
+
+    fun saveBotPermission() {
+        val state = _uiState.value
+        val target = state.botPermissionTarget ?: return
+        if (state.isSavingBotPermission) return
+        _uiState.update { it.copy(isSavingBotPermission = true) }
+        viewModelScope.launch {
+            botRepository.editGroupBotPermission(token, chatId, target.id, state.botPermission)
+                .onSuccess {
+                    _uiState.update {
+                        it.copy(
+                            isSavingBotPermission = false,
+                            botPermissionTarget = null,
+                            showBotPermissionDialog = false,
+                            message = "机器人权限已更新"
+                        )
+                    }
+                }
+                .onFailure { error ->
+                    _uiState.update {
+                        it.copy(
+                            isSavingBotPermission = false,
+                            message = error.message ?: "保存机器人权限失败"
+                        )
+                    }
+                }
+        }
+    }
+
+    private fun canManageBots(): Boolean {
+        val detail = _uiState.value.detail
+        if (chatType != 2 || (detail?.permissionLevel ?: 0) < 2) {
+            _uiState.update { it.copy(message = "你没有管理机器人的权限") }
+            return false
+        }
+        return true
+    }
+
     private fun String.escapeHtml(): String = this
         .replace("&", "&amp;")
         .replace("\"", "&quot;")
         .replace("<", "&lt;")
         .replace(">", "&gt;")
-    
+
     fun buildShareCardHtml(): String? {
         val detail = _uiState.value.detail ?: return null
         val type = when (detail.chatType) {
@@ -490,7 +630,7 @@ class ConversationDetailViewModel(
         val avatar = detail.avatarUrl.escapeHtml()
         val name = detail.name.ifBlank { "会话" }.escapeHtml()
         val chatId = detail.chatId.escapeHtml()
-    
+
         return buildString {
             append("<a href=\"yunhu://chat-add?id=$chatId&type=$type\" style=\"display:block;text-decoration:none;color:inherit;-webkit-tap-highlight-color:transparent;border:none;outline:none;\">")
             append("<table cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"max-width:280px;border-collapse:collapse;border:none;\"><tr>")

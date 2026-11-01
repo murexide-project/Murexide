@@ -85,6 +85,7 @@ import com.juhao.murexide.ui.chat.components.UploadProgressBar
 import com.juhao.murexide.ui.chat.components.ScreenshotBottomSheet
 import com.juhao.murexide.ui.chat.components.GroupMemberSheet
 import com.juhao.murexide.datastore.SettingsStorage
+import com.juhao.murexide.datastore.UserAccount
 import com.juhao.murexide.data.MessageItem
 import com.juhao.murexide.data.MessageDisplayItem
 import com.juhao.murexide.data.ForwardTarget
@@ -180,14 +181,16 @@ private fun ChatComposer(
     isSending: Boolean,
     isEmojiPanelVisible: Boolean,
     onEmojiClick: () -> Unit,
-    hasInstructions: Boolean,
     isInstructionPanelVisible: Boolean,
     onInstructionClick: () -> Unit,
     onAddAlbumClick: () -> Unit,
     onAddFileClick: () -> Unit,
     focusRequester: FocusRequester,
     onInputFocused: () -> Unit,
-    limitedMsgType: List<Int> = emptyList()
+    limitedMsgType: List<Int> = emptyList(),
+    accounts: List<UserAccount>,
+    activeAccountId: String,
+    onSwitchAccount: (UserAccount) -> Unit
 ) {
     val composerState by viewModel.composerState.collectAsState()
     MessageInput(
@@ -209,7 +212,6 @@ private fun ChatComposer(
         onAddFileClick = onAddFileClick,
         isEmojiPanelVisible = isEmojiPanelVisible,
         onEmojiClick = onEmojiClick,
-        hasInstructions = hasInstructions,
         isInstructionPanelVisible = isInstructionPanelVisible,
         onInstructionClick = onInstructionClick,
         mentions = composerState.mentions,
@@ -218,7 +220,10 @@ private fun ChatComposer(
         },
         focusRequester = focusRequester,
         onInputFocused = onInputFocused,
-        limitedMsgType = limitedMsgType
+        limitedMsgType = limitedMsgType,
+        accounts = accounts,
+        activeAccountId = activeAccountId,
+        onSwitchAccount = onSwitchAccount
     )
 }
 
@@ -852,9 +857,24 @@ fun ChatScreen(
             )
         }
     }
+    
+    val accountStorage = remember { com.juhao.murexide.datastore.AccountStorage.getInstance(context) }
+    var sendAccounts by remember { mutableStateOf<List<UserAccount>>(emptyList()) }
+    var activeSendAccountId by remember { mutableStateOf(viewModel.currentUserId) }
+    
+    LaunchedEffect(Unit) {
+        val accounts = accountStorage.getAccounts().filter { it.token.isNotBlank() }
+        sendAccounts = accounts
+        val initial = accounts.firstOrNull { it.id == viewModel.currentUserId }
+            ?: accounts.firstOrNull()
+        if (initial != null) {
+            activeSendAccountId = initial.id
+            viewModel.switchSendToken(initial.token)
+        }
+    }
 
     Scaffold(
-        modifier = Modifier.fillMaxSize(),
+        modifier = modifier.fillMaxSize(),
         containerColor = chatBackgroundColor,
         snackbarHost = {
             SnackbarHost(hostState = snackbarHostState)
@@ -1513,7 +1533,6 @@ fun ChatScreen(
                                     expressions.isVisible ||
                                             pendingInputPanel == ChatInputPanel.Emoji,
                                 onEmojiClick = { requestInputPanel(ChatInputPanel.Emoji) },
-                                hasInstructions = instructionPanel.instructions.isNotEmpty(),
                                 isInstructionPanelVisible =
                                     instructionPanel.isVisible ||
                                             pendingInputPanel == ChatInputPanel.Instruction,
@@ -1530,7 +1549,13 @@ fun ChatScreen(
                                     isReturningToKeyboard = false
                                     isMeasuringIme = false
                                 },
-                                limitedMsgType = uiState.limitedMsgType
+                                limitedMsgType = uiState.limitedMsgType,
+                                accounts = sendAccounts,
+                                activeAccountId = activeSendAccountId,
+                                onSwitchAccount = { account ->
+                                    activeSendAccountId = account.id
+                                    viewModel.switchSendToken(account.token)
+                                }
                             )
 
                             BackHandler(

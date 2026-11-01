@@ -15,6 +15,7 @@ import androidx.compose.ui.unit.dp
 import com.juhao.murexide.ui.components.*
 import com.juhao.murexide.ui.about.AboutActivity
 import com.juhao.murexide.ui.settings.userbot.UserBotActivity
+import com.juhao.murexide.ui.settings.chatbackground.ChatBackgroundActivity
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -148,6 +149,15 @@ private fun MainScreen() {
             subtitle = "关键词自动回复、自动撤回",
             onClick = {
                 UserBotActivity.start(context)
+            }
+        )
+        SettingsItem(
+            icon = AppIcons.Image,
+            title = "聊天背景",
+            subtitle = "为聊天设置背景图",
+            onClick = {
+                val intent = Intent(context, ChatBackgroundActivity::class.java)
+                context.startActivity(intent)
             }
         )
         SettingsItem(

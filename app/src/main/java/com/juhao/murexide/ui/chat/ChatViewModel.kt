@@ -167,6 +167,17 @@ class ChatViewModel(
     private var hasJumpedToUnread: Boolean = false
     private var pendingUnreadJumpAfterLoad: Boolean = false
     
+    private var activeSendToken: String = token
+
+    fun switchSendToken(newToken: String) {
+        if (newToken.isBlank()) return
+        activeSendToken = newToken
+    }
+    
+    fun getActiveSendToken(): String = activeSendToken
+    
+    private fun isActiveAccount(): Boolean = activeSendToken == token
+        
     private var initialUnreadCountApplied = false
 
     fun setInitialUnreadCount(count: Int) {
@@ -972,7 +983,7 @@ class ChatViewModel(
             )
 
             repository.sendMessage(
-                token = token,
+                token = activeSendToken,
                 chatId = chatId,
                 chatType = chatType,
                 content = content,
@@ -983,14 +994,16 @@ class ChatViewModel(
                 draftSaveJob?.cancel()
                 draftSaveJob = null
                 accountStorage.clearDraft(chatId, chatType)
-                addSentMessage(
-                    msgId = msgId,
-                    content = content,
-                    contentType = contentType,
-                    quoteMsgId = state.replyTo?.msgId,
-                    commandId = state.pendingCommandId,
-                    commandName = state.pendingCommandName
-                )
+                if (isActiveAccount()) {
+                    addSentMessage(
+                        msgId = msgId,
+                        content = content,
+                        contentType = contentType,
+                        quoteMsgId = state.replyTo?.msgId,
+                        commandId = state.pendingCommandId,
+                        commandName = state.pendingCommandName
+                    )
+                }
                 _uiState.update {
                     it.copy(
                         inputText = "",
@@ -1108,22 +1121,21 @@ class ChatViewModel(
             )
 
             repository.sendMessage(
-                token = token,
+                token = activeSendToken,
                 chatId = chatId,
                 chatType = chatType,
                 content = content,
                 contentType = MessageItem.CONTENT_TYPE_VIDEO,
                 quoteMsgId = state.replyTo?.msgId
             ).onSuccess { msgId ->
-                draftSaveJob?.cancel()
-                draftSaveJob = null
-                accountStorage.clearDraft(chatId, chatType)
-                addSentMessage(
-                    msgId = msgId,
-                    content = content,
-                    contentType = MessageItem.CONTENT_TYPE_VIDEO,
-                    quoteMsgId = state.replyTo?.msgId
-                )
+                if (isActiveAccount()) {
+                    addSentMessage(
+                        msgId = msgId,
+                        content = content,
+                        contentType = MessageItem.CONTENT_TYPE_VIDEO,
+                        quoteMsgId = state.replyTo?.msgId
+                    )
+                }
                 _uiState.update { it.copy(replyTo = null, isSending = false) }
             }.onFailure { error ->
                 _uiState.update { it.copy(isSending = false) }
@@ -1153,22 +1165,21 @@ class ChatViewModel(
             )
 
             repository.sendMessage(
-                token = token,
+                token = activeSendToken,
                 chatId = chatId,
                 chatType = chatType,
                 content = content,
                 contentType = MessageItem.CONTENT_TYPE_IMAGE,
                 quoteMsgId = state.replyTo?.msgId
             ).onSuccess { msgId ->
-                draftSaveJob?.cancel()
-                draftSaveJob = null
-                accountStorage.clearDraft(chatId, chatType)
-                addSentMessage(
-                    msgId = msgId,
-                    content = content,
-                    contentType = MessageItem.CONTENT_TYPE_IMAGE,
-                    quoteMsgId = state.replyTo?.msgId
-                )
+                if (isActiveAccount()) {
+                    addSentMessage(
+                        msgId = msgId,
+                        content = content,
+                        contentType = MessageItem.CONTENT_TYPE_IMAGE,
+                        quoteMsgId = state.replyTo?.msgId
+                    )
+                }
                 _uiState.update { it.copy(replyTo = null, isSending = false) }
             }.onFailure { error ->
                 _uiState.update { it.copy(isSending = false) }
@@ -1250,22 +1261,21 @@ class ChatViewModel(
             )
 
             repository.sendMessage(
-                token = token,
+                token = activeSendToken,
                 chatId = chatId,
                 chatType = chatType,
                 content = content,
                 contentType = MessageItem.CONTENT_TYPE_FILE,
                 quoteMsgId = state.replyTo?.msgId
             ).onSuccess { msgId ->
-                draftSaveJob?.cancel()
-                draftSaveJob = null
-                accountStorage.clearDraft(chatId, chatType)
-                addSentMessage(
-                    msgId = msgId,
-                    content = content,
-                    contentType = MessageItem.CONTENT_TYPE_FILE,
-                    quoteMsgId = state.replyTo?.msgId
-                )
+                if (isActiveAccount()) {
+                    addSentMessage(
+                        msgId = msgId,
+                        content = content,
+                        contentType = MessageItem.CONTENT_TYPE_FILE,
+                        quoteMsgId = state.replyTo?.msgId
+                    )
+                }
                 _uiState.update { it.copy(replyTo = null, isSending = false) }
             }.onFailure { error ->
                 _uiState.update { it.copy(isSending = false) }
@@ -1571,22 +1581,21 @@ class ChatViewModel(
 
         viewModelScope.launch {
             repository.sendMessage(
-                token = token,
+                token = activeSendToken,
                 chatId = chatId,
                 chatType = chatType,
                 content = content,
                 contentType = MessageItem.CONTENT_TYPE_STICKER,
                 quoteMsgId = state.replyTo?.msgId
             ).onSuccess { msgId ->
-                draftSaveJob?.cancel()
-                draftSaveJob = null
-                accountStorage.clearDraft(chatId, chatType)
-                addSentMessage(
-                    msgId = msgId,
-                    content = content,
-                    contentType = MessageItem.CONTENT_TYPE_STICKER,
-                    quoteMsgId = state.replyTo?.msgId
-                )
+                if (isActiveAccount()) {
+                    addSentMessage(
+                        msgId = msgId,
+                        content = content,
+                        contentType = MessageItem.CONTENT_TYPE_STICKER,
+                        quoteMsgId = state.replyTo?.msgId
+                    )
+                }
                 hideStickerPanel()
                 _uiState.update { it.copy(replyTo = null) }
             }.onFailure { error ->
@@ -1684,7 +1693,7 @@ class ChatViewModel(
         viewModelScope.launch {
             val content = MessageContent()
             repository.sendMessage(
-                token = token,
+                token = activeSendToken,
                 chatId = chatId,
                 chatType = chatType,
                 content = content,
@@ -1694,14 +1703,16 @@ class ChatViewModel(
                 draftSaveJob?.cancel()
                 draftSaveJob = null
                 accountStorage.clearDraft(chatId, chatType)
-                addSentMessage(
-                    msgId = msgId,
-                    content = content,
-                    contentType = MessageItem.CONTENT_TYPE_TEXT,
-                    quoteMsgId = null,
-                    commandId = item.id,
-                    commandName = item.name
-                )
+                if (isActiveAccount()) {
+                    addSentMessage(
+                        msgId = msgId,
+                        content = content,
+                        contentType = MessageItem.CONTENT_TYPE_TEXT,
+                        quoteMsgId = null,
+                        commandId = item.id,
+                        commandName = item.name
+                    )
+                }
                 hideInstructionPanel()
             }.onFailure { error ->
                 _toastMessage.emit("指令发送失败: ${error.message}")
@@ -1713,7 +1724,7 @@ class ChatViewModel(
         viewModelScope.launch {
             val content = MessageContent(form = formJson)
             repository.sendMessage(
-                token = token,
+                token = activeSendToken,
                 chatId = chatId,
                 chatType = chatType,
                 content = content,
@@ -1723,14 +1734,16 @@ class ChatViewModel(
                 draftSaveJob?.cancel()
                 draftSaveJob = null
                 accountStorage.clearDraft(chatId, chatType)
-                addSentMessage(
-                    msgId = msgId,
-                    content = content,
-                    contentType = MessageItem.CONTENT_TYPE_TEXT,
-                    quoteMsgId = null,
-                    commandId = item.id,
-                    commandName = item.name
-                )
+                if (isActiveAccount()) {
+                    addSentMessage(
+                        msgId = msgId,
+                        content = content,
+                        contentType = MessageItem.CONTENT_TYPE_TEXT,
+                        quoteMsgId = null,
+                        commandId = item.id,
+                        commandName = item.name
+                    )
+                }
                 _instructionForm.value = null
                 hideInstructionPanel()
             }.onFailure { error ->

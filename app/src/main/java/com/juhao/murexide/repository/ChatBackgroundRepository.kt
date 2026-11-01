@@ -6,6 +6,8 @@ import com.juhao.murexide.network.NetworkClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -15,10 +17,6 @@ class ChatBackgroundRepository {
     private val baseUrl = NetworkClient.BASE_URL
     private val json = Json { ignoreUnknownKeys = true }
 
-    /**
-     * 获取背景设置列表。
-     * @return 服务端返回的全部背景设置；为空表示用户未设置任何背景。
-     */
     suspend fun getBackgroundList(token: String): Result<List<ChatBackgroundItem>> {
         return withContext(Dispatchers.IO) {
             try {
@@ -53,10 +51,49 @@ class ChatBackgroundRepository {
         }
     }
 
-    /**
-     * 从背景列表中挑选出对当前会话生效的背景。
-     * 优先级：当前会话 ID 对应的背景 > 全局背景 ("all")。
-     */
+    suspend fun editBackground(
+        token: String,
+        userId: String,
+        chatId: String,
+        fileName: String
+    ): Result<Unit> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val payload = buildJsonObject {
+                    put("userId", userId)
+                    put("chatId", chatId)
+                    put("url", fileName)
+                }.toString()
+                val requestBody = payload.toRequestBody("application/json".toMediaType())
+
+                val httpRequest = Request.Builder()
+                    .url("$baseUrl/v1/chat-background/edit")
+                    .post(requestBody)
+                    .header("token", token)
+                    .build()
+
+                client.newCall(httpRequest).execute().use { response ->
+                    if (response.isSuccessful) {
+                        val responseBody = response.body.string()
+                        val result = json.decodeFromString(
+                            ChatBackgroundListResponse.serializer(),
+                            responseBody
+                        )
+                        if (result.code == 1) {
+                            Result.success(Unit)
+                        } else {
+                            Result.failure(Exception(result.msg.ifEmpty { "设置背景失败" }))
+                        }
+                    } else {
+                        Result.failure(Exception("HTTP error: ${response.code}"))
+                    }
+                }
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+        }
+    }
+
     fun resolveBackground(list: List<ChatBackgroundItem>, chatId: String): String? {
         val specific = list.firstOrNull { it.chatId == chatId && it.imgUrl.isNotEmpty() }
         if (specific != null) return specific.imgUrl

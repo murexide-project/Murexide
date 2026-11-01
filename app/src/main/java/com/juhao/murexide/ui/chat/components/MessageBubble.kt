@@ -514,7 +514,9 @@ private fun MessageBubbleBody(
                             modifier = Modifier
                                 .align(if (isMine) Alignment.BottomStart else Alignment.BottomEnd)
                                 .padding(4.dp)
-                                .background(cardColor.copy(alpha = 0.6f), RoundedCornerShape(24.dp))
+                                .then(
+                                    if (hideCard) Modifier.background(cardColor.copy(alpha = 0.6f), RoundedCornerShape(24.dp)) else Modifier
+                                )
                                 .padding(horizontal = 4.dp, vertical = 2.dp)
                         )
                     }
@@ -766,11 +768,11 @@ private fun MessageContentRouter(
     val density = LocalDensity.current
     val timeTextStyle = remember { TextStyle(fontSize = 10.sp, lineHeight = 16.sp) }
     val textReserveWidthPx = remember(timestampDisplay, message.isEdited, density) {
-        val timeText = timestampDisplay + if (message.isEdited) " 已编辑" else ""
+    val timeText = timestampDisplay + if (message.isEdited) " 已编辑" else ""
         textMeasurer.measure(
             text = AnnotatedString(timeText),
             style = timeTextStyle
-        ).size.width + with(density) { 8.dp.roundToPx() }
+        ).size.width + with(density) { 16.dp.roundToPx() }
     }
     
     if (message.isRecalled) {

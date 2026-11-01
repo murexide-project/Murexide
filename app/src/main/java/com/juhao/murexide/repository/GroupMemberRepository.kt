@@ -168,6 +168,39 @@ class GroupRepository {
         }
     }
 
+    /** 移除群聊内机器人（/v1/group/remove-bot，群主/管理员可用）。 */
+    suspend fun removeBot(
+        token: String,
+        groupId: String,
+        botId: String
+    ): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            val json = JSONObject().apply {
+                put("groupId", groupId)
+                put("botId", botId)
+            }
+
+            val request = Request.Builder()
+                .url("$baseUrl/v1/group/remove-bot")
+                .post(json.toString().toRequestBody("application/json".toMediaType()))
+                .header("token", token)
+                .build()
+
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    return@use Result.failure(Exception("HTTP error: ${response.code}"))
+                }
+                val resp = JSONObject(response.body.string())
+                if (resp.optInt("code") != 1) {
+                    return@use Result.failure(Exception(resp.optString("msg", "操作失败")))
+                }
+                Result.success(Unit)
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     suspend fun setAdmin(
         token: String,
         groupId: String,

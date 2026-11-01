@@ -1,5 +1,7 @@
 package com.juhao.murexide.repository
 
+import com.juhao.murexide.data.GroupBotPermission
+import com.juhao.murexide.data.GroupBotPermissionItem
 import com.juhao.murexide.network.NetworkClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -9,6 +11,7 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.intOrNull
@@ -152,6 +155,41 @@ class BotRepository(
                 }
             }
 
+    /** 获取群内机器人权限设置（/v1/bot/group-permission-get）。 */
+    suspend fun getGroupBotPermission(
+        token: String,
+        groupId: String,
+        botId: String
+    ): Result<GroupBotPermission> =
+        postJson(token, "/v1/bot/group-permission-get", buildJsonObject {
+            put("botId", botId)
+            put("groupId", groupId)
+        }).mapCatching { root ->
+            val data = root["data"] as? JsonObject ?: JsonObject(emptyMap())
+            val remoteItems = (data["permissions"] as? JsonArray)
+                ?.mapNotNull { element -> (element as? JsonObject)?.toPermissionItem() }
+                ?.filter { it.key.isNotBlank() }
+                .orEmpty()
+            val items = remoteItems.ifEmpty {
+                GroupBotPermission.defaultItems.map { it.copy(enabled = data[it.key].asInt() == 1) }
+            }
+            GroupBotPermission(permissions = items)
+        }
+
+    /** 更改群内机器人权限（/v1/bot/group-permission-edit）。 */
+    suspend fun editGroupBotPermission(
+        token: String,
+        groupId: String,
+        botId: String,
+        permission: GroupBotPermission
+    ): Result<Unit> = postJson(token, "/v1/bot/group-permission-edit", buildJsonObject {
+        put("groupId", groupId)
+        put("botId", botId)
+        put("permissions", buildJsonObject {
+            permission.toPermissionMap().forEach { (key, enabled) -> put(key, enabled) }
+        })
+    }).map { }
+
     suspend fun removeFollower(token: String, botId: String, userId: String): Result<Unit> =
         postJson(token, "/v1/bot/remove-follower", buildJsonObject {
             put("botId", botId)
@@ -196,3 +234,15 @@ private fun JsonElement?.asInt(): Int {
 
 private fun JsonElement?.asString(): String =
     (this as? JsonPrimitive)?.contentOrNull.orEmpty()
+
+private fun JsonElement?.asBoolean(): Boolean {
+    val p = this as? JsonPrimitive ?: return false
+    return p.booleanOrNull ?: p.contentOrNull?.toBooleanStrictOrNull() ?: (p.intOrNull == 1)
+}
+
+private fun JsonObject.toPermissionItem() = GroupBotPermissionItem(
+    key = this["key"].asString(),
+    name = this["name"].asString(),
+    description = this["description"].asString(),
+    enabled = this["enabled"].asBoolean()
+)

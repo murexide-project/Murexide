@@ -28,6 +28,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -104,6 +105,8 @@ fun ConversationListScreen(
     val listState = rememberLazyListState()
     val stickyIds by viewModel.stickyIds.collectAsState()
     val pullToRefreshState = rememberPullToRefreshState()
+
+    var openSwipeKey by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(uiState) {
         if (uiState is ConversationUiState.Success) {
@@ -446,7 +449,10 @@ fun ConversationListScreen(
                                             currentConversation.chatType == conversation.chatType &&
                                             bigScreenMode,
                                     isSticky = true,
+                                    openItemKey = openSwipeKey,
+                                    onOpen = { openSwipeKey = it },
                                     onClick = {
+                                        openSwipeKey = null
                                         viewModel.clearUnread(
                                             conversation.chatId,
                                             conversation.chatType
@@ -475,7 +481,10 @@ fun ConversationListScreen(
                                             currentConversation.chatType == conversation.chatType &&
                                             bigScreenMode,
                                     isSticky = false,
+                                    openItemKey = openSwipeKey,
+                                    onOpen = { openSwipeKey = it },
                                     onClick = {
+                                        openSwipeKey = null
                                         viewModel.clearUnread(
                                             conversation.chatId,
                                             conversation.chatType
@@ -574,6 +583,8 @@ private fun SwipeableConversationItem(
     draft: String? = null,
     isSelected: Boolean = false,
     isSticky: Boolean = false,
+    openItemKey: String?,
+    onOpen: (String?) -> Unit,
     onClick: () -> Unit,
     onPin: () -> Unit,
     onUnpin: () -> Unit,
@@ -585,25 +596,42 @@ private fun SwipeableConversationItem(
     val totalWidth = buttonWidth * 2
     val totalWidthPx = with(density) { totalWidth.toPx() }
 
-    val state = remember {
+    val itemKey = "${conversation.chatType}:${conversation.chatId}"
+
+    val state = remember(density) {
         AnchoredDraggableState(
             initialValue = SwipeState.Closed,
-            anchors = DraggableAnchors {
+            positionalThreshold = { distance -> distance * 0.5f },
+            velocityThreshold = { with(density) { 125.dp.toPx() } },
+            snapAnimationSpec = spring(),
+            decayAnimationSpec = splineBasedDecay(density)
+        )
+    }
+
+    LaunchedEffect(totalWidthPx) {
+        state.updateAnchors(
+            DraggableAnchors {
                 SwipeState.Closed at 0f
                 SwipeState.Open at -totalWidthPx
             }
         )
     }
 
-    LaunchedEffect(conversation.chatId, conversation.chatType, isSticky) {
-        if (state.currentValue == SwipeState.Open) {
+    LaunchedEffect(openItemKey) {
+        if (openItemKey != itemKey && state.currentValue == SwipeState.Open) {
             state.animateTo(SwipeState.Closed)
         }
     }
-    
+
+    LaunchedEffect(state.currentValue) {
+        if (state.currentValue == SwipeState.Open) {
+            onOpen(itemKey)
+        }
+    }
+
     val themeColor by UiState.themeColor
     val listItemColor = if (isSelected)
-        MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+        MaterialTheme.colorScheme.surfaceBright
     else if ((isSticky && themeColor != "WHITE") || (!isSticky && themeColor == "WHITE")) {
         MaterialTheme.colorScheme.surfaceContainer
     } else {
@@ -614,12 +642,7 @@ private fun SwipeableConversationItem(
         modifier = modifier
             .fillMaxWidth()
             .height(IntrinsicSize.Min)
-            .background(
-                if (isSelected)
-                    MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
-                else
-                    listItemColor
-            )
+            .background(listItemColor)
             .anchoredDraggable(
                 state = state,
                 orientation = Orientation.Horizontal
@@ -637,8 +660,9 @@ private fun SwipeableConversationItem(
                     .weight(1f)
                     .fillMaxHeight()
                     .background(MaterialTheme.colorScheme.primaryContainer)
-                    .clickable {
+                    .clickable(role = Role.Button) {
                         scope.launch { state.animateTo(SwipeState.Closed) }
+                        onOpen(null)
                         if (isSticky) onUnpin() else onPin()
                     },
                 contentAlignment = Alignment.Center
@@ -661,8 +685,9 @@ private fun SwipeableConversationItem(
                     .weight(1f)
                     .fillMaxHeight()
                     .background(MaterialTheme.colorScheme.errorContainer)
-                    .clickable {
+                    .clickable(role = Role.Button) {
                         scope.launch { state.animateTo(SwipeState.Closed) }
+                        onOpen(null)
                         onDelete()
                     },
                 contentAlignment = Alignment.Center
@@ -685,7 +710,11 @@ private fun SwipeableConversationItem(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .offset { IntOffset(state.requireOffset().roundToInt(), 0) }
+                .offset {
+                    val offset = state.offset
+                    val px = if (offset.isNaN()) 0f else offset
+                    IntOffset(px.roundToInt(), 0)
+                }
         ) {
             ConversationItem(
                 modifier = Modifier,
@@ -697,6 +726,7 @@ private fun SwipeableConversationItem(
                 onClick = {
                     if (state.currentValue == SwipeState.Open) {
                         scope.launch { state.animateTo(SwipeState.Closed) }
+                        onOpen(null)
                     } else {
                         onClick()
                     }

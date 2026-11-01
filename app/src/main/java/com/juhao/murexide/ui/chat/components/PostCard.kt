@@ -1,6 +1,5 @@
 package com.juhao.murexide.ui.chat.components
 
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -32,11 +31,6 @@ fun PostCard(
         modifier = Modifier
             .padding(2.dp)
             .clip(RoundedCornerShape(12.dp))
-            .border(
-                width = 1.dp,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
-                shape = RoundedCornerShape(12.dp)
-            )
             .clickable {
                 PostDetailActivity.start(context, postId)
             }

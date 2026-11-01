@@ -65,6 +65,7 @@ object AppIcons {
     val Favorite get() = MaterialSymbols.RoundedFilled.Favorite
     val FavoriteBorder get() = MaterialSymbols.Rounded.Favorite
     val FolderZip get() = MaterialSymbols.Rounded.Folder_zip
+    val FormatBold get() = MaterialSymbols.Rounded.Format_bold
     val FormatQuote get() = MaterialSymbols.Rounded.Format_quote
     val Girl get() = MaterialSymbols.Rounded.Girl
     val Group get() = MaterialSymbols.Rounded.Group

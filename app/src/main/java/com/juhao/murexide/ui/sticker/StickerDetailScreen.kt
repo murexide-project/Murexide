@@ -126,204 +126,193 @@ fun StickerDetailScreen(
         }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = state.pack?.name ?: "表情包详情",
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(AppIcons.ArrowBack, contentDescription = "返回")
-                    }
-                },
-                actions = {
-                    if (state.isOwner) {
-                        Box {
-                            IconButton(onClick = { showMenu = true }) {
-                                Icon(AppIcons.MoreVert, contentDescription = "更多")
-                            }
-                            ExpressiveDropdownMenu(
-                                expanded = showMenu,
-                                onDismissRequest = { showMenu = false }
-                            ) {
-                                DropdownMenuItem(
-                                    text = { Text("重命名表情包") },
-                                    leadingIcon = {
-                                        Icon(
-                                            imageVector = AppIcons.Edit,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(18.dp)
-                                        )
-                                    },
-                                    onClick = {
-                                        showMenu = false
-                                        showRenamePackDialog = true
-                                    }
-                                )
-                                DropdownMenuItem(
-                                    text = { Text("添加表情") },
-                                    leadingIcon = {
-                                        Icon(
-                                            imageVector = AppIcons.Add,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(18.dp)
-                                        )
-                                    },
-                                    onClick = {
-                                        showMenu = false
-                                        imagePickerLauncher.launch(
-                                            PickVisualMediaRequest(
-                                                ActivityResultContracts.PickVisualMedia.ImageOnly
-                                            )
-                                        )
-                                    }
-                                )
-                                DropdownMenuItem(
-                                    text = {
-                                        Text(
-                                            "删除表情包",
-                                            color = MaterialTheme.colorScheme.error
-                                        )
-                                    },
-                                    leadingIcon = {
-                                        Icon(
-                                            imageVector = AppIcons.Delete,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(18.dp),
-                                            tint = MaterialTheme.colorScheme.error
-                                        )
-                                    },
-                                    onClick = {
-                                        showMenu = false
-                                        showDeletePackDialog = true
-                                    }
-                                )
-                            }
-                        }
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                )
+    StyledScaffold(
+        title = {
+            Text(
+                text = state.pack?.name ?: "表情包详情",
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         },
-        snackbarHost = { SnackbarHost(snackbarHostState) }
-    ) { innerPadding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-        ) {
-            Column(Modifier.fillMaxSize()) {
-
-                AnimatedVisibility(
-                    visible = uploadProgress != null,
-                    enter = expandVertically(),
-                    exit = shrinkVertically()
-                ) {
-                    UploadProgressBar(progress = uploadProgress ?: 0f)
-                }
-
-                when {
-                    state.isLoading && state.pack == null -> {
-                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator()
-                        }
+        navigationIcon = {
+            IconButton(onClick = onBack) {
+                Icon(AppIcons.ArrowBack, contentDescription = "返回")
+            }
+        },
+        actions = {
+            if (state.isOwner) {
+                Box {
+                    IconButton(onClick = { showMenu = true }) {
+                        Icon(AppIcons.MoreVert, contentDescription = "更多")
                     }
-
-                    state.error != null && state.pack == null -> {
-                        EmptyPlaceholder(
-                            icon = AppIcons.Warning,
-                            title = "加载失败",
-                            subtitle = state.error,
-                            primaryButton = {
-                                Button(onClick = viewModel::load) {
-                                    Text("重试")
-                                }
+                    ExpressiveDropdownMenu(
+                        expanded = showMenu,
+                        onDismissRequest = { showMenu = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("重命名表情包") },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = AppIcons.Edit,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            },
+                            onClick = {
+                                showMenu = false
+                                showRenamePackDialog = true
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("添加表情") },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = AppIcons.Add,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            },
+                            onClick = {
+                                showMenu = false
+                                imagePickerLauncher.launch(
+                                    PickVisualMediaRequest(
+                                        ActivityResultContracts.PickVisualMedia.ImageOnly
+                                    )
+                                )
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    "删除表情包",
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = AppIcons.Delete,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp),
+                                    tint = MaterialTheme.colorScheme.error
+                                )
+                            },
+                            onClick = {
+                                showMenu = false
+                                showDeletePackDialog = true
                             }
                         )
                     }
+                }
+            }
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) }
+    ) { innerPadding ->
+        Box(Modifier.fillMaxSize()) {
+            when {
+                state.isLoading && state.pack == null -> {
+                    Box(Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
+                    }
+                }
 
-                    else -> {
-                        val pack = state.pack ?: return@Column
-                        val previewUrl = previewStickerUrl?.takeIf { it.isNotBlank() }
-                        val rows = remember(pack.stickerItems) {
-                            pack.stickerItems.chunked(GRID_COLUMNS)
-                        }
-
-                        val currentPreviewHeight: Dp = with(density) {
-                            previewHeightPx.floatValue.toDp()
-                        }
-
-                        LazyColumn(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .nestedScroll(nestedScrollConnection),
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            if (previewUrl != null) {
-                                item(key = "preview") {
-                                    StickerPreviewHeader(
-                                        url = previewUrl,
-                                        height = currentPreviewHeight
-                                    )
-                                }
+                state.error != null && state.pack == null -> {
+                    EmptyPlaceholder(
+                        modifier = Modifier.padding(innerPadding),
+                        icon = AppIcons.Warning,
+                        title = "加载失败",
+                        subtitle = state.error,
+                        primaryButton = {
+                            Button(onClick = viewModel::load) {
+                                Text("重试")
                             }
+                        }
+                    )
+                }
 
-                            item(key = "header") {
-                                StickerPackHeader(
-                                    pack = pack,
-                                    creatorName = state.creator?.nickname ?: "",
-                                    creatorAvatar = state.creator?.avatar_url ?: "",
-                                    isCollected = state.isCollected,
-                                    isOwner = state.isOwner,
-                                    isSubmitting = state.isSubmitting,
-                                    onToggleCollect = { viewModel.toggleCollect() }
+                else -> {
+                    val pack = state.pack ?: return@Box
+                    val previewUrl = previewStickerUrl?.takeIf { it.isNotBlank() }
+                    val rows = remember(pack.stickerItems) {
+                        pack.stickerItems.chunked(GRID_COLUMNS)
+                    }
+
+                    val currentPreviewHeight: Dp = with(density) {
+                        previewHeightPx.floatValue.toDp()
+                    }
+
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .nestedScroll(nestedScrollConnection),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                        contentPadding = innerPadding
+                    ) {
+                        if (previewUrl != null) {
+                            item(key = "preview") {
+                                StickerPreviewHeader(
+                                    url = previewUrl,
+                                    height = currentPreviewHeight
                                 )
                             }
+                        }
 
-                            item(key = "divider") {
-                                HorizontalDivider(modifier = Modifier.padding(bottom = 4.dp))
-                            }
+                        item(key = "header") {
+                            StickerPackHeader(
+                                pack = pack,
+                                creatorName = state.creator?.nickname ?: "",
+                                creatorAvatar = state.creator?.avatar_url ?: "",
+                                isCollected = state.isCollected,
+                                isOwner = state.isOwner,
+                                isSubmitting = state.isSubmitting,
+                                onToggleCollect = { viewModel.toggleCollect() }
+                            )
+                        }
 
-                            itemsIndexed(
-                                items = rows,
-                                key = { index, _ -> "row_$index" }
-                            ) { _, row ->
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 8.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                ) {
-                                    row.forEach { sticker ->
-                                        Box(
-                                            modifier = Modifier.weight(1f),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            StickerDetailItem(
-                                                sticker = sticker,
-                                                isOwner = state.isOwner,
-                                                onRename = { stickerToRename = sticker },
-                                                onDelete = { stickerToDelete = sticker },
-                                                onAddToFavorites = { viewModel.addStickerToFavorites(sticker.id) }
-                                            )
-                                        }
+                        item(key = "divider") {
+                            HorizontalDivider(modifier = Modifier.padding(bottom = 4.dp))
+                        }
+
+                        itemsIndexed(
+                            items = rows,
+                            key = { index, _ -> "row_$index" }
+                        ) { _, row ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 8.dp),
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                row.forEach { sticker ->
+                                    Box(
+                                        modifier = Modifier.weight(1f),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        StickerDetailItem(
+                                            sticker = sticker,
+                                            isOwner = state.isOwner,
+                                            onRename = { stickerToRename = sticker },
+                                            onDelete = { stickerToDelete = sticker },
+                                            onAddToFavorites = { viewModel.addStickerToFavorites(sticker.id) }
+                                        )
                                     }
+                                }
 
-                                    repeat(GRID_COLUMNS - row.size) {
-                                        Spacer(modifier = Modifier.weight(1f))
-                                    }
+                                repeat(GRID_COLUMNS - row.size) {
+                                    Spacer(modifier = Modifier.weight(1f))
                                 }
                             }
                         }
                     }
                 }
+            }
+            
+            AnimatedVisibility(
+                modifier = Modifier.padding(innerPadding),
+                visible = uploadProgress != null,
+                enter = expandVertically(),
+                exit = shrinkVertically()
+            ) {
+                UploadProgressBar(progress = uploadProgress ?: 0f)
             }
         }
     }

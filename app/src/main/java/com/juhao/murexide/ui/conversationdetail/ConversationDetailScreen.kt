@@ -6,6 +6,9 @@ import android.widget.Toast
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.fadeIn
@@ -40,7 +43,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.layout.ContentScale
@@ -57,6 +59,7 @@ import coil.compose.AsyncImage
 import com.juhao.murexide.data.BaItem
 import com.juhao.murexide.data.BotItem
 import com.juhao.murexide.data.ConversationDetail
+import com.juhao.murexide.data.GroupBotPermission
 import com.juhao.murexide.data.GroupMember
 import com.juhao.murexide.data.MessageItem
 import com.juhao.murexide.ui.components.*
@@ -68,8 +71,8 @@ import com.juhao.murexide.ui.chatsearch.ChatSearchActivity
 import com.juhao.murexide.ui.share.ShareReceiverActivity
 import com.juhao.murexide.ui.theme.LocalLiquidGlassBackdrop
 import com.juhao.murexide.ui.theme.LocalLiquidGlassEnabled
-import com.juhao.murexide.ui.theme.liquidGlass
 import com.juhao.murexide.ui.theme.resolvedLiquidGlassContentColor
+import com.juhao.murexide.utils.QiniuUploader
 import kotlinx.coroutines.launch
 
 @Composable
@@ -95,15 +98,17 @@ fun ConversationDetailScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val shareState by viewModel.shareState.collectAsStateWithLifecycle()
+    val backgroundUploadState by viewModel.backgroundUploadState.collectAsStateWithLifecycle()
     LaunchedEffect(refreshSignal) {
         if (refreshSignal > 0) viewModel.loadDetail()
     }
     val context = LocalContext.current
-    val liquidGlassEnabled = LocalLiquidGlassEnabled.current
     val liquidBackdrop = LocalLiquidGlassBackdrop.current
     val snackbars = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
     var showMore by remember { mutableStateOf(false) }
     var showLeaveConfirm by remember { mutableStateOf(false) }
+    var uploadingBackground by remember { mutableStateOf(false) }
     val groupListState = rememberLazyListState()
     val userListState = rememberLazyListState()
     val groupNameBottomOffset = with(LocalDensity.current) { 130.dp.roundToPx() }
@@ -111,6 +116,27 @@ fun ConversationDetailScreen(
         derivedStateOf {
             groupListState.firstVisibleItemIndex > 0 ||
                 groupListState.firstVisibleItemScrollOffset >= groupNameBottomOffset
+        }
+    }
+
+    val backgroundPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        uri ?: return@rememberLauncherForActivityResult
+        scope.launch {
+            uploadingBackground = true
+            QiniuUploader(
+                context = context,
+                userToken = viewModel.token,
+                uploadType = 1
+            ).uploadFromUri(context, uri)
+                .onSuccess { response ->
+                    viewModel.setChatBackground(response.key)
+                }
+                .onFailure { e ->
+                    Toast.makeText(context, e.message ?: "上传失败", Toast.LENGTH_SHORT).show()
+                }
+            uploadingBackground = false
         }
     }
 
@@ -226,6 +252,16 @@ fun ConversationDetailScreen(
                         )
                     }
                     DropdownMenuItem(
+                        text = { Text("设置会话背景") },
+                        leadingIcon = { Icon(AppIcons.Image, null) },
+                        onClick = {
+                            showMore = false
+                            backgroundPicker.launch(
+                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                            )
+                        }
+                    )
+                    DropdownMenuItem(
                         text = { Text("刷新") },
                         leadingIcon = { Icon(AppIcons.Refresh, null) },
                         onClick = {
@@ -298,6 +334,9 @@ fun ConversationDetailScreen(
                         onKickMember = viewModel::requestKickMember,
                         onGagMember = viewModel::requestGagMember,
                         onAdminToggle = viewModel::requestAdminToggle,
+                        canManageBots = detail.permissionLevel >= 2,
+                        onRemoveBot = viewModel::requestRemoveBot,
+                        onBotPermission = viewModel::requestBotPermission,
                         onOpenBot = { bot ->
                             ConversationDetailActivity.start(
                                 context = context,
@@ -389,6 +428,21 @@ fun ConversationDetailScreen(
         )
     }
 
+    if (uploadingBackground || backgroundUploadState.isUploading) {
+        AlertDialog(
+            onDismissRequest = {},
+            title = { Text("正在设置背景") },
+            text = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp)
+                    Spacer(Modifier.width(12.dp))
+                    Text("上传并保存中…")
+                }
+            },
+            confirmButton = {}
+        )
+    }
+
     MemberManagementDialogs(
         kickTarget = state.kickTarget,
         gagTarget = state.gagTarget,
@@ -400,6 +454,20 @@ fun ConversationDetailScreen(
         onConfirmKick = viewModel::confirmKickMember,
         onConfirmGag = viewModel::confirmGagMember,
         onConfirmAdminToggle = viewModel::confirmAdminToggle
+    )
+
+    BotManagementDialogs(
+        removeBotTarget = state.removeBotTarget,
+        showRemoveBotConfirm = state.showRemoveBotConfirm,
+        permissionTarget = state.botPermissionTarget,
+        showPermissionDialog = state.showBotPermissionDialog,
+        permission = state.botPermission,
+        isLoadingPermission = state.isLoadingBotPermission,
+        isSavingPermission = state.isSavingBotPermission,
+        onDismiss = viewModel::dismissBotDialogs,
+        onConfirmRemove = viewModel::confirmRemoveBot,
+        onPermissionChange = viewModel::updateBotPermission,
+        onSavePermission = viewModel::saveBotPermission
     )
 
     ShareLinkSheet(
@@ -421,7 +489,6 @@ fun ConversationDetailScreen(
             }
         }
     )
-
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -599,6 +666,9 @@ private fun GroupConversationDetail(
     onKickMember: (GroupMember) -> Unit,
     onGagMember: (GroupMember) -> Unit,
     onAdminToggle: (GroupMember) -> Unit,
+    canManageBots: Boolean,
+    onRemoveBot: (BotItem) -> Unit,
+    onBotPermission: (BotItem) -> Unit,
     onOpenBot: (BotItem) -> Unit
 ) {
     var introductionExpanded by remember(detail.introduction) { mutableStateOf(false) }
@@ -784,7 +854,13 @@ private fun GroupConversationDetail(
                         items(bots, key = BotItem::id) { bot ->
                             val isLast = bot == bots.last()
                             DetailCardSegment(cardColor, isBottom = isLast) {
-                                BotRow(bot, onClick = { onOpenBot(bot) })
+                                BotRow(
+                                    bot = bot,
+                                    canManage = canManageBots,
+                                    onClick = { onOpenBot(bot) },
+                                    onRemove = { onRemoveBot(bot) },
+                                    onPermission = { onBotPermission(bot) }
+                                )
                             }
                         }
                     }
@@ -1561,7 +1637,6 @@ private fun IntroductionContent(
     val clipboard = LocalClipboard.current
 
     var hasOverflow by remember(introduction) { mutableStateOf(false) }
-    val cardColor = MaterialTheme.colorScheme.surfaceContainerHigh
     Column(Modifier.padding(14.dp).animateContentSize()) {
         SelectionContainer {
             Text(
@@ -1748,11 +1823,43 @@ private fun MemberRow(
 }
 
 @Composable
-private fun BotRow(bot: BotItem, onClick: () -> Unit) {
+private fun BotRow(
+    bot: BotItem,
+    canManage: Boolean,
+    onClick: () -> Unit,
+    onRemove: () -> Unit,
+    onPermission: () -> Unit
+) {
+    var expanded by remember(bot.id) { mutableStateOf(false) }
+
     ListItem(
         onClick = onClick,
         leadingContent = {
             Avatar(url = bot.avatarUrl, size = 46.dp)
+        },
+        trailingContent = {
+            if (canManage) {
+                Box {
+                    IconButton(
+                        onClick = { expanded = true },
+                        modifier = Modifier.size(44.dp)
+                    ) {
+                        Icon(AppIcons.MoreVert, contentDescription = "更多")
+                    }
+                    ExpressiveDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                        DropdownMenuItem(
+                            text = { Text("设置机器人权限") },
+                            onClick = { expanded = false; onPermission() },
+                            leadingIcon = { Icon(AppIcons.Settings, null) }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("移除机器人", color = MaterialTheme.colorScheme.error) },
+                            onClick = { expanded = false; onRemove() },
+                            leadingIcon = { Icon(AppIcons.Delete, null, tint = MaterialTheme.colorScheme.error) }
+                        )
+                    }
+                }
+            }
         },
         colors = ListItemDefaults.colors(
             containerColor = Color.Transparent
@@ -2056,4 +2163,115 @@ private fun EmptyContent(text: String) = Box(Modifier.fillMaxSize(), Alignment.C
         icon = AppIcons.Info,
         title = text
     )
+}
+
+@Composable
+private fun BotManagementDialogs(
+    removeBotTarget: BotItem?,
+    showRemoveBotConfirm: Boolean,
+    permissionTarget: BotItem?,
+    showPermissionDialog: Boolean,
+    permission: GroupBotPermission,
+    isLoadingPermission: Boolean,
+    isSavingPermission: Boolean,
+    onDismiss: () -> Unit,
+    onConfirmRemove: () -> Unit,
+    onPermissionChange: (GroupBotPermission) -> Unit,
+    onSavePermission: () -> Unit
+) {
+    if (showRemoveBotConfirm) {
+        AlertDialog(
+            onDismissRequest = onDismiss,
+            title = { Text("移除机器人") },
+            text = { Text("确定要将 ${removeBotTarget?.name ?: "该机器人"} 移出本群吗？") },
+            confirmButton = {
+                TextButton(onClick = onConfirmRemove) {
+                    Text("移除", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } }
+        )
+    }
+    if (showPermissionDialog) {
+        AlertDialog(
+            onDismissRequest = { if (!isSavingPermission) onDismiss() },
+            title = { Text("${permissionTarget?.name ?: "机器人"} 的权限") },
+            text = {
+                if (isLoadingPermission) {
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .height(120.dp),
+                        contentAlignment = Alignment.Center
+                    ) { CircularProgressIndicator(Modifier.size(28.dp), strokeWidth = 2.dp) }
+                } else {
+                    Column {
+                        permission.items.forEach { item ->
+                            BotPermissionSwitchRow(
+                                label = item.name.ifBlank { item.key },
+                                description = item.description,
+                                checked = item.enabled,
+                                enabled = !isSavingPermission,
+                                onCheckedChange = { checked ->
+                                    onPermissionChange(permission.withEnabled(item.key, checked))
+                                }
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = !isLoadingPermission && !isSavingPermission,
+                    onClick = onSavePermission
+                ) {
+                    if (isSavingPermission) {
+                        CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                    } else {
+                        Text("保存")
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(enabled = !isSavingPermission, onClick = onDismiss) { Text("取消") }
+            }
+        )
+    }
+}
+
+@Composable
+private fun BotPermissionSwitchRow(
+    label: String,
+    description: String,
+    checked: Boolean,
+    enabled: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(enabled = enabled) { onCheckedChange(!checked) }
+            .padding(vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyMedium
+            )
+            if (description.isNotBlank()) {
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = resolvedLiquidGlassContentColor(MaterialTheme.colorScheme.onSurfaceVariant)
+                )
+            }
+        }
+        Spacer(Modifier.width(8.dp))
+        StyledSwitch(
+            checked = checked,
+            enabled = enabled,
+            onCheckedChange = onCheckedChange
+        )
+    }
 }

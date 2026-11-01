@@ -4,29 +4,20 @@ import com.juhao.murexide.ui.icons.AppIcons
 import com.juhao.murexide.ui.icons.AutoMirroredIcon
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -59,6 +50,8 @@ import androidx.compose.ui.window.PopupProperties
 import com.juhao.murexide.R
 import com.juhao.murexide.data.MentionToken
 import com.juhao.murexide.data.MessageItem
+import com.juhao.murexide.datastore.UserAccount
+import com.juhao.murexide.ui.components.Avatar
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -113,14 +106,16 @@ fun MessageInput(
     onAddFileClick: () -> Unit,
     isEmojiPanelVisible: Boolean = false,
     onEmojiClick: () -> Unit,
-    hasInstructions: Boolean = false,
     isInstructionPanelVisible: Boolean = false,
     onInstructionClick: () -> Unit = {},
     mentions: List<MentionToken> = emptyList(),
     onMentionTriggered: (Int) -> Unit = {},
     focusRequester: FocusRequester,
     onInputFocused: () -> Unit = {},
-    limitedMsgType: List<Int> = emptyList()
+    limitedMsgType: List<Int> = emptyList(),
+    accounts: List<UserAccount> = emptyList(),
+    activeAccountId: String = "",
+    onSwitchAccount: (UserAccount) -> Unit = {}
 ) {
     val fieldValue = TextFieldValue(
         text = inputText,
@@ -137,11 +132,47 @@ fun MessageInput(
             .padding(horizontal = 6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        MoreActionsButton(
-            onAddAlbumClick = onAddAlbumClick,
-            onAddFileClick = onAddFileClick,
-            limitedMsgType = limitedMsgType
-        )
+        if (accounts.size > 1) {
+            var showAccountMenu by remember { mutableStateOf(false) }
+            val activeAccount = accounts.firstOrNull { it.id == activeAccountId }
+            Box {
+                IconButton(
+                    onClick = { showAccountMenu = true },
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Avatar(
+                        url = activeAccount?.avatar.orEmpty(),
+                        size = 32.dp,
+                        alwaysCircle = true
+                    )
+                }
+                DropdownMenu(
+                    expanded = showAccountMenu,
+                    onDismissRequest = { showAccountMenu = false },
+                    containerColor = MenuDefaults.groupStandardContainerColor,
+                    shape = MenuDefaults.standaloneGroupShape
+                ) {
+                    accounts.forEachIndexed { index, account ->
+                        SelectableDropdownMenuItem(
+                            shapes = MenuDefaults.itemShape(index, accounts.size),
+                            text = { Text(account.username) },
+                            leadingIcon = {
+                                Avatar(
+                                    url = account.avatar,
+                                    size = 24.dp,
+                                    alwaysCircle = true
+                                )
+                            },
+                            onClick = {
+                                showAccountMenu = false
+                                onSwitchAccount(account)
+                            },
+                            selected = account.id == activeAccountId
+                        )
+                    }
+                }
+            }
+        }
 
         if (MessageItem.CONTENT_TYPE_STICKER !in limitedMsgType) {
             IconButton(
@@ -184,8 +215,15 @@ fun MessageInput(
                 .padding(horizontal = 4.dp)
         )
 
+        MoreActionsButton(
+            visible = inputText.isEmpty(),
+            onAddAlbumClick = onAddAlbumClick,
+            onAddFileClick = onAddFileClick,
+            limitedMsgType = limitedMsgType
+        )
+
         AnimatedContent(
-            targetState = inputText.isNotEmpty() || !hasInstructions,
+            targetState = inputText.isNotEmpty(),
             transitionSpec = {
                 fadeIn(animationSpec = tween(200)) togetherWith
                         fadeOut(animationSpec = tween(200))
@@ -455,51 +493,73 @@ private fun FormatSendButton(
 
 @Composable
 private fun MoreActionsButton(
+    visible: Boolean,
     onAddAlbumClick: () -> Unit,
     onAddFileClick: () -> Unit,
     limitedMsgType: List<Int> = emptyList()
 ) {
     var showMenu by remember { mutableStateOf(false) }
 
-    Box {
-        IconButton(
-            onClick = { showMenu = true },
-            modifier = Modifier.size(36.dp)
-        ) {
-            Icon(
-                AppIcons.Add,
-                contentDescription = "更多"
-            )
-        }
+    AnimatedVisibility(
+        visible = visible,
+        enter = fadeIn(animationSpec = tween(200)) +
+                expandHorizontally(animationSpec = tween(200)),
+        exit = fadeOut(animationSpec = tween(200)) +
+                shrinkHorizontally(animationSpec = tween(200))
+    ) {
+        Box {
+            IconButton(
+                onClick = { showMenu = true },
+                modifier = Modifier.padding(horizontal = 4.dp).size(36.dp)
+            ) {
+                AnimatedContent(
+                    targetState = showMenu,
+                    transitionSpec = {
+                        fadeIn(animationSpec = tween(200)) togetherWith
+                                fadeOut(animationSpec = tween(200))
+                    },
+                    label = "more_actions_icon"
+                ) { expanded ->
+                    Icon(
+                        imageVector = if (expanded) AppIcons.Close else AppIcons.Link,
+                        contentDescription = if (expanded) "关闭菜单" else "更多"
+                    )
+                }
+            }
 
-        DropdownMenu(
-            expanded = showMenu,
-            onDismissRequest = { showMenu = false },
-            shape = MenuDefaults.standaloneGroupShape
-        ) {
-            DropdownMenuItem(
-                text = { Text("相册") },
-                onClick = {
-                    showMenu = false
-                    onAddAlbumClick()
-                },
-                leadingIcon = {
-                    Icon(AppIcons.Image, contentDescription = null)
-                },
-                enabled = MessageItem.CONTENT_TYPE_IMAGE !in limitedMsgType &&
-                        MessageItem.CONTENT_TYPE_VIDEO !in limitedMsgType
-            )
-            DropdownMenuItem(
-                text = { Text("文件") },
-                onClick = {
-                    showMenu = false
-                    onAddFileClick()
-                },
-                leadingIcon = {
-                    Icon(AppIcons.AttachFile, contentDescription = null)
-                },
-                enabled = MessageItem.CONTENT_TYPE_FILE !in limitedMsgType
-            )
+            DropdownMenu(
+                expanded = showMenu,
+                onDismissRequest = { showMenu = false },
+                shape = MenuDefaults.standaloneGroupShape
+            ) {
+                DropdownMenuItem(
+                    text = { Text("相册") },
+                    onClick = {
+                        showMenu = false
+                        onAddAlbumClick()
+                    },
+                    leadingIcon = {
+                        Icon(AppIcons.Image, contentDescription = null)
+                    },
+                    enabled = MessageItem.CONTENT_TYPE_IMAGE !in limitedMsgType &&
+                            MessageItem.CONTENT_TYPE_VIDEO !in limitedMsgType
+                )
+                DropdownMenuItem(
+                    text = { Text("文件") },
+                    onClick = {
+                        showMenu = false
+                        onAddFileClick()
+                    },
+                    leadingIcon = {
+                        Icon(AppIcons.AttachFile, contentDescription = null)
+                    },
+                    enabled = MessageItem.CONTENT_TYPE_FILE !in limitedMsgType
+                )
+            }
         }
+    }
+
+    if (!visible && showMenu) {
+        showMenu = false
     }
 }

@@ -1,6 +1,6 @@
 # Murexide
 
-一个云湖第三方客户端，采用 Material 3 设计 
+一个云湖第三方客户端，采用 Material 3 Expressive 设计 
 
 # 构建
 
@@ -15,39 +15,7 @@ Android 构建环境需要 CMake 3.22.1 和 NDK 28.2.13676358。
 # 声明
 此项目（Murexide）仅为个人兴趣开发, 只可用于学习和测试，请于下载后24小时内删除。 所用API皆从官方网站收集, 不提供任何破解内容。
 
-# 已经实现的功能
-- [x] 手机号 / 邮箱登录
-- [x] 显示会话
-    - [x] 显示普通会话
-    - [x] 显示置顶会话
-    - [x] 消息红点
-    - [x] 免打扰状态
-    - [x] 官方/城市群标识
-- [x] 查看消息
-    - [x] 解析文本消息
-    - [x] 解析 Markdown 消息
-    - [x] 解析图片消息
-    - [x] 解析表情消息
-    - [x] 解析文件消息
-    - [x] 解析HTML消息
-    - [x] 解析文章消息
-    - [x] 解析语音消息
-    - [x] 解析视频消息
-- [x] 发送消息
-    - [x] 文本 / Markdown / HTML
-    - [x] 表情包
-    - [x] 图片 / 视频 / 文件
-- [x] 查看机器人看板
-- [x] 修改群聊设置
-- [x] 修改我的群名称
-- [x] 修改个人资料
-- [x] 撤回/编辑消息
-- [x] WebSocket 实时通讯
-- [x] 引用消息
-- [x] 查看会话详情
-- [x] 社区
-    - [x] 查看帖子
-    - [x] 查看我的帖子
-    - [x] 点赞帖子
-    - [x] 收藏帖子
-    - [ ] 评论帖子
+# 致谢
+[Yhchat_MD3](https://github.com/Kauid323/Yhchat_MD3)
+[yhchat_old](https://github.com/Kauid323/yhchat_old)
+[Maodouchat](https://github.com/xalor888/Maodouchat)

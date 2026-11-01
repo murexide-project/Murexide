@@ -17,16 +17,20 @@ class CreatePostViewModel(
 
     private var repository: CommunityRepository? = null
 
+    var token: String = ""
+        private set
+
     private val _uiState = MutableStateFlow(CreatePostUiState())
     val uiState: StateFlow<CreatePostUiState> = _uiState.asStateFlow()
 
     init {
         viewModelScope.launch {
-            val token = accountStorage.getCurrentToken()
-            if (token == null) {
+            val currentToken = accountStorage.getCurrentToken()
+            if (currentToken == null) {
                 _uiState.update { it.copy(error = "请先登录") }
             } else {
-                repository = CommunityRepository(token)
+                token = currentToken
+                repository = CommunityRepository(currentToken)
             }
         }
     }

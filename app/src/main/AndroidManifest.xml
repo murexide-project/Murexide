@@ -200,6 +200,11 @@
             </intent-filter>
         </activity>
         <activity
+            android:name=".ui.settings.chatbackground.ChatBackgroundActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Murexide"
+            android:windowSoftInputMode="adjustResize" />
+        <activity
             android:name=".ui.settings.userbot.UserBotActivity"
             android:exported="false"
             android:theme="@style/Theme.Murexide" />
