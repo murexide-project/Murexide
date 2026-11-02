@@ -27,18 +27,32 @@ private fun TopBar(
     actions: @Composable (RowScope.() -> Unit) = {},
     scrollBehavior: TopAppBarScrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(),
     containerColor: Color = Color.Transparent,
+    isMediumTopAppBarDisabled: Boolean = false
 ) {
-    MediumFlexibleTopAppBar(
-        title = title,
-        subtitle = subtitle,
-        navigationIcon = navigationIcon,
-        actions = actions,
-        scrollBehavior = scrollBehavior,
-        colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = containerColor,
-            scrolledContainerColor = containerColor
+    if (isMediumTopAppBarDisabled) {
+        FlexibleTopAppBar(
+            title = title,
+            subtitle = subtitle,
+            navigationIcon = navigationIcon,
+            actions = actions,
+            colors = TopAppBarDefaults.topAppBarColors(
+                containerColor = containerColor,
+                scrolledContainerColor = containerColor
+            )
         )
-    )
+    } else {
+        MediumFlexibleTopAppBar(
+            title = title,
+            subtitle = subtitle,
+            navigationIcon = navigationIcon,
+            actions = actions,
+            scrollBehavior = scrollBehavior,
+            colors = TopAppBarDefaults.topAppBarColors(
+                containerColor = containerColor,
+                scrolledContainerColor = containerColor
+            )
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -54,7 +68,8 @@ fun StyledScaffold(
     floatingActionButtonPosition: FabPosition = FabPosition.End,
     topBarScrollBehavior: TopAppBarScrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(),
     snackbarHost: (@Composable () -> Unit)? = null,
-    content: @Composable (PaddingValues) -> Unit
+    content: @Composable (PaddingValues) -> Unit,
+    isMediumTopAppBarDisabled: Boolean = false
 ) {
     val hazeState = rememberHazeState()
     val surfaceColor = MaterialTheme.colorScheme.surface
@@ -112,7 +127,8 @@ fun StyledScaffold(
                     subtitle = subtitle,
                     navigationIcon = navigationIcon,
                     actions = actions,
-                    scrollBehavior = topBarScrollBehavior
+                    scrollBehavior = topBarScrollBehavior,
+                    isMediumTopAppBarDisabled = isMediumTopAppBarDisabled
                 )
             }
         },
@@ -128,7 +144,9 @@ fun StyledScaffold(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .nestedScroll(topBarScrollBehavior.nestedScrollConnection)
+                .then(
+                    if (isMediumTopAppBarDisabled) Modifier else Modifier.nestedScroll(topBarScrollBehavior.nestedScrollConnection)
+                )
                 .hazeSource(state = hazeState)
         ) {
             content(padding)

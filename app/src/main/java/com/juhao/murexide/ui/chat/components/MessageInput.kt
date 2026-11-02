@@ -521,8 +521,8 @@ private fun MoreActionsButton(
                     label = "more_actions_icon"
                 ) { expanded ->
                     Icon(
-                        imageVector = if (expanded) AppIcons.Close else AppIcons.Link,
-                        contentDescription = if (expanded) "关闭菜单" else "更多"
+                        imageVector = if (expanded) AppIcons.Close else AppIcons.AttachFile,
+                        contentDescription = if (expanded) "关闭菜单" else "媒体"
                     )
                 }
             }

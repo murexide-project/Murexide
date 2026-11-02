@@ -401,10 +401,6 @@ fun ConversationListScreen(
                                 }
                             }
                         } else {
-                            item(key = "divider") {
-                                HorizontalDivider()
-                            }
-
                             if (allowCollapseSticky) {
                                 item(key = "collapseStickyButton") {
                                     val bkgolor = if (themeColor != "WHITE") {
@@ -436,37 +432,38 @@ fun ConversationListScreen(
                                 }
                             }
 
-                            items(
-                                items = stickyConvs,
-                                key = { item -> "sticky_${item.chatType}:${item.chatId}" }
-                            ) { conversation ->
-                                if (isStickyCollapsed) return@items
-                                SwipeableConversationItem(
-                                    modifier = Modifier.animateItem(),
-                                    conversation = conversation,
-                                    draft = drafts["${conversation.chatType}_${conversation.chatId}"],
-                                    isSelected = currentConversation?.chatId == conversation.chatId &&
-                                            currentConversation.chatType == conversation.chatType &&
-                                            bigScreenMode,
-                                    isSticky = true,
-                                    openItemKey = openSwipeKey,
-                                    onOpen = { openSwipeKey = it },
-                                    onClick = {
-                                        openSwipeKey = null
-                                        viewModel.clearUnread(
-                                            conversation.chatId,
-                                            conversation.chatType
-                                        )
-                                        onConversationClick(conversation)
-                                    },
-                                    onPin = { viewModel.pinConversation(conversation) },
-                                    onUnpin = { viewModel.unpinConversation(conversation) },
-                                    onDelete = { viewModel.removeConversation(conversation) }
-                                )
-                            }
-
-                            item(key = "divider2") {
-                                HorizontalDivider()
+                            if (!isStickyCollapsed) {
+                                items(
+                                    items = stickyConvs,
+                                    key = { item -> "sticky_${item.chatType}:${item.chatId}" }
+                                ) { conversation ->
+                                    SwipeableConversationItem(
+                                        modifier = Modifier.animateItem(),
+                                        conversation = conversation,
+                                        draft = drafts["${conversation.chatType}_${conversation.chatId}"],
+                                        isSelected = currentConversation?.chatId == conversation.chatId &&
+                                                currentConversation.chatType == conversation.chatType &&
+                                                bigScreenMode,
+                                        isSticky = true,
+                                        openItemKey = openSwipeKey,
+                                        onOpen = { openSwipeKey = it },
+                                        onClick = {
+                                            openSwipeKey = null
+                                            viewModel.clearUnread(
+                                                conversation.chatId,
+                                                conversation.chatType
+                                            )
+                                            onConversationClick(conversation)
+                                        },
+                                        onPin = { viewModel.pinConversation(conversation) },
+                                        onUnpin = { viewModel.unpinConversation(conversation) },
+                                        onDelete = { viewModel.removeConversation(conversation) }
+                                    )
+                                }
+    
+                                item(key = "divider") {
+                                    HorizontalDivider()
+                                }
                             }
 
                             items(

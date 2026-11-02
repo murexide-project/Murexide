@@ -256,7 +256,10 @@ fun BaList(
         }
     } else {
         LazyColumn(contentPadding = PaddingValues(bottom = innerPadding.calculateBottomPadding())) {
-            items(baList) { ba ->
+            items(
+                items = baList,
+                key = { item -> "ba_${item.id}" }
+            ) { ba ->
                 BaRow(Modifier.animateItem(), ba = ba, onClick = { onBaClick(ba) })
             }
         }
@@ -350,7 +353,10 @@ fun PostsList(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(bottom = innerPadding.calculateBottomPadding())
             ) {
-                items(posts) { post ->
+                items(
+                    items = posts,
+                    key = { item -> "post_${item.id}" }
+                ) { post ->
                     PostCard(
                         modifier = Modifier.animateItem(),
                         post = post,

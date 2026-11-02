@@ -240,6 +240,16 @@ fun ConversationDetailScreen(
                                 }
                             }
                         )
+                        DropdownMenuItem(
+                            text = { Text("设置会话背景") },
+                            leadingIcon = { Icon(AppIcons.Image, null) },
+                            onClick = {
+                                showMore = false
+                                backgroundPicker.launch(
+                                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                )
+                            }
+                        )
                     }
                     if (group != null) {
                         DropdownMenuItem(
@@ -251,16 +261,6 @@ fun ConversationDetailScreen(
                             }
                         )
                     }
-                    DropdownMenuItem(
-                        text = { Text("设置会话背景") },
-                        leadingIcon = { Icon(AppIcons.Image, null) },
-                        onClick = {
-                            showMore = false
-                            backgroundPicker.launch(
-                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                            )
-                        }
-                    )
                     DropdownMenuItem(
                         text = { Text("刷新") },
                         leadingIcon = { Icon(AppIcons.Refresh, null) },
@@ -275,7 +275,8 @@ fun ConversationDetailScreen(
                     )
                 }
             }
-        }
+        },
+        isMediumTopAppBarDisabled = true
     ) { padding ->
         CompositionLocalProvider(LocalLiquidGlassBackdrop provides liquidBackdrop) {
             Box(
