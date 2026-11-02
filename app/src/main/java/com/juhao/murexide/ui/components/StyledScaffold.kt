@@ -30,9 +30,8 @@ private fun TopBar(
     isMediumTopAppBarDisabled: Boolean = false
 ) {
     if (isMediumTopAppBarDisabled) {
-        FlexibleTopAppBar(
+        TopAppBar(
             title = title,
-            subtitle = subtitle,
             navigationIcon = navigationIcon,
             actions = actions,
             colors = TopAppBarDefaults.topAppBarColors(
@@ -68,8 +67,8 @@ fun StyledScaffold(
     floatingActionButtonPosition: FabPosition = FabPosition.End,
     topBarScrollBehavior: TopAppBarScrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(),
     snackbarHost: (@Composable () -> Unit)? = null,
-    content: @Composable (PaddingValues) -> Unit,
-    isMediumTopAppBarDisabled: Boolean = false
+    isMediumTopAppBarDisabled: Boolean = false,
+    content: @Composable (PaddingValues) -> Unit
 ) {
     val hazeState = rememberHazeState()
     val surfaceColor = MaterialTheme.colorScheme.surface
