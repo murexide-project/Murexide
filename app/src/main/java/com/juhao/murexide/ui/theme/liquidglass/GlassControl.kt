@@ -2,8 +2,8 @@ package com.juhao.murexide.ui.theme.liquidglass
 
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.border
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastCoerceAtMost
@@ -98,10 +98,14 @@ fun Modifier.glassControl(
             noiseFactor(0f)
         }
         
-        shadow(2.dp, shape)
-            .clip(shape)
-            .hazeBlur(
-                input = HazeInput.Sources(hazeState),
-                style = style
-            )
+        border(
+            width = 1.dp,
+            color = MaterialTheme.colorScheme.surfaceBright,
+            shape = shape
+        )
+        .clip(shape)
+        .hazeBlur(
+            input = HazeInput.Sources(hazeState),
+            style = style
+        )
     }

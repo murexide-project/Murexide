@@ -179,5 +179,13 @@ fun UpdatePage() {
                 }
             }
         )
+        SettingsItem(
+            icon = AppIcons.Download,
+            title = "前往交流群更新",
+            subtitle = "如果你无法检测更新或难以访问 Github，可点此直接进群下载",
+            onClick = {
+                context.startActivity(Intent(Intent.ACTION_VIEW, "yunhu://chat-add?id=476660997&type=group".toUri()))
+            }
+        )
     }
 }

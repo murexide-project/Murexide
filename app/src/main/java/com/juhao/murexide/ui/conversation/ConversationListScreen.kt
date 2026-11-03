@@ -435,7 +435,7 @@ fun ConversationListScreen(
                             if (!isStickyCollapsed) {
                                 items(
                                     items = stickyConvs,
-                                    key = { item -> "sticky_${item.chatType}:${item.chatId}" }
+                                    key = { item -> "conv_${item.chatType}:${item.chatId}" }
                                 ) { conversation ->
                                     SwipeableConversationItem(
                                         modifier = Modifier.animateItem(),
@@ -468,7 +468,7 @@ fun ConversationListScreen(
 
                             items(
                                 items = normalConvs,
-                                key = { item -> "normal_${item.chatType}:${item.chatId}" }
+                                key = { item -> "conv_${item.chatType}:${item.chatId}" }
                             ) { conversation ->
                                 SwipeableConversationItem(
                                     modifier = Modifier.animateItem(),
