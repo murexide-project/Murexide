@@ -22,6 +22,8 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
@@ -2206,7 +2208,7 @@ private fun BotManagementDialogs(
                         contentAlignment = Alignment.Center
                     ) { CircularProgressIndicator(Modifier.size(28.dp), strokeWidth = 2.dp) }
                 } else {
-                    Column {
+                    Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                         permission.items.forEach { item ->
                             BotPermissionSwitchRow(
                                 label = item.name.ifBlank { item.key },

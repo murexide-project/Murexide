@@ -1,5 +1,7 @@
 package com.juhao.murexide.ui.settings.userbot
 
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -107,7 +109,7 @@ fun UserBotPage(
             icon = { Icon(AppIcons.Info, contentDescription = null) },
             title = { Text("用户 Bot 使用提示") },
             text = {
-                Column {
+                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                     Text("用户 Bot 功能会通过 WebSocket 收到相应事件后根据你的设置进行响应。")
                     Spacer(Modifier.height(8.dp))
                     Text("请勿用于攻击、阻碍他人正常交流，违者后果自负。")
@@ -189,7 +191,7 @@ fun UserBotPage(
             onDismissRequest = { showRecallDialog = false },
             title = { Text(if (isEditing) "编辑撤回目标" else "添加撤回目标") },
             text = {
-                Column {
+                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                     Text(
                         if (isEditing) {
                             "修改这个发送者 ID。"
@@ -268,7 +270,7 @@ fun UserBotPage(
             onDismissRequest = { showEditor = false },
             title = { Text(if (editingIndex >= 0) "编辑规则" else "添加规则") },
             text = {
-                Column {
+                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                     SingleChoiceSegmentedButtonRow(
                         modifier = Modifier.fillMaxWidth()
                     ) {

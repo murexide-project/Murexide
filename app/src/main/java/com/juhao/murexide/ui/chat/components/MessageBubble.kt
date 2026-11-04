@@ -1159,18 +1159,6 @@ private fun FileContent(
     Row(
         modifier = Modifier
             .widthIn(min = 240.dp)
-            .clip(
-                RoundedCornerShape(
-                    topStart = bubbleCornerRadius.dp,
-                    topEnd = bubbleCornerRadius.dp
-                )
-            )
-            .background(
-                if (isMine)
-                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = bubbleOpacity)
-                else
-                    incomingBubbleColor
-            )
             .combinedClickable(
                 onClick = { if (!isDownloading) onDownloadClick(message) },
                 onLongClick = { onLongPress(message) }
