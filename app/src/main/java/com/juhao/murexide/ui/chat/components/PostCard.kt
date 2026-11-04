@@ -5,11 +5,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -29,8 +27,6 @@ fun PostCard(
         color = Color.Transparent,
         contentColor = MaterialTheme.colorScheme.onSurface,
         modifier = Modifier
-            .padding(2.dp)
-            .clip(RoundedCornerShape(12.dp))
             .clickable {
                 PostDetailActivity.start(context, postId)
             }
@@ -53,7 +49,7 @@ fun PostCard(
             Text(
                 "点击查看文章详情",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                color = MaterialTheme.colorScheme.primary
             )
         }
     }

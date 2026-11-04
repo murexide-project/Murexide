@@ -830,14 +830,10 @@ private fun MessageContentRouter(
 
         MessageItem.CONTENT_TYPE_FILE -> FileContent(
             message = message,
-            isMine = isMine,
             onLongPress = onLongPress,
             onDownloadClick = onDownloadClick,
             downloadProgress = downloadProgress,
-            isDownloaded = isDownloaded,
-            bubbleCornerRadius = bubbleCornerRadius,
-            bubbleOpacity = bubbleOpacity,
-            incomingBubbleColor = incomingBubbleColor
+            isDownloaded = isDownloaded
         )
 
         MessageItem.CONTENT_TYPE_POST -> PostContent(message = message)
@@ -1136,14 +1132,10 @@ private fun BoxScope.VideoDurationBadge(duration: String) {
 @Composable
 private fun FileContent(
     message: MessageItem,
-    isMine: Boolean,
     onLongPress: (MessageItem) -> Unit,
     onDownloadClick: (MessageItem) -> Unit,
     downloadProgress: Float?,
-    isDownloaded: Boolean,
-    bubbleCornerRadius: Float,
-    bubbleOpacity: Float,
-    incomingBubbleColor: Color
+    isDownloaded: Boolean
 ) {
     val fileName = message.fileName ?: return
     val progress = downloadProgress ?: 0f
