@@ -75,6 +75,8 @@ import com.juhao.murexide.ui.components.MarkdownText
 import com.juhao.murexide.ui.components.showImageViewer
 import com.juhao.murexide.ui.theme.UiState
 import com.juhao.murexide.ui.theme.usesDarkTheme
+import com.juhao.murexide.ui.community.detail.PostDetailActivity
+
 import com.juhao.murexide.utils.formatTimestamp
 import com.juhao.murexide.utils.isYunhuImageUrl
 import com.juhao.murexide.utils.imageAspectRatio
@@ -1263,6 +1265,42 @@ private fun PostContent(message: MessageItem) {
         message.postTitle ?: "文章",
         message.postContent ?: "内容"
     )
+}
+
+@Composable
+private fun PostCard(
+    postId: Int,
+    postTitle: String,
+    postContent: String
+) {
+    val context = LocalContext.current
+
+    Column(
+        modifier = Modifier
+            .clickable {
+                PostDetailActivity.start(context, postId)
+            }
+            .padding(12.dp)
+    ) {
+        Text(
+            postTitle,
+            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.titleMedium
+        )
+        Spacer(Modifier.height(6.dp))
+        Text(
+            postContent,
+            maxLines = 5,
+            overflow = TextOverflow.Ellipsis,
+            style = MaterialTheme.typography.bodyMedium
+        )
+        Spacer(Modifier.height(6.dp))
+        Text(
+            "点击查看文章详情",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.primary
+        )
+    }
 }
 
 @Composable
