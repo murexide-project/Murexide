@@ -125,11 +125,7 @@ class SettingsStorage(private val context: Context) {
     suspend fun setShowMyBubbleAvatar(show: Boolean) =
         setPreference(SHOW_MY_BUBBLE_AVATAR_KEY, show)
 
-    val liquidGlassEnabledFlow: Flow<Boolean> = dataStore.data.map { preferences ->
-        preferences[LIQUID_GLASS_ENABLED_KEY] == true &&
-                Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
-    }
-
+    val liquidGlassEnabledFlow = preferenceFlow(LIQUID_GLASS_ENABLED_KEY, false)
     suspend fun getLiquidGlassEnabled() = liquidGlassEnabledFlow.first()
     suspend fun setLiquidGlassEnabled(enabled: Boolean) =
         setPreference(LIQUID_GLASS_ENABLED_KEY, enabled)

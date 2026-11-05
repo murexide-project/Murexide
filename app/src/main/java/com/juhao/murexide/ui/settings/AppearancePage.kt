@@ -1,6 +1,5 @@
 package com.juhao.murexide.ui.settings
 
-import android.os.Build
 import com.juhao.murexide.ui.icons.AppIcons
 import com.juhao.murexide.ui.icons.AppFilledIcons
 
@@ -144,89 +143,87 @@ fun AppearancePage() {
             }
         )
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            SettingsSwitchItem(
-                icon = AppIcons.Opacity,
-                title = "启用液态玻璃效果",
-                subtitle = "使用液态玻璃风格显示界面元素",
-                checked = liquidGlassEnabled,
-                onCheckedChange = { enabled ->
-                    scope.launch {
-                        settingsStorage.setLiquidGlassEnabled(enabled)
-                    }
+        SettingsSwitchItem(
+            icon = AppIcons.Opacity,
+            title = "启用液态玻璃效果",
+            subtitle = "使用液态玻璃风格显示界面元素，仅在 Android 13 及以上效果最佳",
+            checked = liquidGlassEnabled,
+            onCheckedChange = { enabled ->
+                scope.launch {
+                    settingsStorage.setLiquidGlassEnabled(enabled)
                 }
-            )
-            if (liquidGlassEnabled) {
-                CustomItemCell {
-                    Column(modifier = Modifier.fillMaxWidth()) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    AppIcons.Opacity,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(20.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Text(
-                                    "液态玻璃模糊",
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                            }
-                            Surface(
-                                shape = RoundedCornerShape(6.dp),
-                                color = MaterialTheme.colorScheme.secondaryContainer
-                            ) {
-                                Text(
-                                    text = "${
-                                        "%.1f".format(
-                                            java.util.Locale.US,
-                                            liquidGlassBlur
-                                        )
-                                    }x",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.onSecondaryContainer,
-                                    modifier = Modifier.padding(
-                                        horizontal = 8.dp,
-                                        vertical = 2.dp
-                                    ),
-                                    textAlign = TextAlign.Center
-                                )
-                            }
+            }
+        )
+        if (liquidGlassEnabled) {
+            CustomItemCell {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                AppIcons.Opacity,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                "液态玻璃模糊",
+                                style = MaterialTheme.typography.bodyMedium
+                            )
                         }
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Slider(
-                            value = liquidGlassBlur,
-                            onValueChange = { liquidGlassBlur = it },
-                            onValueChangeFinished = {
-                                scope.launch {
-                                    settingsStorage.setLiquidGlassBlur(
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = MaterialTheme.colorScheme.secondaryContainer
+                        ) {
+                            Text(
+                                text = "${
+                                    "%.1f".format(
+                                        java.util.Locale.US,
                                         liquidGlassBlur
                                     )
-                                }
-                            },
-                            valueRange = 0f..4f,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(
-                                "0",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Text(
-                                "4",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                }x",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                modifier = Modifier.padding(
+                                    horizontal = 8.dp,
+                                    vertical = 2.dp
+                                ),
+                                textAlign = TextAlign.Center
                             )
                         }
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Slider(
+                        value = liquidGlassBlur,
+                        onValueChange = { liquidGlassBlur = it },
+                        onValueChangeFinished = {
+                            scope.launch {
+                                settingsStorage.setLiquidGlassBlur(
+                                    liquidGlassBlur
+                                )
+                            }
+                        },
+                        valueRange = 0f..4f,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            "0",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            "4",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
             }
