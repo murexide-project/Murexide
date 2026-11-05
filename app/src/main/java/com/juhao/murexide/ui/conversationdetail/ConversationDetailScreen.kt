@@ -1193,8 +1193,7 @@ private fun UserHeader(
                 detail.name,
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                textAlign = TextAlign.Center
             )
             if (!isBot) {
                 val (genderIcon, genderColor, genderDescription) = when (detail.gender) {
@@ -1475,7 +1474,8 @@ private fun GroupHeader(
         Text(
             detail.name,
             style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center
         )
         Text(
             "${detail.memberCount ?: 0} 位成员",
