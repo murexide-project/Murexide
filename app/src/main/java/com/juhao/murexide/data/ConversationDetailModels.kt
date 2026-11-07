@@ -2,6 +2,13 @@ package com.juhao.murexide.data
 
 import kotlinx.serialization.Serializable
 
+@Serializable
+data class UserMedal(
+    val id: Long = 0L,
+    val name: String = "",
+    val sort: Long = 0L
+)
+
 /**
  * 会话详情统一数据模型（用户 / 群聊 / 机器人）
  */
@@ -28,6 +35,8 @@ data class ConversationDetail(
     val directJoin: Boolean = false,   // 进群免审核
     val historyMsg: Boolean = false,   // 新成员可见历史消息
     val hideGroupMembers: Boolean = false, // 隐藏群成员
+    val limitedMsgType: String = "",   // 被限制的消息类型，如 "1,2,3"
+    val denyMembersUploadToGroupDisk: Boolean = false, // 禁止成员上传到群云盘
     // 用户
     val nameId: Long? = null,
     val registerTime: String? = null,
@@ -37,6 +46,7 @@ data class ConversationDetail(
     val ipGeo: String? = null,
     val isVip: Boolean = false,
     val gender: Int = 3,
+    val medals: List<UserMedal> = emptyList(),
     // 机器人
     val createBy: String? = null,
     val createTime: Long? = null,

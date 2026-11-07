@@ -27,5 +27,6 @@ data class GroupMembersState(
 /** @成员选择弹窗状态 */
 data class MentionPickerState(
     val isVisible: Boolean = false,
-    val triggerPos: Int = -1 // 输入 "@" 的位置，-1 表示非输入触发
+    val triggerPos: Int = -1,
+    val keyword: String = ""
 )

@@ -1,8 +1,10 @@
 package com.juhao.murexide
 
 import android.Manifest
+import android.app.Activity
 import android.app.Application
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.drawable.BitmapDrawable
@@ -11,6 +13,7 @@ import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
 import android.os.Build
+import android.os.Bundle
 import android.util.Log
 import androidx.core.content.ContextCompat
 import coil.ImageLoader
@@ -28,6 +31,8 @@ import com.juhao.murexide.data.local.CacheSyncCoordinator
 import com.juhao.murexide.network.NetworkClient
 import com.juhao.murexide.network.WebSocketManager
 import com.juhao.murexide.repository.ConversationRepository
+import com.juhao.murexide.ui.lock.AppLockState
+import com.juhao.murexide.ui.lock.GateActivity
 import com.juhao.murexide.ui.settings.userbot.UserBotManager
 import com.juhao.murexide.ui.theme.UiCache
 import com.juhao.murexide.ui.theme.UiState
@@ -42,6 +47,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import java.util.UUID
 
 class MyApplication : Application(), ImageLoaderFactory {
@@ -53,8 +59,80 @@ class MyApplication : Application(), ImageLoaderFactory {
 
     private val wsDeviceId: String = UUID.randomUUID().toString().replace("-", "")
 
+    @Volatile
+    private var appLockEnabled: Boolean = false
+
+    @Volatile
+    private var appLockLockOnBackground: Boolean = true
+
+    @Volatile
+    private var wasInBackground: Boolean = false
+
+    private val activityLifecycleCallbacks = object : ActivityLifecycleCallbacks {
+
+        override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {
+            if (!appLockEnabled) return
+            if (AppLockState.unlocked) return
+            if (activity is GateActivity) return
+            if (AppLockState.gateVisible) return
+
+            val forwarded = cloneIntent(activity.intent)
+            AppLockState.gateVisible = true
+            activity.startActivity(GateActivity.intentFor(activity, forwarded))
+        }
+
+        override fun onActivityStarted(activity: Activity) {
+            if (!appLockEnabled || !appLockLockOnBackground) {
+                wasInBackground = false
+                return
+            }
+            if (activity is GateActivity) {
+                wasInBackground = false
+                return
+            }
+            if (wasInBackground && !AppLockState.unlocked && !AppLockState.gateVisible) {
+                wasInBackground = false
+                AppLockState.gateVisible = true
+                activity.startActivity(GateActivity.intentFor(activity, null))
+            }
+        }
+
+        override fun onActivityResumed(activity: Activity) { }
+
+        override fun onActivityPaused(activity: Activity) { }
+
+        override fun onActivityStopped(activity: Activity) {
+            if (!AppForegroundState.isInForeground) {
+                if (appLockEnabled && appLockLockOnBackground) {
+                    AppLockState.reset()
+                }
+                wasInBackground = true
+            }
+        }
+
+        override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) { }
+
+        override fun onActivityDestroyed(activity: Activity) { }
+    }
+
+    private fun cloneIntent(intent: Intent?): Intent? {
+        if (intent == null) return null
+        if (intent.action == Intent.ACTION_MAIN &&
+            intent.categories?.contains(Intent.CATEGORY_LAUNCHER) == true
+        ) {
+            return null
+        }
+        return runCatching { Intent(intent) }.getOrNull()
+    }
+
     override fun onCreate() {
         super.onCreate()
+
+        runBlocking {
+            appLockEnabled = settingsStorage.getAppLockEnabled()
+            appLockLockOnBackground = settingsStorage.getAppLockLockOnBackground()
+        }
+
         LocalCache.initialize(this)
         OpenImageConfig.getInstance().apply {
             bigImageHelper = MurexideBigImageHelper()
@@ -66,7 +144,7 @@ class MyApplication : Application(), ImageLoaderFactory {
         UserBotManager.start(this)
         observeAvatarSetting()
         initWebSocket()
-        syncLauncherVisibility()
+        registerActivityLifecycleCallbacks(activityLifecycleCallbacks)
         CacheSyncCoordinator(
             dismissConversationNotification = { chatId ->
                 val account = accountStorage.getCurrentUserInfo()
@@ -82,10 +160,10 @@ class MyApplication : Application(), ImageLoaderFactory {
         observeMessages(this)
     }
 
-    private fun syncLauncherVisibility() {
+    fun refreshAppLockState() {
         applicationScope.launch {
-            val hidden = settingsStorage.getHideLauncher()
-            settingsStorage.applyLauncherVisibility(hidden)
+            appLockEnabled = settingsStorage.getAppLockEnabled()
+            appLockLockOnBackground = settingsStorage.getAppLockLockOnBackground()
         }
     }
 

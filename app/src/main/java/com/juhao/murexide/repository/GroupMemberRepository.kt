@@ -201,6 +201,106 @@ class GroupRepository {
         }
     }
 
+    
+/** 设置消息类型限制（/v1/group/msg-type-limit，群主/管理员可用）。type 为逗号分隔字符串，如 "1,2,3"。 */
+    suspend fun setMsgTypeLimit(
+        token: String,
+        groupId: String,
+        type: String
+    ): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            val json = JSONObject().apply {
+                put("groupId", groupId)
+                put("type", type)
+            }
+
+            val request = Request.Builder()
+                .url("$baseUrl/v1/group/msg-type-limit")
+                .post(json.toString().toRequestBody("application/json".toMediaType()))
+                .header("token", token)
+                .build()
+
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    return@use Result.failure(Exception("HTTP error: ${response.code}"))
+                }
+                val resp = JSONObject(response.body.string())
+                if (resp.optInt("code") != 1) {
+                    return@use Result.failure(Exception(resp.optString("msg", "操作失败")))
+                }
+                Result.success(Unit)
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /** 设置群口令（/v1/group/edit-group-keyword，需 vip 且为群主）。 */
+    suspend fun editGroupKeyword(
+        token: String,
+        groupId: String,
+        keyword: String
+    ): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            val json = JSONObject().apply {
+                put("groupId", groupId)
+                put("keyword", keyword)
+            }
+
+            val request = Request.Builder()
+                .url("$baseUrl/v1/group/edit-group-keyword")
+                .post(json.toString().toRequestBody("application/json".toMediaType()))
+                .header("token", token)
+                .build()
+
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    return@use Result.failure(Exception("HTTP error: ${response.code}"))
+                }
+                val resp = JSONObject(response.body.string())
+                if (resp.optInt("code") != 1) {
+                    return@use Result.failure(Exception(resp.optString("msg", "操作失败")))
+                }
+                Result.success(Unit)
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /** 设置禁止群成员上传到群云盘（/v1/group/edit-stop-member-upload-group-file，需群主）。 */
+    suspend fun setStopMemberUploadGroupFile(
+        token: String,
+        groupId: String,
+        stop: Boolean
+    ): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            val json = JSONObject().apply {
+                put("groupId", groupId)
+                put("stopMemberUploadGroupFile", if (stop) 1 else 0)
+            }
+
+            val request = Request.Builder()
+                .url("$baseUrl/v1/group/edit-stop-member-upload-group-file")
+                .post(json.toString().toRequestBody("application/json".toMediaType()))
+                .header("token", token)
+                .build()
+
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    return@use Result.failure(Exception("HTTP error: ${response.code}"))
+                }
+                val resp = JSONObject(response.body.string())
+                if (resp.optInt("code") != 1) {
+                    return@use Result.failure(Exception(resp.optString("msg", "操作失败")))
+                }
+                Result.success(Unit)
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     suspend fun setAdmin(
         token: String,
         groupId: String,

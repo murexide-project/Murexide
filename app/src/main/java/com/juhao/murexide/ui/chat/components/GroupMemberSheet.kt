@@ -14,6 +14,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.juhao.murexide.data.GroupMember
 import com.juhao.murexide.ui.components.Avatar
+import com.juhao.murexide.ui.icons.AppIcons
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -24,9 +25,15 @@ fun GroupMemberSheet(
     hasMore: Boolean,
     onLoadMore: () -> Unit,
     onMemberClick: (GroupMember) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    searchQuery: String = "",
+    onSearchChange: ((String) -> Unit)? = null
 ) {
     val listState = rememberLazyListState()
+
+    LaunchedEffect(searchQuery) {
+        listState.scrollToItem(0)
+    }
 
     LaunchedEffect(listState, members.size, hasMore, isLoading) {
         snapshotFlow {
@@ -60,12 +67,51 @@ fun GroupMemberSheet(
                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
             )
 
+            if (onSearchChange != null) {
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = onSearchChange,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 4.dp),
+                    singleLine = true,
+                    placeholder = { Text("搜索成员") },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = AppIcons.Search,
+                            contentDescription = null
+                        )
+                    },
+                    trailingIcon = {
+                        if (searchQuery.isNotEmpty()) {
+                            IconButton(onClick = { onSearchChange("") }) {
+                                Icon(
+                                    imageVector = AppIcons.Close,
+                                    contentDescription = "清除"
+                                )
+                            }
+                        }
+                    }
+                )
+            }
+
             if (members.isEmpty() && isLoading) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
                     CircularProgressIndicator()
+                }
+            } else if (members.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = if (searchQuery.isNotEmpty()) "没有匹配的成员" else "暂无成员",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             } else {
                 LazyColumn(

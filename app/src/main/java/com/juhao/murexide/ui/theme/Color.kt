@@ -672,3 +672,6 @@ val BrownDarkColorScheme = buildThemeColorScheme(neutralBase, AppTheme.BROWN, fa
 
 val GrayLightColorScheme = buildThemeColorScheme(dayNeutralBase, AppTheme.GRAY, true)
 val GrayDarkColorScheme = buildThemeColorScheme(neutralBase, AppTheme.GRAY, false)
+
+internal val neutralBaseForCustom: ColorScheme = neutralBase
+internal val dayNeutralBaseForCustom: ColorScheme = dayNeutralBase

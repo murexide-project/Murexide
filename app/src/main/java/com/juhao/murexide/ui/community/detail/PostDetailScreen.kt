@@ -33,16 +33,18 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.juhao.murexide.data.CommentItem
-import com.juhao.murexide.data.PostDetail
-import com.juhao.murexide.data.GroupInfo
+import com.juhao.murexide.data.*
+import com.juhao.murexide.datastore.AccountStorage
+import com.juhao.murexide.repository.ConversationRepository
 import com.juhao.murexide.ui.chat.ChatActivity
+import com.juhao.murexide.ui.conversationdetail.ConversationDetailActivity
 import com.juhao.murexide.ui.community.ba.CreatePostActivity
 import com.juhao.murexide.ui.components.*
 import com.juhao.murexide.ui.theme.LocalLiquidGlassBlur
 import com.juhao.murexide.ui.theme.LocalLiquidGlassEnabled
 import com.juhao.murexide.ui.theme.liquidglass.glassControl
 import com.juhao.murexide.ui.theme.UiState
+import com.juhao.murexide.ui.theme.UiCache
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
@@ -68,10 +70,14 @@ fun PostDetailScreen(
     val context = LocalContext.current
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
+    
+    var showShareSheet by remember { mutableStateOf(false) }
+    val isSharing by viewModel.isSharing.collectAsState()
 
     var showMenu by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showInputSheet by remember { mutableStateOf(false) }
+    var replyToComment by remember { mutableStateOf<CommentItem?>(null) }
 
     val shouldLoadMore by remember {
         derivedStateOf {
@@ -134,15 +140,38 @@ fun PostDetailScreen(
             }
         )
     }
+    
+    if (showShareSheet) {
+        PostShareSheet(
+            isSharing = isSharing,
+            onDismiss = { if (!isSharing) showShareSheet = false },
+            onShare = { targets ->
+                viewModel.sharePost(targets) { success, error ->
+                    if (success) {
+                        showShareSheet = false
+                        Toast.makeText(context, "已分享", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(context, error ?: "分享失败", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+        )
+    }
 
     if (showInputSheet) {
         CommentInputSheet(
-            onDismiss = { showInputSheet = false },
+            replyTo = replyToComment,
+            onDismiss = {
+                showInputSheet = false
+                replyToComment = null
+            },
             liquidGlassEnabled = liquidGlassEnabled,
             onSend = { text ->
-                viewModel.submitComment(text) { success ->
+                val parentId = replyToComment?.id ?: 0
+                viewModel.submitComment(text, commentId = parentId) { success ->
                     if (success) {
                         showInputSheet = false
+                        replyToComment = null
                         Toast.makeText(context, "评论成功", Toast.LENGTH_SHORT).show()
                     } else {
                         Toast.makeText(context, "评论失败，请重试", Toast.LENGTH_SHORT).show()
@@ -186,6 +215,17 @@ fun PostDetailScreen(
                         }
                     }
                 },
+                onTitleClick = {
+                    uiState.post?.let { post ->
+                        ConversationDetailActivity.start(
+                            context = context,
+                            chatId = post.senderId,
+                            chatType = 1,
+                            chatName = post.senderNickname,
+                            chatAvatar = post.senderAvatar
+                        )
+                    }
+                },
                 actions = {
                     Box {
                         ExpressiveDropdownMenu(
@@ -203,6 +243,16 @@ fun PostDetailScreen(
                                 },
                                 leadingIcon = {
                                     Icon(AppIcons.ContentCopy, contentDescription = null)
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("分享") },
+                                onClick = {
+                                    showMenu = false
+                                    showShareSheet = true
+                                },
+                                leadingIcon = {
+                                    Icon(AppIcons.Share, contentDescription = null)
                                 }
                             )
                             if (uiState.isManageEnabled) {
@@ -255,7 +305,10 @@ fun PostDetailScreen(
                 likeCount = uiState.post?.likeNum ?: 0,
                 commentCount = uiState.post?.commentNum ?: 0,
                 collectCount = uiState.post?.collectNum ?: 0,
-                onInputClick = { showInputSheet = true },
+                onInputClick = {
+                    replyToComment = null
+                    showInputSheet = true
+                },
                 onLikeClick = { viewModel.toggleLike() },
                 onCommentClick = {
                     scope.launch { listState.animateScrollToItem(2) }
@@ -317,7 +370,7 @@ fun PostDetailScreen(
                         item {
                             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
                             Text(
-                                text = "评论 ${uiState.commentTotal}",
+                                text = "评论",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 16.sp,
                                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
@@ -338,7 +391,13 @@ fun PostDetailScreen(
                         }
 
                         items(uiState.comments, key = { it.id }) { comment ->
-                            CommentRow(comment)
+                            CommentRow(
+                                comment = comment,
+                                onReplyClick = {
+                                    replyToComment = comment
+                                    showInputSheet = true
+                                }
+                            )
                         }
 
                         if (uiState.isLoadingComments) {
@@ -511,6 +570,7 @@ private fun BottomBarAction(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun CommentInputSheet(
+    replyTo: CommentItem?,
     onDismiss: () -> Unit,
     liquidGlassEnabled: Boolean,
     onSend: (String) -> Unit
@@ -532,6 +592,15 @@ private fun CommentInputSheet(
                 .imePadding()
                 .padding(horizontal = 12.dp, vertical = 8.dp)
         ) {
+            if (replyTo != null) {
+                Text(
+                    text = "回复 @${replyTo.senderNickname}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 4.dp)
+                )
+            }
+
             BasicTextField(
                 value = text,
                 onValueChange = { text = it },
@@ -547,7 +616,7 @@ private fun CommentInputSheet(
                     Box {
                         if (text.isEmpty()) {
                             Text(
-                                "说点什么…",
+                                if (replyTo != null) "回复 @${replyTo.senderNickname}…" else "说点什么…",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -641,44 +710,261 @@ private fun GroupCard(group: GroupInfo) {
 }
 
 @Composable
-private fun CommentRow(comment: CommentItem) {
-    Row(
+private fun CommentRow(
+    comment: CommentItem,
+    onReplyClick: () -> Unit,
+    isNested: Boolean = false
+) {
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .padding(
+                start = if (isNested) 48.dp else 16.dp,
+                end = 16.dp,
+                top = 8.dp,
+                bottom = 4.dp
+            )
     ) {
-        Avatar(url = comment.senderAvatar, size = 32.dp)
-        Spacer(Modifier.width(10.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                comment.senderNickname,
-                fontWeight = FontWeight.Medium,
-                fontSize = 13.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text(
-                comment.createTimeText,
-                fontSize = 11.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(Modifier.height(2.dp))
-            Text(comment.content, style = MaterialTheme.typography.bodyMedium)
-        }
-        if (comment.likeNum > 0) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    if (comment.isLiked == "1") AppIcons.Favorite else AppIcons.FavoriteBorder,
-                    contentDescription = null,
-                    modifier = Modifier.size(14.dp),
-                    tint = if (comment.isLiked == "1") MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.width(2.dp))
+        Row(modifier = Modifier.fillMaxWidth()) {
+            Avatar(url = comment.senderAvatar, size = if (isNested) 24.dp else 32.dp)
+            Spacer(Modifier.width(10.dp))
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    comment.likeNum.toString(),
-                    fontSize = 11.sp,
+                    text = comment.senderNickname,
+                    style = if (isNested) {
+                        MaterialTheme.typography.labelMedium
+                    } else {
+                        MaterialTheme.typography.bodyMedium
+                    },
+                    fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = comment.createTimeText,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = comment.content,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "回复",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.clickable(onClick = onReplyClick)
+                )
             }
+            if (comment.likeNum > 0) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        if (comment.isLiked == "1") AppIcons.Favorite else AppIcons.FavoriteBorder,
+                        contentDescription = null,
+                        modifier = Modifier.size(14.dp),
+                        tint = if (comment.isLiked == "1") MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.width(2.dp))
+                    Text(
+                        comment.likeNum.toString(),
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+
+        if (comment.replies.isNotEmpty()) {
+            comment.replies.forEach { reply ->
+                CommentRow(
+                    comment = reply,
+                    onReplyClick = onReplyClick,
+                    isNested = true
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun PostShareSheet(
+    isSharing: Boolean,
+    onDismiss: () -> Unit,
+    onShare: (List<ForwardTarget>) -> Unit
+) {
+    val context = LocalContext.current
+    val accountStorage = remember { AccountStorage.getInstance(context) }
+    val conversationRepository = remember { ConversationRepository() }
+
+    var isLoading by remember { mutableStateOf(true) }
+    var targets by remember { mutableStateOf<List<ForwardTarget>>(emptyList()) }
+    var query by remember { mutableStateOf("") }
+    var selectedIds by remember { mutableStateOf<Set<String>>(emptySet()) }
+
+    LaunchedEffect(Unit) {
+        val token = runCatching { accountStorage.getCurrentToken() }.getOrNull()
+        if (token == null) {
+            isLoading = false
+            return@LaunchedEffect
+        }
+        val cached = UiCache.conversation.value
+        val cachedSticky = UiCache.stickyConversations.value
+        val merged = if (cached.isNotEmpty() || cachedSticky.isNotEmpty()) {
+            mergeForwardTargets(cached, cachedSticky)
+        } else {
+            val convs = conversationRepository.getConversationList(token).getOrNull().orEmpty()
+            val sticky = conversationRepository.getStickyList(token).getOrNull().orEmpty()
+            mergeForwardTargets(convs, sticky)
+        }
+        targets = merged
+        isLoading = false
+    }
+
+    val filtered = remember(targets, query) {
+        if (query.isBlank()) targets
+        else targets.filter {
+            it.displayName.contains(query, ignoreCase = true) ||
+                it.chatId.contains(query, ignoreCase = true)
+        }
+    }
+
+    ModalBottomSheet(
+        onDismissRequest = { if (!isSharing) onDismiss() },
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .imePadding()
+                .padding(horizontal = 16.dp)
+        ) {
+            Text(
+                "分享到会话",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(vertical = 8.dp)
+            )
+
+            OutlinedTextField(
+                value = query,
+                onValueChange = { query = it },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                leadingIcon = { Icon(AppIcons.Search, null) },
+                placeholder = { Text("搜索会话") },
+                shape = RoundedCornerShape(18.dp)
+            )
+
+            Spacer(Modifier.height(8.dp))
+
+            when {
+                isLoading -> Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .height(200.dp),
+                    contentAlignment = Alignment.Center
+                ) { CircularProgressIndicator() }
+
+                filtered.isEmpty() -> Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .height(200.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        if (query.isBlank()) "暂无可分享的会话" else "未找到相关会话",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                else -> LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 400.dp),
+                    contentPadding = PaddingValues(vertical = 4.dp)
+                ) {
+                    items(filtered, key = { "${it.chatType}:${it.chatId}" }) { target ->
+                        val selected = target.chatId in selectedIds
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(
+                                    if (selected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
+                                    else Color.Transparent
+                                )
+                                .clickable(enabled = !isSharing) {
+                                    selectedIds = if (selected) {
+                                        selectedIds - target.chatId
+                                    } else {
+                                        selectedIds + target.chatId
+                                    }
+                                }
+                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Avatar(url = target.avatarUrl, size = 44.dp)
+                            Text(
+                                target.displayName,
+                                style = MaterialTheme.typography.bodyLarge,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f)
+                            )
+                            Surface(
+                                modifier = Modifier.size(22.dp),
+                                shape = CircleShape,
+                                color = if (selected) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.surfaceContainerHigh,
+                                contentColor = if (selected) MaterialTheme.colorScheme.onPrimary
+                                else MaterialTheme.colorScheme.onSurfaceVariant
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    if (selected) Icon(AppIcons.Check, "已选择", Modifier.size(15.dp))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                OutlinedButton(
+                    onClick = onDismiss,
+                    enabled = !isSharing,
+                    modifier = Modifier.weight(1f)
+                ) { Text("取消") }
+                Button(
+                    onClick = {
+                        val selected = targets.filter { it.chatId in selectedIds }
+                        if (selected.isNotEmpty()) onShare(selected)
+                    },
+                    enabled = selectedIds.isNotEmpty() && !isSharing,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    if (isSharing) {
+                        CircularProgressIndicator(
+                            Modifier.size(18.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                    } else {
+                        Text("分享")
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(16.dp))
         }
     }
 }

@@ -2,6 +2,7 @@ package com.juhao.murexide.repository
 
 import com.juhao.murexide.data.ConversationDetail
 import com.juhao.murexide.data.local.LocalCache
+import com.juhao.murexide.data.UserMedal
 import com.juhao.murexide.network.NetworkClient
 import com.juhao.murexide.proto.bot.bot_info
 import com.juhao.murexide.proto.bot.bot_info_send
@@ -188,7 +189,14 @@ class ConversationDetailRepository(
                             ipGeo = d?.ipGeo?.takeIf { it.isNotEmpty() },
                             doNotDisturb = d?.do_not_disturb ?: false,
                             isVip = (d?.is_vip ?: 0) == 1,
-                            gender = d?.profile_info?.gender ?: 3
+                            gender = d?.profile_info?.gender ?: 3,
+                            medals = d?.medal?.map { m ->
+                                UserMedal(
+                                    id = m.id,
+                                    name = m.name.orEmpty(),
+                                    sort = m.sort
+                                )
+                            }?.sortedBy { it.sort } ?: emptyList()
                         )
                     )
                 }
@@ -233,7 +241,10 @@ class ConversationDetailRepository(
                             permissionLevel = d?.permisson_level ?: 0,
                             directJoin = (d?.direct_join ?: 0) == 1,
                             historyMsg = (d?.history_msg ?: 0) == 1,
-                            hideGroupMembers = (d?.hide_group_members ?: 0L) == 1L
+                            hideGroupMembers = (d?.hide_group_members ?: 0L) == 1L,
+                            limitedMsgType = d?.limited_msg_type?.takeIf { it.isNotEmpty() } ?: "",
+                            denyMembersUploadToGroupDisk =
+                                (d?.deny_members_upload_to_group_disk ?: 0L) == 1L
                         )
                     )
                 }

@@ -8,6 +8,8 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -19,6 +21,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
@@ -27,37 +30,28 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.juhao.murexide.ui.components.CustomItemCell
-import com.juhao.murexide.ui.components.SettingsGroup
-import com.juhao.murexide.ui.components.SettingsSwitchItem
+import androidx.compose.ui.window.Dialog
+import com.juhao.murexide.ui.components.*
 import com.juhao.murexide.datastore.SettingsStorage
-import com.juhao.murexide.ui.theme.UiState
-import com.juhao.murexide.ui.theme.usesDarkTheme
-import com.juhao.murexide.ui.theme.DynamicDarkColorScheme
-import com.juhao.murexide.ui.theme.WhiteDarkColorScheme
-import com.juhao.murexide.ui.theme.PurpleDarkColorScheme
-import com.juhao.murexide.ui.theme.BlueDarkColorScheme
-import com.juhao.murexide.ui.theme.GreenDarkColorScheme
-import com.juhao.murexide.ui.theme.OrangeDarkColorScheme
-import com.juhao.murexide.ui.theme.RedDarkColorScheme
-import com.juhao.murexide.ui.theme.TealDarkColorScheme
-import com.juhao.murexide.ui.theme.PinkDarkColorScheme
-import com.juhao.murexide.ui.theme.IndigoDarkColorScheme
-import com.juhao.murexide.ui.theme.BrownDarkColorScheme
-import com.juhao.murexide.ui.theme.GrayDarkColorScheme
-import com.juhao.murexide.ui.theme.DynamicLightColorScheme
-import com.juhao.murexide.ui.theme.WhiteLightColorScheme
-import com.juhao.murexide.ui.theme.PurpleLightColorScheme
-import com.juhao.murexide.ui.theme.BlueLightColorScheme
-import com.juhao.murexide.ui.theme.GreenLightColorScheme
-import com.juhao.murexide.ui.theme.OrangeLightColorScheme
-import com.juhao.murexide.ui.theme.RedLightColorScheme
-import com.juhao.murexide.ui.theme.TealLightColorScheme
-import com.juhao.murexide.ui.theme.PinkLightColorScheme
-import com.juhao.murexide.ui.theme.IndigoLightColorScheme
-import com.juhao.murexide.ui.theme.BrownLightColorScheme
-import com.juhao.murexide.ui.theme.GrayLightColorScheme
+import com.juhao.murexide.ui.theme.*
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
+
+private const val CUSTOM_PREFIX = "CUSTOM_"
+
+private fun parseCustomThemeColor(value: String): Color? {
+    if (!value.startsWith(CUSTOM_PREFIX)) return null
+    val argb = value.removePrefix(CUSTOM_PREFIX).toLongOrNull() ?: return null
+    return Color(argb.toInt())
+}
+
+private fun encodeCustomThemeColor(color: Color): String {
+    val r = (color.red * 255f).roundToInt()
+    val g = (color.green * 255f).roundToInt()
+    val b = (color.blue * 255f).roundToInt()
+    val argb = (0xFF shl 24) or (r shl 16) or (g shl 8) or b
+    return "$CUSTOM_PREFIX$argb"
+}
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -77,12 +71,28 @@ fun AppearancePage() {
     var backgroundOpacity by remember { mutableFloatStateOf(0.5f) }
 
     val floatBottomBarEnabled by settingsStorage.isFloatBottomBarEnabledFlow.collectAsState(initial = true)
+    val mergeStickyEnabled by settingsStorage.mergeStickyFlow.collectAsState(initial = false)
 
     val isDark = usesDarkTheme(themeMode, isSystemInDarkTheme())
+
+    var showCustomColorDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         backgroundOpacity = settingsStorage.getBackgroundOpacity()
         liquidGlassBlur = settingsStorage.getLiquidGlassBlur()
+    }
+
+    if (showCustomColorDialog) {
+        CustomThemeColorDialog(
+            initialColor = parseCustomThemeColor(themeColor),
+            onDismiss = { showCustomColorDialog = false },
+            onConfirm = { color ->
+                val value = encodeCustomThemeColor(color)
+                UiState.themeColor.value = value
+                scope.launch { settingsStorage.setThemeColor(value) }
+                showCustomColorDialog = false
+            }
+        )
     }
 
     SettingsGroup {
@@ -90,7 +100,7 @@ fun AppearancePage() {
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier.fillMaxWidth()
         ) {
-            ConversationListPreview(squareAvatar = squareAvatar)
+            ConversationListPreview(squareAvatar = squareAvatar, mergeSticky = mergeStickyEnabled)
         }
     }
 
@@ -140,7 +150,8 @@ fun AppearancePage() {
             onColorSelected = { selected ->
                 UiState.themeColor.value = selected
                 scope.launch { settingsStorage.setThemeColor(selected) }
-            }
+            },
+            onCustomClick = { showCustomColorDialog = true }
         )
 
         SettingsSwitchItem(
@@ -336,23 +347,43 @@ fun AppearancePage() {
                 }
             }
         )
+        SettingsSwitchItem(
+            icon = AppIcons.Keep,
+            title = "合并置顶会话",
+            subtitle = "开启后置顶会话将合并至会话列表中而不是单独显示置顶栏",
+            checked = mergeStickyEnabled,
+            onCheckedChange = { checked ->
+                scope.launch {
+                    settingsStorage.setMergeSticky(checked)
+                }
+            }
+        )
     }
 }
 
-private fun themeColorScheme(value: String, isDark: Boolean): ColorScheme = when (value) {
-    "DYNAMIC" -> if (isDark) DynamicDarkColorScheme else DynamicLightColorScheme
-    "WHITE" -> if (isDark) WhiteDarkColorScheme else WhiteLightColorScheme
-    "PURPLE" -> if (isDark) PurpleDarkColorScheme else PurpleLightColorScheme
-    "BLUE" -> if (isDark) BlueDarkColorScheme else BlueLightColorScheme
-    "GREEN" -> if (isDark) GreenDarkColorScheme else GreenLightColorScheme
-    "ORANGE" -> if (isDark) OrangeDarkColorScheme else OrangeLightColorScheme
-    "RED" -> if (isDark) RedDarkColorScheme else RedLightColorScheme
-    "TEAL" -> if (isDark) TealDarkColorScheme else TealLightColorScheme
-    "PINK" -> if (isDark) PinkDarkColorScheme else PinkLightColorScheme
-    "INDIGO" -> if (isDark) IndigoDarkColorScheme else IndigoLightColorScheme
-    "BROWN" -> if (isDark) BrownDarkColorScheme else BrownLightColorScheme
-    "GRAY" -> if (isDark) GrayDarkColorScheme else GrayLightColorScheme
-    else -> if (isDark) PurpleDarkColorScheme else PurpleLightColorScheme
+private fun themeColorScheme(value: String, isDark: Boolean): ColorScheme {
+    parseCustomThemeColor(value)?.let { color ->
+        return buildCustomColorScheme(
+            base = if (isDark) neutralBaseForCustom else dayNeutralBaseForCustom,
+            customColor = color,
+            isDay = !isDark
+        )
+    }
+    return when (value) {
+        "DYNAMIC" -> if (isDark) DynamicDarkColorScheme else DynamicLightColorScheme
+        "WHITE" -> if (isDark) WhiteDarkColorScheme else WhiteLightColorScheme
+        "PURPLE" -> if (isDark) PurpleDarkColorScheme else PurpleLightColorScheme
+        "BLUE" -> if (isDark) BlueDarkColorScheme else BlueLightColorScheme
+        "GREEN" -> if (isDark) GreenDarkColorScheme else GreenLightColorScheme
+        "ORANGE" -> if (isDark) OrangeDarkColorScheme else OrangeLightColorScheme
+        "RED" -> if (isDark) RedDarkColorScheme else RedLightColorScheme
+        "TEAL" -> if (isDark) TealDarkColorScheme else TealLightColorScheme
+        "PINK" -> if (isDark) PinkDarkColorScheme else PinkLightColorScheme
+        "INDIGO" -> if (isDark) IndigoDarkColorScheme else IndigoLightColorScheme
+        "BROWN" -> if (isDark) BrownDarkColorScheme else BrownLightColorScheme
+        "GRAY" -> if (isDark) GrayDarkColorScheme else GrayLightColorScheme
+        else -> if (isDark) PurpleDarkColorScheme else PurpleLightColorScheme
+    }
 }
 
 private data class ThemeModeOption(
@@ -421,7 +452,8 @@ private val themeColorOptions = listOf(
 private fun ThemeColorPicker(
     selectedColor: String,
     isDark: Boolean,
-    onColorSelected: (String) -> Unit
+    onColorSelected: (String) -> Unit,
+    onCustomClick: () -> Unit
 ) {
     CustomItemCell {
         Column(modifier = Modifier.fillMaxWidth()) {
@@ -450,6 +482,14 @@ private fun ThemeColorPicker(
                         selected = selectedColor == option.value,
                         isDark = isDark,
                         onClick = { onColorSelected(option.value) }
+                    )
+                }
+                item {
+                    CustomThemeColorBall(
+                        selected = parseCustomThemeColor(selectedColor) != null,
+                        customColor = parseCustomThemeColor(selectedColor),
+                        isDark = isDark,
+                        onClick = onCustomClick
                     )
                 }
             }
@@ -563,7 +603,218 @@ private fun ThemeColorBall(
 }
 
 @Composable
-private fun ConversationListPreview(squareAvatar: Boolean) {
+private fun CustomThemeColorBall(
+    selected: Boolean,
+    customColor: Color?,
+    isDark: Boolean,
+    onClick: () -> Unit
+) {
+    val previewColor = customColor ?: Color(0xFF9BD7FF)
+    val scheme = remember(previewColor, isDark) {
+        buildCustomColorScheme(
+            base = if (isDark) neutralBaseForCustom else dayNeutralBaseForCustom,
+            customColor = previewColor,
+            isDay = !isDark
+        )
+    }
+
+    val borderWidth by animateDpAsState(
+        targetValue = if (selected) 2.dp else 0.dp,
+        label = "customThemeBallBorderWidth"
+    )
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .semantics { contentDescription = "自定义主题" }
+            .selectable(
+                selected = selected,
+                onClick = onClick,
+                role = Role.RadioButton
+            )
+    ) {
+        Card(
+            onClick = onClick,
+            modifier = Modifier.size(64.dp),
+            shape = RoundedCornerShape(16.dp),
+            border = if (selected) {
+                BorderStroke(borderWidth, MaterialTheme.colorScheme.primary)
+            } else {
+                null
+            },
+            colors = CardDefaults.cardColors(containerColor = scheme.surfaceContainer)
+        ) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(
+                            Brush.sweepGradient(
+                                listOf(
+                                    Color(0xFFFF0000),
+                                    Color(0xFFFFFF00),
+                                    Color(0xFF00FF00),
+                                    Color(0xFF00FFFF),
+                                    Color(0xFF0000FF),
+                                    Color(0xFFFF00FF),
+                                    Color(0xFFFF0000)
+                                )
+                            )
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(24.dp)
+                            .clip(CircleShape)
+                            .background(previewColor)
+                    )
+                }
+
+                if (selected) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(RoundedCornerShape(12.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = AppIcons.Check,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            text = "自定义",
+            style = MaterialTheme.typography.labelSmall,
+            color = if (selected) {
+                MaterialTheme.colorScheme.primary
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            }
+        )
+    }
+}
+
+@Composable
+private fun CustomThemeColorDialog(
+    initialColor: Color?,
+    onDismiss: () -> Unit,
+    onConfirm: (Color) -> Unit
+) {
+    val start = initialColor ?: Color(0xFF9BD7FF)
+    var red by remember { mutableFloatStateOf(start.red) }
+    var green by remember { mutableFloatStateOf(start.green) }
+    var blue by remember { mutableFloatStateOf(start.blue) }
+
+    val currentColor = Color(red, green, blue)
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text("自定义主题色")
+        },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(currentColor)
+                )
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                ColorChannelSlider(
+                    label = "红",
+                    value = red,
+                    tint = Color(0xFFFF5252),
+                    onValueChange = { red = it }
+                )
+                ColorChannelSlider(
+                    label = "绿",
+                    value = green,
+                    tint = Color(0xFF69F0AE),
+                    onValueChange = { green = it }
+                )
+                ColorChannelSlider(
+                    label = "蓝",
+                    value = blue,
+                    tint = Color(0xFF40C4FF),
+                    onValueChange = { blue = it }
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(currentColor) }) {
+                Text("应用")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("取消")
+            }
+        }
+    )
+}
+
+@Composable
+private fun ColorChannelSlider(
+    label: String,
+    value: Float,
+    tint: Color,
+    onValueChange: (Float) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.width(24.dp)
+        )
+        Slider(
+            value = value,
+            onValueChange = onValueChange,
+            valueRange = 0f..1f,
+            modifier = Modifier.weight(1f),
+            colors = SliderDefaults.colors(
+                thumbColor = tint,
+                activeTrackColor = tint
+            )
+        )
+        Text(
+            text = "${(value * 255f).roundToInt()}",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.End,
+            modifier = Modifier.width(36.dp)
+        )
+    }
+}
+
+@Composable
+private fun ConversationListPreview(squareAvatar: Boolean, mergeSticky: Boolean) {
     val scheme = MaterialTheme.colorScheme
 
     Column(
@@ -600,6 +851,32 @@ private fun ConversationListPreview(squareAvatar: Boolean) {
                     color = scheme.outlineVariant.copy(alpha = 0.5f)
                 )
 
+                if (!mergeSticky) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        ConversationPreviewAvatar(
+                            name = "设计团队",
+                            avatarColor = scheme.primaryContainer,
+                            avatarContentColor = scheme.onPrimaryContainer,
+                            squareAvatar = squareAvatar
+                        )
+                        ConversationPreviewAvatar(
+                            name = "项目组",
+                            avatarColor = scheme.tertiaryContainer,
+                            avatarContentColor = scheme.onTertiaryContainer,
+                            squareAvatar = squareAvatar
+                        )
+                    }
+                    HorizontalDivider(
+                        modifier = Modifier.padding(vertical = 4.dp),
+                        color = scheme.outlineVariant.copy(alpha = 0.5f)
+                    )
+                }
+
                 ConversationPreviewItem(
                     name = "设计团队",
                     message = "明天上午十点开会",
@@ -607,16 +884,8 @@ private fun ConversationListPreview(squareAvatar: Boolean) {
                     unread = 3,
                     avatarColor = scheme.primaryContainer,
                     avatarContentColor = scheme.onPrimaryContainer,
-                    squareAvatar = squareAvatar
-                )
-                ConversationPreviewItem(
-                    name = "Alex",
-                    message = "好的，收到 👍",
-                    time = "09:15",
-                    unread = 0,
-                    avatarColor = scheme.secondaryContainer,
-                    avatarContentColor = scheme.onSecondaryContainer,
-                    squareAvatar = squareAvatar
+                    squareAvatar = squareAvatar,
+                    isSticky = mergeSticky
                 )
                 ConversationPreviewItem(
                     name = "项目组",
@@ -625,7 +894,19 @@ private fun ConversationListPreview(squareAvatar: Boolean) {
                     unread = 12,
                     avatarColor = scheme.tertiaryContainer,
                     avatarContentColor = scheme.onTertiaryContainer,
-                    squareAvatar = squareAvatar
+                    squareAvatar = squareAvatar,
+                    isSticky = mergeSticky
+                )
+
+                ConversationPreviewItem(
+                    name = "Alex",
+                    message = "好的，收到 👍",
+                    time = "09:15",
+                    unread = 0,
+                    avatarColor = scheme.secondaryContainer,
+                    avatarContentColor = scheme.onSecondaryContainer,
+                    squareAvatar = squareAvatar,
+                    isSticky = false
                 )
 
                 Spacer(Modifier.height(16.dp))
@@ -662,6 +943,40 @@ private fun ConversationListPreview(squareAvatar: Boolean) {
 }
 
 @Composable
+private fun ConversationPreviewAvatar(
+    name: String,
+    avatarColor: Color,
+    avatarContentColor: Color,
+    squareAvatar: Boolean
+) {
+    val avatarShape = if (squareAvatar) RoundedCornerShape(8.dp) else CircleShape
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(
+            modifier = Modifier
+                .size(36.dp)
+                .clip(avatarShape)
+                .background(avatarColor),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = AppIcons.Person,
+                contentDescription = null,
+                tint = avatarContentColor,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = name,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+@Composable
 private fun ConversationPreviewItem(
     name: String,
     message: String,
@@ -669,14 +984,23 @@ private fun ConversationPreviewItem(
     unread: Int,
     avatarColor: Color,
     avatarContentColor: Color,
-    squareAvatar: Boolean
+    squareAvatar: Boolean,
+    isSticky: Boolean
 ) {
+    val themeColor by UiState.themeColor
     val scheme = MaterialTheme.colorScheme
     val avatarShape = if (squareAvatar) RoundedCornerShape(8.dp) else CircleShape
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .background(
+                if ((isSticky && themeColor != "WHITE") || (!isSticky && themeColor == "WHITE")) {
+                    MaterialTheme.colorScheme.surfaceContainerHigh
+                } else {
+                    MaterialTheme.colorScheme.surface
+                }
+            )
             .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {

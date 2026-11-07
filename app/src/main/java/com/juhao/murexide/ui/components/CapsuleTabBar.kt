@@ -33,8 +33,7 @@ fun CapsuleTabBar(
     tabs: List<String>,
     selectedTabIndex: Int,
     onTabSelected: (Int) -> Unit,
-    modifier: Modifier = Modifier,
-    scrollable: Boolean = false
+    modifier: Modifier = Modifier
 ) {
     if (tabs.isEmpty()) return
 
@@ -45,65 +44,57 @@ fun CapsuleTabBar(
         MaterialTheme.colorScheme.secondaryContainer
     }
 
-    BoxWithConstraints(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(40.dp)
-            .clip(CircleShape)
-            .background(MaterialTheme.colorScheme.surfaceContainer)
-            .padding(horizontal = 6.dp, vertical = 6.dp)
-    ) {
-        val tabWidth = if (scrollable) 88.dp else maxWidth / tabs.size
-
-        Row(
+    Box(modifier = modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+        BoxWithConstraints(
             modifier = Modifier
-                .fillMaxWidth()
-                .fillMaxHeight()
-                .then(
-                    if (scrollable) Modifier.horizontalScroll(rememberScrollState())
-                    else Modifier
-                )
+                .height(40.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.surfaceContainer)
+                .padding(horizontal = 6.dp, vertical = 6.dp)
         ) {
-            tabs.forEachIndexed { index, label ->
-                val selected = index == selectedIndex
-                val backgroundColor by animateColorAsState(
-                    targetValue = if (selected) selectedIndicatorColor else Color.Transparent,
-                    animationSpec = tween(durationMillis = 180),
-                    label = "capsule tab background"
-                )
-                val textColor by animateColorAsState(
-                    targetValue = if (selected) {
-                        MaterialTheme.colorScheme.onSecondaryContainer
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    },
-                    animationSpec = tween(durationMillis = 180),
-                    label = "capsule tab text color"
-                )
-
-                Box(
-                    modifier = Modifier
-                        .then(
-                            if (scrollable) Modifier.width(tabWidth)
-                            else Modifier.weight(1f)
-                        )
-                        .fillMaxHeight()
-                        .clip(CircleShape)
-                        .background(backgroundColor)
-                        .selectable(
-                            selected = selected,
-                            role = Role.Tab,
-                            onClick = { onTabSelected(index) }
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = label,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = textColor,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+            Row(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .horizontalScroll(rememberScrollState())
+            ) {
+                tabs.forEachIndexed { index, label ->
+                    val selected = index == selectedIndex
+                    val backgroundColor by animateColorAsState(
+                        targetValue = if (selected) selectedIndicatorColor else Color.Transparent,
+                        animationSpec = tween(durationMillis = 180),
+                        label = "capsule tab background"
                     )
+                    val textColor by animateColorAsState(
+                        targetValue = if (selected) {
+                            MaterialTheme.colorScheme.onSecondaryContainer
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                        animationSpec = tween(durationMillis = 180),
+                        label = "capsule tab text color"
+                    )
+    
+                    Box(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .clip(CircleShape)
+                            .background(backgroundColor)
+                            .selectable(
+                                selected = selected,
+                                role = Role.Tab,
+                                onClick = { onTabSelected(index) }
+                            )
+                            .padding(horizontal = 16.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = label,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = textColor,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
             }
         }

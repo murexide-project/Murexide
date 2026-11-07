@@ -938,60 +938,60 @@ private data class MarkdownDetailsBlock(
 )
 
 private fun extractDetailsBlock(lines: List<String>, startIndex: Int): MarkdownDetailsBlock? {
-    val trimmed = lines.getOrNull(startIndex)?.trim() ?: return null
-    if (!trimmed.startsWith("<details")) return null
+    val startLine = lines.getOrNull(startIndex) ?: return null
+    val detailsStart = startLine.indexOf("<details", ignoreCase = true)
+    if (detailsStart == -1) return null
 
-    val prefix = lines[startIndex].substringBefore("<details", missingDelimiterValue = lines[startIndex])
+    val prefix = startLine.substring(0, detailsStart)
+        .trimEnd()
         .takeIf { it.isNotBlank() }
 
-    var i = startIndex + 1
-    val contentLines = mutableListOf<String>()
+    val buffer = StringBuilder(startLine.substring(detailsStart))
+    var index = startIndex
     var summary: String? = null
+    var contentStartInBuffer = -1
 
-    while (i < lines.size) {
-        val line = lines[i]
-        val t = line.trim()
-
-        if (t.startsWith("<summary")) {
-            val afterTag = line.substringAfter(">", missingDelimiterValue = "")
-            val sameLine = afterTag.substringBefore("</summary>", missingDelimiterValue = afterTag)
-            if (line.contains("</summary>")) {
-                summary = sameLine.trim()
-            } else {
-                val summaryLines = mutableListOf<String>()
-                if (sameLine.isNotBlank()) summaryLines += sameLine
-                i++
-                while (i < lines.size && !lines[i].contains("</summary>")) {
-                    summaryLines += lines[i]
-                    i++
+    while (true) {
+        if (summary == null) {
+            val summaryStart = buffer.indexOf("<summary", ignoreCase = true)
+            if (summaryStart != -1) {
+                val summaryOpenEnd = buffer.indexOf(">", summaryStart, ignoreCase = true)
+                if (summaryOpenEnd != -1) {
+                    val summaryClose = buffer.indexOf("</summary>", summaryOpenEnd, ignoreCase = true)
+                    if (summaryClose != -1) {
+                        summary = buffer.substring(summaryOpenEnd + 1, summaryClose).trim()
+                        contentStartInBuffer = summaryClose + "</summary>".length
+                    }
                 }
-                if (i < lines.size) {
-                    val beforeClose = lines[i].substringBefore("</summary>")
-                    if (beforeClose.isNotBlank()) summaryLines += beforeClose
-                }
-                summary = summaryLines.joinToString("\n").trim()
             }
-        } else if (t.startsWith("</details")) {
-            break
-        } else {
-            contentLines += line
         }
-        i++
+
+        val detailsEnd = buffer.indexOf("</details>", ignoreCase = true)
+        if (detailsEnd != -1) {
+            val rawContent = if (contentStartInBuffer in 0 until detailsEnd) {
+                buffer.substring(contentStartInBuffer, detailsEnd)
+            } else {
+                buffer.substring(detailsEnd.coerceAtMost(buffer.length))
+            }
+            val suffix = buffer.substring(detailsEnd + "</details>".length)
+                .trimStart('\n')
+                .takeIf { it.isNotBlank() }
+
+            return MarkdownDetailsBlock(
+                summary = summary?.takeIf { it.isNotBlank() } ?: "详情",
+                content = rawContent.trim('\n', ' ', '\t'),
+                prefix = prefix,
+                suffix = suffix,
+                nextIndex = index + 1
+            )
+        }
+
+        if (index + 1 >= lines.size) break
+        index++
+        buffer.append('\n').append(lines[index])
     }
 
-    if (i >= lines.size) return null
-
-    val content = contentLines.joinToString("\n").trim('\n', ' ')
-    val suffixRemainder = lines[i].substringAfter("</details>", missingDelimiterValue = "")
-        .takeIf { it.isNotBlank() }
-
-    return MarkdownDetailsBlock(
-        summary = summary?.takeIf { it.isNotBlank() } ?: "详情",
-        content = content,
-        prefix = prefix,
-        suffix = suffixRemainder,
-        nextIndex = i + 1
-    )
+    return null
 }
 
 @Composable
@@ -1022,6 +1022,7 @@ private fun MarkdownDetailsBlock(
             .padding(12.dp)
     ) {
         Row(
+            modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {

@@ -3,6 +3,7 @@ package com.juhao.murexide.ui.conversation
 import com.juhao.murexide.ui.icons.AppIcons
 import com.juhao.murexide.ui.icons.AutoMirroredIcon
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
@@ -10,6 +11,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.animateTo
 import androidx.compose.foundation.gestures.AnchoredDraggableState
 import androidx.compose.foundation.gestures.DraggableAnchors
@@ -29,10 +31,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -124,45 +130,39 @@ fun ConversationListScreen(
 
     val scope = rememberCoroutineScope()
     val settingsStorage = remember { SettingsStorage(context) }
+    val mergeSticky by settingsStorage.mergeStickyFlow.collectAsState(initial = false)
     val isStickyExpanded by settingsStorage.showStickyFlow.collectAsState(initial = true)
-    val searchState by searchViewModel.uiState.collectAsState()
 
+    val searchState by searchViewModel.uiState.collectAsState()
     val searchBarState = rememberSearchBarState()
     val textFieldState = rememberTextFieldState()
-    val searchBarExpanded = searchBarState.targetValue != SearchBarValue.Collapsed
+    val scopeSearch = rememberCoroutineScope()
+
+    LaunchedEffect(textFieldState) {
+        snapshotFlow { textFieldState.text.toString() }
+            .collect { query -> searchViewModel.updateQuery(query) }
+    }
+
     val inputField = @Composable {
         SearchBarDefaults.InputField(
             textFieldState = textFieldState,
             searchBarState = searchBarState,
-            enabled = searchBarExpanded,
-            colors = TextFieldDefaults.colors(
-                disabledLeadingIconColor = MaterialTheme.colorScheme.onSurface,
-                disabledTrailingIconColor = MaterialTheme.colorScheme.onSurface,
-                disabledPlaceholderColor = MaterialTheme.colorScheme.onSurface,
-                disabledTextColor = MaterialTheme.colorScheme.onSurface,
-                focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-                disabledContainerColor = MaterialTheme.colorScheme.surfaceContainer
-            ),
-            onSearch = {
-                searchViewModel.updateQuery(it)
-            },
-            placeholder = {
-                Text(modifier = Modifier.clearAndSetSemantics {}, text = "搜索&发现")
-            },
+            onSearch = { scopeSearch.launch { searchBarState.animateToCollapsed() } },
+            placeholder = { Text("搜索&发现") },
             leadingIcon = {
                 if (searchBarState.targetValue != SearchBarValue.Collapsed) {
-                    IconButton(
-                        onClick = {
-                            scope.launch {
-                                searchBarState.animateToCollapsed()
-                            }
-                        }
-                    ) {
-                        AutoMirroredIcon(AppIcons.ArrowBack, contentDescription = null)
+                    IconButton(onClick = { scopeSearch.launch { searchBarState.animateToCollapsed() } }) {
+                        AutoMirroredIcon(AppIcons.ArrowBack, contentDescription = "返回")
                     }
                 } else {
                     AutoMirroredIcon(AppIcons.Search, contentDescription = null)
+                }
+            },
+            trailingIcon = {
+                if (textFieldState.text.isNotEmpty()) {
+                    IconButton(onClick = { textFieldState.clearText() }) {
+                        Icon(AppIcons.Close, contentDescription = "清除")
+                    }
                 }
             }
         )
@@ -177,10 +177,6 @@ fun ConversationListScreen(
         ConversationFilter.BOT -> 4
     }
 
-    val expandSearch: () -> Unit = {
-        scope.launch { searchBarState.animateToExpanded() }
-    }
-
     StyledScaffold(
         modifier = modifier,
         title = { Text("Murexide") },
@@ -190,7 +186,7 @@ fun ConversationListScreen(
                 enter = fadeIn() + expandVertically(),
                 exit = fadeOut() + shrinkVertically()
             ) {
-                IconButton(onClick = expandSearch) {
+                IconButton(onClick = { scopeSearch.launch { searchBarState.animateToExpanded() } }) {
                     Icon(AppIcons.Search, contentDescription = "搜索")
                 }
             }
@@ -252,7 +248,7 @@ fun ConversationListScreen(
                 val (stickyConvs, normalConvs) = filteredConversations.partition {
                     stickyIds.contains(it.chatId)
                 }
-
+                
                 val allowCollapseSticky = stickyConvs.size > 5
                 val isStickyCollapsed = !isStickyExpanded && allowCollapseSticky
 
@@ -278,7 +274,9 @@ fun ConversationListScreen(
                     ) {
                         item(key = "searchBar") {
                             ConversationSearchHeader(
-                                onSearchClick = expandSearch
+                                onSearchClick = {
+                                    scopeSearch.launch { searchBarState.animateToExpanded() }
+                                }
                             )
                         }
 
@@ -286,7 +284,6 @@ fun ConversationListScreen(
                             CapsuleTabBar(
                                 tabs = tabs,
                                 selectedTabIndex = selectedTabIndex,
-                                scrollable = true,
                                 onTabSelected = { index ->
                                     val newFilter = when (index) {
                                         0 -> ConversationFilter.ALL
@@ -332,7 +329,24 @@ fun ConversationListScreen(
                                 }
                             }
                         } else {
-                            if (allowCollapseSticky) {
+                            if (!mergeSticky && stickyConvs.isNotEmpty()) {
+                                item(key = "stickyRow") {
+                                    StickyConversationsRow(
+                                        conversations = stickyConvs,
+                                        onConversationClick = { conversation ->
+                                            openSwipeKey = null
+                                            viewModel.clearUnread(conversation.chatId, conversation.chatType)
+                                            onConversationClick(conversation)
+                                        },
+                                        onUnpin = { viewModel.unpinConversation(it) }
+                                    )
+                                }
+                                item(key = "stickyDivider") {
+                                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                                }
+                            }
+
+                            if (mergeSticky && allowCollapseSticky) {
                                 item(key = "collapseStickyButton") {
                                     val bkgolor = if (themeColor != "WHITE") {
                                         MaterialTheme.colorScheme.surfaceContainer
@@ -363,44 +377,13 @@ fun ConversationListScreen(
                                 }
                             }
 
-                            if (!isStickyCollapsed) {
-                                items(
-                                    items = stickyConvs,
-                                    key = { item -> "conv_${item.chatType}:${item.chatId}" }
-                                ) { conversation ->
-                                    SwipeableConversationItem(
-                                        modifier = Modifier.animateItem(),
-                                        conversation = conversation,
-                                        draft = drafts["${conversation.chatType}_${conversation.chatId}"],
-                                        isSelected = currentConversation?.chatId == conversation.chatId &&
-                                                currentConversation.chatType == conversation.chatType &&
-                                                bigScreenMode,
-                                        isSticky = true,
-                                        openItemKey = openSwipeKey,
-                                        onOpen = { openSwipeKey = it },
-                                        onClick = {
-                                            openSwipeKey = null
-                                            viewModel.clearUnread(
-                                                conversation.chatId,
-                                                conversation.chatType
-                                            )
-                                            onConversationClick(conversation)
-                                        },
-                                        onPin = { viewModel.pinConversation(conversation) },
-                                        onUnpin = { viewModel.unpinConversation(conversation) },
-                                        onDelete = { viewModel.removeConversation(conversation) }
-                                    )
-                                }
-
-                                item(key = "divider") {
-                                    HorizontalDivider()
-                                }
-                            }
-
                             items(
-                                items = normalConvs,
+                                items = if (mergeSticky) {
+                                    if (isStickyCollapsed) normalConvs else (stickyConvs + normalConvs)
+                                } else filteredConversations,
                                 key = { item -> "conv_${item.chatType}:${item.chatId}" }
                             ) { conversation ->
+                                val isItemSticky = mergeSticky && stickyIds.contains(conversation.chatId)
                                 SwipeableConversationItem(
                                     modifier = Modifier.animateItem(),
                                     conversation = conversation,
@@ -408,15 +391,12 @@ fun ConversationListScreen(
                                     isSelected = currentConversation?.chatId == conversation.chatId &&
                                             currentConversation.chatType == conversation.chatType &&
                                             bigScreenMode,
-                                    isSticky = false,
+                                    isSticky = isItemSticky,
                                     openItemKey = openSwipeKey,
                                     onOpen = { openSwipeKey = it },
                                     onClick = {
                                         openSwipeKey = null
-                                        viewModel.clearUnread(
-                                            conversation.chatId,
-                                            conversation.chatType
-                                        )
+                                        viewModel.clearUnread(conversation.chatId, conversation.chatType)
                                         onConversationClick(conversation)
                                     },
                                     onPin = { viewModel.pinConversation(conversation) },
@@ -424,6 +404,10 @@ fun ConversationListScreen(
                                     onDelete = { viewModel.removeConversation(conversation) }
                                 )
                             }
+                        }
+                        
+                        item {
+                            Spacer(Modifier.height(innerPadding.calculateBottomPadding()))
                         }
                     }
                 }
@@ -449,7 +433,10 @@ fun ConversationListScreen(
         }
     }
 
-    ExpandedFullScreenSearchBar(state = searchBarState, inputField = inputField) {
+    ExpandedFullScreenSearchBar(
+        state = searchBarState,
+        inputField = inputField
+    ) {
         when {
             searchState.isLoading && searchState.results.isEmpty() -> LoadingScreen(Modifier)
             searchState.error != null -> EmptyPlaceholder(
@@ -467,7 +454,9 @@ fun ConversationListScreen(
                 title = if (searchState.hasSearched) "未找到相关结果" else "暂无搜索内容",
                 subtitle = if (searchState.hasSearched) "换个关键词试试" else "输入关键词开始搜索"
             )
-            else -> LazyColumn(Modifier.fillMaxSize()) {
+            else -> LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+            ) {
                 listOf(1 to "用户", 2 to "群聊", 3 to "机器人").forEach { (type, title) ->
                     val items = searchState.resultsFor(type)
                     if (items.isNotEmpty()) {
@@ -500,29 +489,98 @@ fun ConversationListScreen(
 private fun ConversationSearchHeader(
     onSearchClick: () -> Unit
 ) {
-    Surface(
-        onClick = onSearchClick,
-        shape = RoundedCornerShape(24.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically
+        Surface(
+            onClick = onSearchClick,
+            shape = RoundedCornerShape(24.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            modifier = Modifier.weight(1f)
         ) {
-            Icon(
-                AppIcons.Search,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(Modifier.width(8.dp))
-            Text(
-                text = "搜索&发现",
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    AppIcons.Search,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = "搜索&发现",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun StickyConversationsRow(
+    conversations: List<ConversationItem>,
+    onConversationClick: (ConversationItem) -> Unit,
+    onUnpin: (ConversationItem) -> Unit
+) {
+    val themeColor by UiState.themeColor
+    val itemColor = if (themeColor != "WHITE") {
+        MaterialTheme.colorScheme.surfaceContainer
+    } else {
+        MaterialTheme.colorScheme.surface
+    }
+    
+    LazyRow(
+        modifier = Modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        items(conversations, key = { "${it.chatType}:${it.chatId}" }) { conversation ->
+            Column(
+                modifier = Modifier
+                    .width(64.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .combinedClickable(
+                        onClick = { onConversationClick(conversation) },
+                        onLongClick = { onUnpin(conversation) }
+                    )
+                    .padding(vertical = 4.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Box {
+                    Avatar(url = conversation.avatarUrl, size = 48.dp)
+                    if (conversation.certificationLevel >= 1) {
+                        Badge(
+                            containerColor = MaterialTheme.colorScheme.secondary,
+                            contentColor = MaterialTheme.colorScheme.onSecondary,
+                            modifier = Modifier
+                                .border(width = 1.dp, color = itemColor, shape = CircleShape)
+                                .align(Alignment.BottomEnd)
+                        ) {
+                            Text(
+                                if (conversation.certificationLevel == 1) "官" else "城",
+                                style = MaterialTheme.typography.labelSmall
+                            )
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = conversation.displayName,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    textAlign = TextAlign.Center
+                )
+            }
         }
     }
 }
@@ -590,7 +648,7 @@ private fun SwipeableConversationItem(
     val listItemColor = if (isSelected)
         MaterialTheme.colorScheme.surfaceBright
     else if ((isSticky && themeColor != "WHITE") || (!isSticky && themeColor == "WHITE")) {
-        MaterialTheme.colorScheme.surfaceContainer
+        MaterialTheme.colorScheme.surfaceContainerHigh
     } else {
         MaterialTheme.colorScheme.surface
     }

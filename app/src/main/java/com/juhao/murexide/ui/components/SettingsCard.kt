@@ -15,7 +15,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.shape.RoundedCornerShape
 
@@ -101,9 +100,7 @@ fun SettingsItem(
                     text = subtitle,
                     style = MaterialTheme.typography.bodySmall,
                     color = if (isDestructive) MaterialTheme.colorScheme.error.copy(alpha = 0.9f)
-                    else Color.Unspecified,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
+                    else Color.Unspecified
                 )
             }
         }
@@ -168,9 +165,7 @@ fun SettingsItemCell(
                     text = subtitle,
                     style = MaterialTheme.typography.bodySmall,
                     color = if (isDestructive) MaterialTheme.colorScheme.error.copy(alpha = 0.9f)
-                    else Color.Unspecified,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
+                    else Color.Unspecified
                 )
             }
         }
@@ -230,9 +225,7 @@ fun SettingsSwitchItem(
                     text = subtitle,
                     style = MaterialTheme.typography.bodySmall,
                     color = if (isDestructive) MaterialTheme.colorScheme.error.copy(alpha = 0.9f)
-                    else Color.Unspecified,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
+                    else Color.Unspecified
                 )
             }
         }
@@ -309,9 +302,7 @@ fun SettingsDropdownItem(
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
+                    style = MaterialTheme.typography.bodySmall
                 )
             }
         }

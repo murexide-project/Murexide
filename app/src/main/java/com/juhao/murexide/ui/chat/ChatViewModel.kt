@@ -105,6 +105,7 @@ class ChatViewModel(
 
     private var uploadJob: Job? = null
     private var streamPersistJob: Job? = null
+    private var mentionSearchJob: Job? = null
 
     private val msgIdCache = mutableSetOf<String>()
 
@@ -166,18 +167,18 @@ class ChatViewModel(
     private var isJumping: Boolean = false
     private var hasJumpedToUnread: Boolean = false
     private var pendingUnreadJumpAfterLoad: Boolean = false
-    
+
     private var activeSendToken: String = token
 
     fun switchSendToken(newToken: String) {
         if (newToken.isBlank()) return
         activeSendToken = newToken
     }
-    
+
     fun getActiveSendToken(): String = activeSendToken
-    
+
     private fun isActiveAccount(): Boolean = activeSendToken == token
-        
+
     private var initialUnreadCountApplied = false
 
     fun setInitialUnreadCount(count: Int) {
@@ -191,7 +192,7 @@ class ChatViewModel(
             maybeAutoLoadForUnreadJump(historyLoadGeneration)
         }
     }
-    
+
     private fun applyInitialUnreadCount() {
         if (initialUnreadCountApplied) {
             recomputeJumpTargetIndex()
@@ -452,7 +453,7 @@ class ChatViewModel(
             }
 
             applyInitialUnreadCount()
-            
+
             repository.getMessageList(
                 token = token,
                 chatId = chatId,
@@ -642,6 +643,7 @@ class ChatViewModel(
 
     override fun onCleared() {
         draftSaveJob?.cancel()
+        mentionSearchJob?.cancel()
         val text = _uiState.value.inputText
         val sending = _uiState.value.isSending
         kotlinx.coroutines.GlobalScope.launch(Dispatchers.IO) {
@@ -2035,10 +2037,11 @@ class ChatViewModel(
         if (state.isLoading) return
         if (!refresh && !state.hasMore) return
 
+        val keyword = _uiState.value.mentionPicker.keyword
         val page = if (refresh) 1 else state.page + 1
         _uiState.update { it.copy(groupMembers = it.groupMembers.copy(isLoading = true)) }
         viewModelScope.launch(Dispatchers.IO) {
-            groupMemberRepository.listMembers(token, chatId, page = page)
+            groupMemberRepository.listMembers(token, chatId, page = page, keywords = keyword)
                 .onSuccess { members ->
                     _uiState.update {
                         val existing = if (refresh) emptyList() else it.groupMembers.members
@@ -2059,6 +2062,28 @@ class ChatViewModel(
                     _uiState.update { it.copy(groupMembers = it.groupMembers.copy(isLoading = false)) }
                     _toastMessage.emit("加载群成员失败: ${e.message}")
                 }
+        }
+    }
+
+    fun searchMentionMembers(keyword: String) {
+        _uiState.update { state ->
+            state.copy(
+                mentionPicker = state.mentionPicker.copy(keyword = keyword)
+            )
+        }
+        mentionSearchJob?.cancel()
+        mentionSearchJob = viewModelScope.launch {
+            delay(300)
+            _uiState.update { state ->
+                state.copy(
+                    groupMembers = state.groupMembers.copy(
+                        page = 0,
+                        hasMore = true,
+                        isLoading = false
+                    )
+                )
+            }
+            loadGroupMembers(refresh = true)
         }
     }
 
@@ -2086,13 +2111,22 @@ class ChatViewModel(
 
     fun showMentionPicker(triggerPos: Int = -1) {
         if (chatType != 2) return
-        _uiState.update { it.copy(mentionPicker = MentionPickerState(isVisible = true, triggerPos = triggerPos)) }
+        _uiState.update {
+            it.copy(
+                mentionPicker = MentionPickerState(
+                    isVisible = true,
+                    triggerPos = triggerPos,
+                    keyword = ""
+                )
+            )
+        }
         if (_uiState.value.groupMembers.members.isEmpty()) {
             loadGroupMembers(refresh = true)
         }
     }
 
     fun hideMentionPicker() {
+        mentionSearchJob?.cancel()
         _uiState.update { it.copy(mentionPicker = MentionPickerState()) }
     }
 

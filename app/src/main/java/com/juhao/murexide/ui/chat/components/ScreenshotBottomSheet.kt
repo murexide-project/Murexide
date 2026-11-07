@@ -299,7 +299,7 @@ private fun ScreenshotContent(
                         MaterialTheme.colorScheme.surface,
                         RoundedCornerShape(12.dp)
                     ),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
+                verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
                 messages.forEachIndexed { index, message ->
                     val olderMessage = messages.getOrNull(index - 1)

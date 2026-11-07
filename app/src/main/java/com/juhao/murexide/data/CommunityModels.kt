@@ -65,8 +65,8 @@ data class PostItem(
     val likeNum: Int,
     val commentNum: Int,
     val collectNum: Int,
-    val isLiked: String,  // "0" 或 "1"
-    val isCollected: Int, // 0 或 1
+    val isLiked: String,
+    val isCollected: Int,
     val isReward: Int,
     val group: GroupInfo? = null
 )
@@ -78,8 +78,6 @@ data class GroupInfo(
     val avatarUrl: String,
     val headcount: Int
 )
-
-// ==================== 帖子详情 ====================
 
 @Serializable
 data class PostDetailResponse(
@@ -128,8 +126,6 @@ data class PostDetail(
     val group: GroupInfo? = null
 )
 
-// ==================== 评论 ====================
-
 @Serializable
 data class CommentListResponse(
     val code: Int,
@@ -159,10 +155,9 @@ data class CommentItem(
     val senderAvatar: String,
     val isLiked: String = "0",
     val isReward: Int = 0,
-    val isVip: Int = 0
+    val isVip: Int = 0,
+    val replies: List<CommentItem> = emptyList()
 )
-
-// ==================== 分区详情 ====================
 
 @Serializable
 data class BaInfoResponse(
@@ -175,8 +170,6 @@ data class BaInfoResponse(
 data class BaInfoData(
     val ba: BaDetail
 )
-
-// ==================== 发布文章 ====================
 
 @Serializable
 data class CreatePostResponse(

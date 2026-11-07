@@ -45,8 +45,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.ClipEntry
@@ -64,6 +66,7 @@ import com.juhao.murexide.data.ConversationDetail
 import com.juhao.murexide.data.GroupBotPermission
 import com.juhao.murexide.data.GroupMember
 import com.juhao.murexide.data.MessageItem
+import com.juhao.murexide.data.UserMedal
 import com.juhao.murexide.ui.components.*
 import com.juhao.murexide.ui.icons.AppIcons
 import com.juhao.murexide.ui.icons.AppFilledIcons
@@ -742,30 +745,28 @@ private fun GroupConversationDetail(
         }
         if (isAdded == true) {
             item(key = "tabs") {
-                DetailCardSegment(cardColor = cardColor, isTop = true) {
-                    val labels = listOf("成员", "机器人", "媒体", "群云盘")
-                    CapsuleTabBar(
-                        tabs = labels,
-                        selectedTabIndex = selectedTab,
-                        onTabSelected = { index ->
-                            if (index == 3) {
-                                DiskActivity.start(
-                                    context = context,
-                                    chatId = detail.chatId,
-                                    canManage = detail.permissionLevel >= 2
-                                )
-                            } else {
-                                onTabSelected(index)
-                            }
-                        },
-                        modifier = Modifier.padding(12.dp)
-                    )
-                }
+                val labels = listOf("成员", "机器人", "媒体", "群云盘")
+                CapsuleTabBar(
+                    tabs = labels,
+                    selectedTabIndex = selectedTab,
+                    onTabSelected = { index ->
+                        if (index == 3) {
+                            DiskActivity.start(
+                                context = context,
+                                chatId = detail.chatId,
+                                canManage = detail.permissionLevel >= 2
+                            )
+                        } else {
+                            onTabSelected(index)
+                        }
+                    },
+                    modifier = Modifier.padding(12.dp)
+                )
             }
             when (selectedTab) {
                 0 -> {
                     item(key = "members-search") {
-                        DetailCardSegment(cardColor = cardColor) {
+                        DetailCardSegment(cardColor = cardColor, isTop = true) {
                             SearchBar(
                                 query = memberKeyword,
                                 onQueryChange = onMemberSearch,
@@ -795,62 +796,63 @@ private fun GroupConversationDetail(
                         }
                     }
                     when {
-                    isLoadingMembers && members.isEmpty() -> item(key = "members-loading") {
-                        DetailCardSegment(
-                            cardColor,
-                            isBottom = true,
-                            minHeight = 180.dp
-                        ) { LoadingContent() }
-                    }
-
-                    members.isEmpty() -> item(key = "members-empty") {
-                        DetailCardSegment(
-                            cardColor,
-                            isBottom = true,
-                            minHeight = 180.dp
-                        ) { EmptyContent("暂无可展示的成员") }
-                    }
-
-                    else -> {
-                        items(members, key = GroupMember::userId) { member ->
-                            val isLast = member == members.last() && !hasMoreMembers
-                            DetailCardSegment(cardColor, isBottom = isLast) {
-                                MemberRow(
-                                    member = member,
-                                    canManage = canManageMembers && member.permissionLevel != 100,
-                                    canSetAdmin = isGroupOwner && member.permissionLevel != 100,
-                                    onClick = { onOpenMember(member) },
-                                    onKick = { onKickMember(member) },
-                                    onGag = { onGagMember(member) },
-                                    onAdminToggle = { onAdminToggle(member) }
-                                )
-                            }
+                        isLoadingMembers && members.isEmpty() -> item(key = "members-loading") {
+                            DetailCardSegment(
+                                cardColor,
+                                isBottom = true,
+                                minHeight = 180.dp
+                            ) { LoadingContent() }
                         }
-                        if (hasMoreMembers) item(key = "members-load-more") {
-                            DetailCardSegment(cardColor, isBottom = true) {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(12.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    if (isLoadingMoreMembers) {
-                                        CircularProgressIndicator(
-                                            modifier = Modifier.size(24.dp),
-                                            strokeWidth = 2.dp
-                                        )
+    
+                        members.isEmpty() -> item(key = "members-empty") {
+                            DetailCardSegment(
+                                cardColor,
+                                isBottom = true,
+                                minHeight = 180.dp
+                            ) { EmptyContent("暂无可展示的成员") }
+                        }
+    
+                        else -> {
+                            items(members, key = GroupMember::userId) { member ->
+                                val isLast = member == members.last() && !hasMoreMembers
+                                DetailCardSegment(cardColor, isBottom = isLast) {
+                                    MemberRow(
+                                        member = member,
+                                        canManage = canManageMembers && member.permissionLevel != 100,
+                                        canSetAdmin = isGroupOwner && member.permissionLevel != 100,
+                                        onClick = { onOpenMember(member) },
+                                        onKick = { onKickMember(member) },
+                                        onGag = { onGagMember(member) },
+                                        onAdminToggle = { onAdminToggle(member) }
+                                    )
+                                }
+                            }
+                            if (hasMoreMembers) item(key = "members-load-more") {
+                                DetailCardSegment(cardColor, isBottom = true) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(12.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        if (isLoadingMoreMembers) {
+                                            CircularProgressIndicator(
+                                                modifier = Modifier.size(24.dp),
+                                                strokeWidth = 2.dp
+                                            )
+                                        }
                                     }
                                 }
                             }
                         }
                     }
                 }
-                }
 
                 1 -> when {
                     isLoadingBots && bots.isEmpty() -> item(key = "bots-loading") {
                         DetailCardSegment(
                             cardColor,
+                            isTop = true,
                             isBottom = true,
                             minHeight = 180.dp
                         ) { LoadingContent() }
@@ -859,6 +861,7 @@ private fun GroupConversationDetail(
                     bots.isEmpty() && hasLoadedBots -> item(key = "bots-empty") {
                         DetailCardSegment(
                             cardColor,
+                            isTop = true,
                             isBottom = true,
                             minHeight = 180.dp
                         ) { EmptyContent("暂无机器人") }
@@ -866,8 +869,9 @@ private fun GroupConversationDetail(
 
                     else -> {
                         items(bots, key = BotItem::id) { bot ->
+                            val isFirst = bot == bots.first()
                             val isLast = bot == bots.last()
-                            DetailCardSegment(cardColor, isBottom = isLast) {
+                            DetailCardSegment(cardColor, isBottom = isLast, isTop = isFirst) {
                                 BotRow(
                                     bot = bot,
                                     canManage = canManageBots,
@@ -884,6 +888,7 @@ private fun GroupConversationDetail(
                     isLoadingHistory && media.isEmpty() -> item(key = "media-loading") {
                         DetailCardSegment(
                             cardColor,
+                            isTop = true,
                             isBottom = true,
                             minHeight = 180.dp
                         ) { LoadingContent() }
@@ -892,6 +897,7 @@ private fun GroupConversationDetail(
                     media.isEmpty() && !hasMoreHistory -> item(key = "media-empty") {
                         DetailCardSegment(
                             cardColor,
+                            isTop = true,
                             isBottom = true,
                             minHeight = 180.dp
                         ) { EmptyContent("暂无媒体") }
@@ -903,6 +909,7 @@ private fun GroupConversationDetail(
                             key = { row -> row.joinToString(separator = ":") { it.msgId } }) { row ->
                             DetailCardSegment(
                                 cardColor,
+                                isTop = true,
                                 isBottom = row == mediaRows.last() && !hasMoreHistory
                             ) {
                                 MediaRow(
@@ -1163,7 +1170,7 @@ private fun BotConversationDetail(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
 @Composable
 private fun UserHeader(
     detail: ConversationDetail,
@@ -1188,34 +1195,12 @@ private fun UserHeader(
         Spacer(Modifier.height(4.dp))
         Avatar(url = detail.avatarUrl, size = 88.dp, canView = true)
         Spacer(Modifier.height(10.dp))
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            Text(
-                detail.name,
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center
-            )
-            if (!isBot) {
-                val (genderIcon, genderColor, genderDescription) = when (detail.gender) {
-                    1 -> Triple(AppIcons.Boy, Color(0xFF2196F3), "男")
-                    2 -> Triple(AppIcons.Girl, Color(0xFFFF6B9A), "女")
-                    else -> Triple(
-                        AppFilledIcons.Person,
-                        resolvedLiquidGlassContentColor(MaterialTheme.colorScheme.onSurfaceVariant),
-                        "未知性别"
-                    )
-                }
-                Icon(
-                    genderIcon,
-                    genderDescription,
-                    tint = genderColor,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-        }
+        Text(
+            detail.name,
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center
+        )
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -1240,6 +1225,47 @@ private fun UserHeader(
                 )
             }
         }
+
+        if (!isBot && (detail.gender in 1..2 || detail.medals.isNotEmpty())) {
+            FlowRow(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                val genderLabel = when (detail.gender) {
+                    1 -> "男"
+                    2 -> "女"
+                    else -> null
+                }
+                if (genderLabel != null) {
+                    val surface = MaterialTheme.colorScheme.onSurface
+                    val genderContainer = when (detail.gender) {
+                        1 -> Color(0xFF2196F3).copy(alpha = 0.2f)
+                        2 -> Color(0xFFFF6B9A).copy(alpha = 0.2f)
+                        else -> MaterialTheme.colorScheme.secondaryContainer
+                    }
+                    val genderContent = when (detail.gender) {
+                        1 -> lerp(surface, Color(0xFF2196F3), 0.5f)
+                        2 -> lerp(surface, Color(0xFFFF6B9A), 0.5f)
+                        else -> MaterialTheme.colorScheme.onSecondaryContainer
+                    }
+                    TagCard(
+                        text = genderLabel,
+                        icon = if (detail.gender == 1) AppIcons.Boy else AppIcons.Girl,
+                        containerColor = genderContainer,
+                        contentColor = genderContent
+                    )
+                }
+                detail.medals
+                    .sortedBy { it.sort }
+                    .forEach { medal ->
+                        TagCard(text = medal.name)
+                    }
+            }
+        }
+
         Spacer(Modifier.height(12.dp))
         if (isCurrentUser) {
             TelegramAction(
@@ -1311,6 +1337,40 @@ private fun UserHeader(
             }
         }
         Spacer(Modifier.height(6.dp))
+    }
+}
+
+@Composable
+private fun TagCard(
+    text: String,
+    icon: ImageVector? = null,
+    containerColor: Color = MaterialTheme.colorScheme.secondaryContainer,
+    contentColor: Color = MaterialTheme.colorScheme.onSecondaryContainer
+) {
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = containerColor
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            if (icon != null) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = contentColor,
+                    modifier = Modifier.size(14.dp)
+                )
+            }
+            Text(
+                text = text,
+                style = MaterialTheme.typography.labelMedium,
+                color = contentColor,
+                maxLines = 1
+            )
+        }
     }
 }
 
@@ -1405,7 +1465,7 @@ private fun UserInfoRow(
     label: String,
     value: String,
     onClick: (() -> Unit)? = null,
-    trailingIcon: androidx.compose.ui.graphics.vector.ImageVector? = null
+    trailingIcon: ImageVector? = null
 ) {
     Row(
         modifier = Modifier
@@ -1536,7 +1596,6 @@ private fun GroupHeader(
                 )
             }
         }
-        Spacer(Modifier.height(6.dp))
     }
 }
 
@@ -1702,7 +1761,7 @@ private fun IntroductionContent(
 @Composable
 private fun TelegramAction(
     modifier: Modifier,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: ImageVector,
     label: String,
     onClick: () -> Unit,
     loading: Boolean = false,

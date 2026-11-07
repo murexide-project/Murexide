@@ -10,10 +10,20 @@ import androidx.core.content.ContextCompat
 import android.Manifest
 import android.content.Intent
 import android.widget.Toast
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
+import com.juhao.murexide.MyApplication
 import com.juhao.murexide.data.local.LocalCache
 import com.juhao.murexide.ui.components.*
 import com.juhao.murexide.datastore.SettingsStorage
@@ -57,9 +67,12 @@ fun ActionPage() {
     }
 
     val cacheEnabled by settingsStorage.cacheEnabledFlow.collectAsState(initial = true)
-    val hideLauncher by settingsStorage.hideLauncherFlow.collectAsState(initial = false)
 
-    var showHideLauncherConfirm by remember { mutableStateOf(false) }
+    val appLockEnabled by settingsStorage.appLockEnabledFlow.collectAsState(initial = false)
+    val lockOnBackground by settingsStorage.appLockLockOnBackgroundFlow.collectAsState(initial = true)
+
+    var showSetPinDialog by remember { mutableStateOf(false) }
+    var showDisableLockConfirm by remember { mutableStateOf(false) }
 
     val legacyStoragePermission = Build.VERSION.SDK_INT <= Build.VERSION_CODES.P
     var storagePermissionGranted by remember {
@@ -96,6 +109,10 @@ fun ActionPage() {
             storagePermissionRequestAttempted = true
             storagePermissionLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
         }
+    }
+
+    fun refreshAppLock() {
+        (context.applicationContext as? MyApplication)?.refreshAppLockState()
     }
 
     SettingsGroup {
@@ -148,20 +165,37 @@ fun ActionPage() {
             }
         )
         SettingsSwitchItem(
-            icon = AppIcons.VisibilityOff,
-            title = "隐藏应用入口",
-            subtitle = if (hideLauncher) "已隐藏，拨号 *#*#2468#*#* 启动" else "显示在桌面启动器中",
-            checked = hideLauncher,
+            icon = AppIcons.Lock,
+            title = "应用锁",
+            subtitle = if (appLockEnabled) "已开启，启动或回到前台需验证密码" else "开启后启动应用需要输入密码",
+            checked = appLockEnabled,
             onCheckedChange = { checked ->
                 if (checked) {
-                    showHideLauncherConfirm = true
+                    showSetPinDialog = true
                 } else {
-                    scope.launch {
-                        settingsStorage.setHideLauncher(false)
-                    }
+                    showDisableLockConfirm = true
                 }
             }
         )
+        if (appLockEnabled) {
+            SettingsSwitchItem(
+                icon = AppIcons.Lock,
+                title = "切到后台后重新锁定",
+                subtitle = "关闭后仅在冷启动时验证密码",
+                checked = lockOnBackground,
+                onCheckedChange = { checked ->
+                    scope.launch {
+                        settingsStorage.setAppLockLockOnBackground(checked)
+                        refreshAppLock()
+                    }
+                }
+            )
+            SettingsItem(
+                icon = AppIcons.Edit,
+                title = "修改应用锁密码",
+                onClick = { showSetPinDialog = true }
+            )
+        }
         SettingsItem(
             icon = AppIcons.Screenshot,
             title = "截图设置",
@@ -174,31 +208,103 @@ fun ActionPage() {
         )
     }
 
-    if (showHideLauncherConfirm) {
+    if (showSetPinDialog) {
+        SetAppLockPinDialog(
+            onDismiss = { showSetPinDialog = false },
+            onConfirm = { pin ->
+                scope.launch {
+                    settingsStorage.setAppLockPin(pin)
+                    refreshAppLock()
+                    showSetPinDialog = false
+                }
+            }
+        )
+    }
+
+    if (showDisableLockConfirm) {
         AlertDialog(
-            onDismissRequest = { showHideLauncherConfirm = false },
-            title = { Text("隐藏应用入口") },
-            icon = {
-                Icon(AppIcons.Info, contentDescription = null)
-            },
-            text = {
-                Text("隐藏后应用图标将从桌面消失，只能通过拨号盘输入暗码 *#*#2468#*#* 启动应用。\n\n请确认你知道暗码并能正常通过暗码启动。")
-            },
+            onDismissRequest = { showDisableLockConfirm = false },
+            title = { Text("关闭应用锁") },
+            icon = { Icon(AppIcons.Info, contentDescription = null) },
+            text = { Text("关闭后启动应用将不再需要密码。确定关闭吗？") },
             confirmButton = {
                 TextButton(onClick = {
-                    showHideLauncherConfirm = false
+                    showDisableLockConfirm = false
                     scope.launch {
-                        settingsStorage.setHideLauncher(true)
+                        settingsStorage.clearAppLock()
+                        refreshAppLock()
                     }
                 }) {
-                    Text("确认开启")
+                    Text("确认关闭")
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showHideLauncherConfirm = false }) {
+                TextButton(onClick = { showDisableLockConfirm = false }) {
                     Text("取消")
                 }
             }
         )
     }
+}
+
+@Composable
+private fun SetAppLockPinDialog(
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit
+) {
+    var pin by remember { mutableStateOf("") }
+    var confirm by remember { mutableStateOf("") }
+    var error by remember { mutableStateOf<String?>(null) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("设置应用锁密码") },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = pin,
+                    onValueChange = {
+                        pin = it.filter { c -> c.isDigit() }.take(12)
+                        error = null
+                    },
+                    label = { Text("新密码（至少 4 位数字）") },
+                    singleLine = true,
+                    visualTransformation = PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = confirm,
+                    onValueChange = {
+                        confirm = it.filter { c -> c.isDigit() }.take(12)
+                        error = null
+                    },
+                    label = { Text("确认密码") },
+                    singleLine = true,
+                    isError = error != null,
+                    supportingText = error?.let { { Text(it) } },
+                    visualTransformation = PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                if (pin.length < 4) {
+                    error = "密码至少 4 位"
+                } else if (pin != confirm) {
+                    error = "两次输入不一致"
+                } else {
+                    onConfirm(pin)
+                }
+            }) {
+                Text("保存")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("取消") }
+        }
+    )
 }

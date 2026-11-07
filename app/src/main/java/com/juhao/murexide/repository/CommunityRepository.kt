@@ -4,9 +4,7 @@ import com.juhao.murexide.data.*
 import com.juhao.murexide.network.NetworkClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.put
+import kotlinx.serialization.json.*
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -622,6 +620,52 @@ class CommunityRepository(
                             Result.success(result.data?.posts.orEmpty().map { it.toPostItem() })
                         } else {
                             Result.failure(Exception(result.msg.ifEmpty { "搜索失败" }))
+                        }
+                    } else {
+                        Result.failure(Exception("HTTP error: ${response.code}"))
+                    }
+                }
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+        }
+    }
+    
+    suspend fun forwardPost(
+        postId: Int,
+        targets: List<ForwardTarget>
+    ): Result<Boolean> {
+        return withContext(Dispatchers.IO) {
+            try {
+                if (targets.isEmpty()) {
+                    return@withContext Result.failure(Exception("请选择至少一个会话"))
+                }
+                val receive = targets.map { target ->
+                    buildJsonObject {
+                        put("chatId", target.chatId)
+                        put("chatType", target.chatType)
+                    }
+                }
+                val params = buildJsonObject {
+                    put("postId", postId)
+                    put("receive", kotlinx.serialization.json.JsonArray(receive))
+                }
+                val requestBody = json.encodeToString(params).toRequestBody("application/json".toMediaType())
+    
+                val httpRequest = Request.Builder()
+                    .url("$baseUrl/v1/community/posts/post-forward")
+                    .post(requestBody)
+                    .header("token", token)
+                    .header("User-Agent", "android 1.6.32")
+                    .build()
+    
+                client.newCall(httpRequest).execute().use { response ->
+                    if (response.isSuccessful) {
+                        val result = json.decodeFromString<CommonResponse>(response.body.string())
+                        if (result.code == 1) {
+                            Result.success(true)
+                        } else {
+                            Result.failure(Exception(result.msg.ifEmpty { "分享失败" }))
                         }
                     } else {
                         Result.failure(Exception("HTTP error: ${response.code}"))

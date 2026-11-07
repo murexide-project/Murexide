@@ -2,8 +2,7 @@ package com.juhao.murexide.ui.community.detail
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.juhao.murexide.data.CommentItem
-import com.juhao.murexide.data.PostDetail
+import com.juhao.murexide.data.*
 import com.juhao.murexide.datastore.AccountStorage
 import com.juhao.murexide.repository.CommunityRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -41,6 +40,32 @@ class PostDetailViewModel(
 
             loadDetail()
             loadComments(reset = true)
+        }
+    }
+    
+    private val _isSharing = MutableStateFlow(false)
+    val isSharing: StateFlow<Boolean> = _isSharing.asStateFlow()
+    
+    fun sharePost(targets: List<ForwardTarget>, onResult: (Boolean, String?) -> Unit) {
+        val post = _uiState.value.post
+        if (post == null) {
+            onResult(false, "文章未加载")
+            return
+        }
+        if (_isSharing.value) return
+        viewModelScope.launch {
+            repository?.let {
+                _isSharing.value = true
+                it.forwardPost(post.id, targets)
+                    .onSuccess {
+                        _isSharing.value = false
+                        onResult(true, null)
+                    }
+                    .onFailure { e ->
+                        _isSharing.value = false
+                        onResult(false, e.message ?: "分享失败")
+                    }
+            }
         }
     }
 
@@ -155,15 +180,15 @@ class PostDetailViewModel(
             }
         }
     }
-    
-    fun submitComment(content: String, onResult: (Boolean) -> Unit = {}) {
+
+    fun submitComment(content: String, commentId: Int = 0, onResult: (Boolean) -> Unit = {}) {
         val repo = repository ?: return
         val post = _uiState.value.post ?: return
         val trimmed = content.trim()
         if (trimmed.isEmpty()) return
-    
+
         viewModelScope.launch {
-            repo.createComment(postId = post.id, content = trimmed)
+            repo.createComment(postId = post.id, commentId = commentId, content = trimmed)
                 .onSuccess {
                     _uiState.update { state ->
                         state.copy(

@@ -1,8 +1,6 @@
 package com.juhao.murexide.datastore
 
-import android.content.ComponentName
 import android.content.Context
-import android.content.pm.PackageManager
 import android.os.Build
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
@@ -31,6 +29,7 @@ class SettingsStorage(private val context: Context) {
         private val UPDATE_CHANNEL_KEY = stringPreferencesKey("update_channel")
         private val FLOAT_BOTTOM_BAR_KEY = booleanPreferencesKey("float_bottom_bar")
         private val SHOW_STICKY_KEY = booleanPreferencesKey("show_sticky")
+        private val MERGE_STICKY_KEY = booleanPreferencesKey("merge_sticky")
         private val MSG_SHOW_TAGS_KEY = booleanPreferencesKey("msg_show_tags")
         private val BUBBLE_CORNER_RADIUS_KEY = floatPreferencesKey("bubble_corner_radius")
         private val BUBBLE_OPACITY_KEY = floatPreferencesKey("bubble_opacity")
@@ -44,15 +43,14 @@ class SettingsStorage(private val context: Context) {
         private val SCREENSHOT_HIDE_SESSION_INFO_KEY = booleanPreferencesKey("screenshot_hide_session_info")
         private val SCREENSHOT_HIDE_IMAGES_KEY = booleanPreferencesKey("screenshot_hide_images")
         private val CACHE_ENABLED_KEY = booleanPreferencesKey("cache_enabled")
-        private val HIDE_LAUNCHER_KEY = booleanPreferencesKey("hide_launcher")
         private val WS_ENABLED_KEY = booleanPreferencesKey("ws_enabled")
         private val USER_BOT_ENABLED_KEY = booleanPreferencesKey("user_bot_enabled")
         private val USER_BOT_RULES_KEY = stringPreferencesKey("user_bot_rules")
         private val USER_BOT_TIP_SHOWN_KEY = booleanPreferencesKey("user_bot_tip_shown")
         private val USER_BOT_RECALL_SENDER_IDS_KEY = stringPreferencesKey("user_bot_recall_sender_ids")
-
-        private const val LAUNCHER_ALIAS_SUFFIX = ".LauncherAlias"
-        private const val DEFAULT_SECRET_CODE = "2468"
+        private val APP_LOCK_ENABLED_KEY = booleanPreferencesKey("app_lock_enabled")
+        private val APP_LOCK_PIN_HASH_KEY = stringPreferencesKey("app_lock_pin_hash")
+        private val APP_LOCK_LOCK_ON_BACKGROUND_KEY = booleanPreferencesKey("app_lock_lock_on_background")
     }
 
     private fun <T> preferenceFlow(key: Preferences.Key<T>, default: T): Flow<T> =
@@ -93,6 +91,10 @@ class SettingsStorage(private val context: Context) {
     val showStickyFlow = preferenceFlow(SHOW_STICKY_KEY, true)
     suspend fun getShowSticky() = getPreference(SHOW_STICKY_KEY, true)
     suspend fun setShowSticky(value: Boolean) = setPreference(SHOW_STICKY_KEY, value)
+
+    val mergeStickyFlow = preferenceFlow(MERGE_STICKY_KEY, false)
+    suspend fun getMergeSticky() = getPreference(MERGE_STICKY_KEY, false)
+    suspend fun setMergeSticky(value: Boolean) = setPreference(MERGE_STICKY_KEY, value)
 
     val isFloatBottomBarEnabledFlow = preferenceFlow(FLOAT_BOTTOM_BAR_KEY, true)
     suspend fun getFloatBottomBar() = getPreference(FLOAT_BOTTOM_BAR_KEY, true)
@@ -184,31 +186,45 @@ class SettingsStorage(private val context: Context) {
     suspend fun getUserBotRecallSenderIds() = getPreference(USER_BOT_RECALL_SENDER_IDS_KEY, "")
     suspend fun setUserBotRecallSenderIds(ids: String) = setPreference(USER_BOT_RECALL_SENDER_IDS_KEY, ids)
 
-    val hideLauncherFlow = preferenceFlow(HIDE_LAUNCHER_KEY, false)
+    val appLockEnabledFlow = preferenceFlow(APP_LOCK_ENABLED_KEY, false)
+    suspend fun getAppLockEnabled() = getPreference(APP_LOCK_ENABLED_KEY, false)
+    suspend fun setAppLockEnabled(enabled: Boolean) =
+        setPreference(APP_LOCK_ENABLED_KEY, enabled)
 
-    suspend fun getHideLauncher() = getPreference(HIDE_LAUNCHER_KEY, false)
+    val appLockLockOnBackgroundFlow =
+        preferenceFlow(APP_LOCK_LOCK_ON_BACKGROUND_KEY, true)
+    suspend fun getAppLockLockOnBackground() =
+        getPreference(APP_LOCK_LOCK_ON_BACKGROUND_KEY, true)
+    suspend fun setAppLockLockOnBackground(enabled: Boolean) =
+        setPreference(APP_LOCK_LOCK_ON_BACKGROUND_KEY, enabled)
 
-    suspend fun setHideLauncher(hidden: Boolean) {
-        setPreference(HIDE_LAUNCHER_KEY, hidden)
-        applyLauncherVisibility(hidden)
+    suspend fun getAppLockPinHash(): String? =
+        dataStore.data.first()[APP_LOCK_PIN_HASH_KEY]
+
+    suspend fun setAppLockPin(pin: String) {
+        val hash = hashPin(pin)
+        dataStore.edit {
+            it[APP_LOCK_PIN_HASH_KEY] = hash
+            it[APP_LOCK_ENABLED_KEY] = true
+        }
     }
 
-    fun applyLauncherVisibility(hidden: Boolean) {
-        val alias = ComponentName(
-            context.packageName,
-            context.packageName + LAUNCHER_ALIAS_SUFFIX
-        )
-        val newState = if (hidden) {
-            PackageManager.COMPONENT_ENABLED_STATE_DISABLED
-        } else {
-            PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+    suspend fun verifyAppLockPin(pin: String): Boolean {
+        val stored = getAppLockPinHash() ?: return false
+        return stored == hashPin(pin)
+    }
+
+    suspend fun clearAppLock() {
+        dataStore.edit {
+            it.remove(APP_LOCK_ENABLED_KEY)
+            it.remove(APP_LOCK_PIN_HASH_KEY)
+            it.remove(APP_LOCK_LOCK_ON_BACKGROUND_KEY)
         }
-        runCatching {
-            context.packageManager.setComponentEnabledSetting(
-                alias,
-                newState,
-                PackageManager.DONT_KILL_APP
-            )
-        }
+    }
+
+    private fun hashPin(pin: String): String {
+        val digest = java.security.MessageDigest.getInstance("SHA-256")
+        val bytes = digest.digest(("murexide_app_lock_v1:" + pin).toByteArray())
+        return bytes.joinToString("") { "%02x".format(it) }
     }
 }

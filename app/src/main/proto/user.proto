@@ -61,12 +61,6 @@ message get_user {
     }
 }
 
-// 勋章
-message medal {
-    Status status = 1;
-    repeated Medal_info medal = 2;
-}
-
 // 勋章信息
 message Medal_info {
     int64 id = 1;

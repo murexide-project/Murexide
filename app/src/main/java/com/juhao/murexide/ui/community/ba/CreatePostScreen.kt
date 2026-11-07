@@ -4,10 +4,10 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import com.juhao.murexide.ui.icons.AppIcons
-
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -22,6 +22,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.juhao.murexide.ui.components.*
+import com.juhao.murexide.ui.icons.AppIcons
 import com.juhao.murexide.utils.QiniuUploader
 import kotlinx.coroutines.launch
 
@@ -46,6 +47,7 @@ fun CreatePostScreen(
     val scope = rememberCoroutineScope()
     val focusRequester = remember { FocusRequester() }
     var uploading by remember { mutableStateOf(false) }
+    var isPreviewMode by remember { mutableStateOf(false) }
 
     var contentFieldValue by remember {
         mutableStateOf(TextFieldValue(content, TextRange(content.length)))
@@ -66,6 +68,12 @@ fun CreatePostScreen(
         if (!contentInitialized) {
             contentFieldValue = TextFieldValue(content, TextRange(content.length))
             contentInitialized = true
+        }
+    }
+
+    LaunchedEffect(uiState.contentType) {
+        if (uiState.contentType != 2) {
+            isPreviewMode = false
         }
     }
 
@@ -135,30 +143,39 @@ fun CreatePostScreen(
             BottomAppBar(
                 actions = {
                     if (uiState.contentType == 2) {
-                        IconButton(onClick = { insertAtCursor("# ") }) {
-                            Icon(AppIcons.Tag, contentDescription = "标题")
+                        FilledTonalIconButton(onClick = { isPreviewMode = !isPreviewMode }) {
+                            Icon(
+                                imageVector = if (isPreviewMode) AppIcons.Edit else AppIcons.Visibility,
+                                contentDescription = if (isPreviewMode) "编辑" else "预览"
+                            )
                         }
-                        IconButton(onClick = { insertAtCursor("**粗体**") }) {
-                            Icon(AppIcons.FormatBold, contentDescription = "粗体")
-                        }
-                        IconButton(onClick = { insertAtCursor("[]()") }) {
-                            Icon(AppIcons.Link, contentDescription = "链接")
-                        }
-                        IconButton(
-                            onClick = {
-                                imagePicker.launch(
-                                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                                )
-                            },
-                            enabled = !uploading
-                        ) {
-                            if (uploading) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(18.dp),
-                                    strokeWidth = 2.dp
-                                )
-                            } else {
-                                Icon(AppIcons.Image, contentDescription = "插入图片")
+
+                        if (!isPreviewMode) {
+                            IconButton(onClick = { insertAtCursor("# ") }) {
+                                Icon(AppIcons.Tag, contentDescription = "标题")
+                            }
+                            IconButton(onClick = { insertAtCursor("**粗体**") }) {
+                                Icon(AppIcons.FormatBold, contentDescription = "粗体")
+                            }
+                            IconButton(onClick = { insertAtCursor("[]()") }) {
+                                Icon(AppIcons.Link, contentDescription = "链接")
+                            }
+                            IconButton(
+                                onClick = {
+                                    imagePicker.launch(
+                                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                    )
+                                },
+                                enabled = !uploading
+                            ) {
+                                if (uploading) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(18.dp),
+                                        strokeWidth = 2.dp
+                                    )
+                                } else {
+                                    Icon(AppIcons.Image, contentDescription = "插入图片")
+                                }
                             }
                         }
                     }
@@ -217,18 +234,43 @@ fun CreatePostScreen(
 
             Spacer(Modifier.height(12.dp))
 
-            OutlinedTextField(
-                value = contentFieldValue,
-                onValueChange = { newValue ->
-                    contentFieldValue = newValue
-                    viewModel.onContentChange(newValue.text)
-                },
-                label = { Text(if (uiState.contentType == 2) "内容（支持 Markdown）" else "内容") },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 240.dp)
-                    .focusRequester(focusRequester)
-            )
+            if (uiState.contentType == 2 && isPreviewMode) {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 240.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerLow,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+                ) {
+                    Box(modifier = Modifier.padding(16.dp)) {
+                        if (uiState.content.isBlank()) {
+                            Text(
+                                "暂无内容",
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        } else {
+                            MarkdownText(
+                                markdown = uiState.content,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                    }
+                }
+            } else {
+                OutlinedTextField(
+                    value = contentFieldValue,
+                    onValueChange = { newValue ->
+                        contentFieldValue = newValue
+                        viewModel.onContentChange(newValue.text)
+                    },
+                    label = { Text(if (uiState.contentType == 2) "内容（支持 Markdown）" else "内容") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 240.dp)
+                        .focusRequester(focusRequester)
+                )
+            }
         }
     }
 }

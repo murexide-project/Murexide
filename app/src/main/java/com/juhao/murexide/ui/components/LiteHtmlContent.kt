@@ -1,7 +1,7 @@
 package com.juhao.murexide.ui.components
 
-import android.content.ClipData
-import android.content.ClipboardManager
+import android.content.Intent
+import android.net.Uri
 import android.content.Context
 import android.widget.Toast
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -94,9 +94,14 @@ internal fun handleStaticHtmlLink(context: Context, url: String) {
         UrlSchemeHandler.handle(context, url)
         return
     }
-    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-    clipboard.setPrimaryClip(ClipData.newPlainText("URL", url))
-    Toast.makeText(context, "链接已复制", Toast.LENGTH_SHORT).show()
+    try {
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        context.startActivity(intent)
+    } catch (e: Exception) {
+        Toast.makeText(context, "无法打开链接", Toast.LENGTH_SHORT).show()
+    }
 }
 
 internal fun buildMessageCss(

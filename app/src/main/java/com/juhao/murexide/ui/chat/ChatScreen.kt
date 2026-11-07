@@ -1161,6 +1161,22 @@ fun ChatScreen(
                                                 )
                                             }
                                         )
+                                        if (chatType == 2) {
+                                            DropdownMenuItem(
+                                                text = { Text("我的群名称") },
+                                                onClick = {
+                                                    showMoreMenu = false
+                                                    showEditNickNameDialog = true
+                                                },
+                                                leadingIcon = {
+                                                    Icon(
+                                                        AppIcons.DriveFileRenameOutline,
+                                                        contentDescription = null,
+                                                        modifier = Modifier.size(24.dp)
+                                                    )
+                                                }
+                                            )
+                                        }
                                         DropdownMenuItem(
                                             text = { Text("会话详情") },
                                             onClick = {
@@ -1549,7 +1565,7 @@ fun ChatScreen(
                                     isReturningToKeyboard = false
                                     isMeasuringIme = false
                                 },
-                                limitedMsgType = uiState.limitedMsgType,
+                                limitedMsgType = if (uiState.isAdmin) emptyList() else uiState.limitedMsgType,
                                 accounts = sendAccounts,
                                 activeAccountId = activeSendAccountId,
                                 onSwitchAccount = { account ->
@@ -2018,7 +2034,9 @@ fun ChatScreen(
             hasMore = uiState.groupMembers.hasMore,
             onLoadMore = { viewModel.loadGroupMembers() },
             onMemberClick = { member -> viewModel.selectMention(member) },
-            onDismiss = { viewModel.hideMentionPicker() }
+            onDismiss = { viewModel.hideMentionPicker() },
+            searchQuery = uiState.mentionPicker.keyword,
+            onSearchChange = { viewModel.searchMentionMembers(it) }
         )
     }
 

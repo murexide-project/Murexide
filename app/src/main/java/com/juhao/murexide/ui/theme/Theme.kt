@@ -24,6 +24,14 @@ import androidx.core.view.WindowCompat
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 
+private const val CUSTOM_PREFIX = "CUSTOM_"
+
+private fun parseCustomColor(value: String): Color? {
+    if (!value.startsWith(CUSTOM_PREFIX)) return null
+    val argb = value.removePrefix(CUSTOM_PREFIX).toLongOrNull() ?: return null
+    return Color(argb.toInt())
+}
+
 private fun whiteOledColorScheme(): ColorScheme {
     val baseColors = WhiteDarkColorScheme
     return darkColorScheme(
@@ -116,6 +124,14 @@ fun MurexideTheme(
     val darkTheme = usesDarkTheme(themeMode, isSystemInDarkTheme())
 
     val scheme = when {
+        themeColor.startsWith(CUSTOM_PREFIX) -> {
+            val custom = parseCustomColor(themeColor) ?: Color(0xFF9BD7FF)
+            buildCustomColorScheme(
+                base = if (darkTheme) neutralBaseForCustom else dayNeutralBaseForCustom,
+                customColor = custom,
+                isDay = !darkTheme
+            )
+        }
         themeColor == "WHITE" -> if (darkTheme) WhiteDarkColorScheme else WhiteLightColorScheme
         themeColor == "DYNAMIC" && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ->
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)

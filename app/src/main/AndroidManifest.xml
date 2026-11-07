@@ -23,23 +23,23 @@
 
         <activity
             android:name=".MainActivity"
-            android:exported="false"
-            android:theme="@style/Theme.App.Starting"
-            android:windowSoftInputMode="adjustResize" />
-
-        <activity-alias
-            android:name=".LauncherAlias"
-            android:enabled="true"
             android:exported="true"
-            android:icon="@mipmap/ic_launcher"
-            android:label="@string/app_name"
-            android:targetActivity=".MainActivity">
+            android:theme="@style/Theme.App.Starting"
+            android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-        </activity-alias>
-        
+        </activity>
+
+        <activity
+            android:name=".ui.lock.GateActivity"
+            android:exported="false"
+            android:launchMode="singleTop"
+            android:excludeFromRecents="true"
+            android:theme="@style/Theme.Murexide"
+            android:windowSoftInputMode="adjustResize" />
+
         <activity
             android:name=".ui.share.ShareReceiverActivity"
             android:exported="true"
@@ -76,17 +76,6 @@
                 <data android:mimeType="video/*" />
             </intent-filter>
         </activity>
-
-        <receiver
-            android:name=".receiver.SecretCodeReceiver"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.provider.Telephony.SECRET_CODE" />
-                <data
-                    android:scheme="android_secret_code"
-                    android:host="2468" />
-            </intent-filter>
-        </receiver>
 
         <activity
             android:name=".ui.chatsearch.ChatSearchActivity"
