@@ -18,9 +18,9 @@ android {
     defaultConfig {
         applicationId = "com.juhao.murexide"
         minSdk = 24
-        targetSdk = 36
+        targetSdk = 37
         versionCode = 1
-        versionName = "0.0.6"
+        versionName = "1.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 

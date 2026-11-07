@@ -125,6 +125,34 @@ private fun TagListPage(
                     text = { Text("新建标签") }
                 )
             }
+        },
+        extraContent = {
+            SearchBar(
+                query = state.keyword,
+                onQueryChange = viewModel::searchTags,
+                onSearch = {},
+                active = false,
+                onActiveChange = {},
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp),
+                enabled = true,
+                placeholder = { Text("搜索标签") },
+                leadingIcon = { Icon(AppIcons.Search, contentDescription = null) },
+                trailingIcon = {
+                    if (state.keyword.isNotEmpty()) {
+                        IconButton(onClick = { viewModel.searchTags("") }) {
+                            Icon(AppIcons.Close, contentDescription = "清除")
+                        }
+                    }
+                },
+                shape = SearchBarDefaults.inputFieldShape,
+                colors = SearchBarDefaults.colors(),
+                tonalElevation = SearchBarDefaults.TonalElevation,
+                shadowElevation = SearchBarDefaults.ShadowElevation,
+                windowInsets = WindowInsets(0),
+                interactionSource = null
+            ) {}
         }
     ) { padding ->
         when {
@@ -156,34 +184,6 @@ private fun TagListPage(
                     bottom = padding.calculateBottomPadding() + 88.dp
                 )
             ) {
-                item(key = "tags-search") {
-                    SearchBar(
-                        query = state.keyword,
-                        onQueryChange = viewModel::searchTags,
-                        onSearch = {},
-                        active = false,
-                        onActiveChange = {},
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 12.dp, vertical = 4.dp),
-                        enabled = true,
-                        placeholder = { Text("搜索标签") },
-                        leadingIcon = { Icon(AppIcons.Search, contentDescription = null) },
-                        trailingIcon = {
-                            if (state.keyword.isNotEmpty()) {
-                                IconButton(onClick = { viewModel.searchTags("") }) {
-                                    Icon(AppIcons.Close, contentDescription = "清除")
-                                }
-                            }
-                        },
-                        shape = SearchBarDefaults.inputFieldShape,
-                        colors = SearchBarDefaults.colors(),
-                        tonalElevation = SearchBarDefaults.TonalElevation,
-                        shadowElevation = SearchBarDefaults.ShadowElevation,
-                        windowInsets = WindowInsets(0),
-                        interactionSource = null
-                    ) {}
-                }
                 items(state.tags, key = { it.id }) { tag ->
                     TagRow(
                         isAdmin = isAdmin,
@@ -326,6 +326,34 @@ private fun TagMemberPage(
             IconButton(onClick = viewModel::closeTag) {
                 AutoMirroredIcon(AppIcons.ArrowBack, contentDescription = "返回")
             }
+        },
+        extraContent = {
+            SearchBar(
+                query = state.memberKeyword,
+                onQueryChange = viewModel::searchMembers,
+                onSearch = {},
+                active = false,
+                onActiveChange = {},
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp),
+                enabled = true,
+                placeholder = { Text("搜索成员") },
+                leadingIcon = { Icon(AppIcons.Search, contentDescription = null) },
+                trailingIcon = {
+                    if (state.memberKeyword.isNotEmpty()) {
+                        IconButton(onClick = { viewModel.searchMembers("") }) {
+                            Icon(AppIcons.Close, contentDescription = "清除")
+                        }
+                    }
+                },
+                shape = SearchBarDefaults.inputFieldShape,
+                colors = SearchBarDefaults.colors(),
+                tonalElevation = SearchBarDefaults.TonalElevation,
+                shadowElevation = SearchBarDefaults.ShadowElevation,
+                windowInsets = WindowInsets(0),
+                interactionSource = null
+            ) {}
         }
     ) { padding ->
         when {
@@ -349,34 +377,6 @@ private fun TagMemberPage(
                     bottom = padding.calculateBottomPadding()
                 )
             ) {
-                item(key = "members-search") {
-                    SearchBar(
-                        query = state.memberKeyword,
-                        onQueryChange = viewModel::searchMembers,
-                        onSearch = {},
-                        active = false,
-                        onActiveChange = {},
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 12.dp, vertical = 4.dp),
-                        enabled = true,
-                        placeholder = { Text("搜索成员") },
-                        leadingIcon = { Icon(AppIcons.Search, contentDescription = null) },
-                        trailingIcon = {
-                            if (state.memberKeyword.isNotEmpty()) {
-                                IconButton(onClick = { viewModel.searchMembers("") }) {
-                                    Icon(AppIcons.Close, contentDescription = "清除")
-                                }
-                            }
-                        },
-                        shape = SearchBarDefaults.inputFieldShape,
-                        colors = SearchBarDefaults.colors(),
-                        tonalElevation = SearchBarDefaults.TonalElevation,
-                        shadowElevation = SearchBarDefaults.ShadowElevation,
-                        windowInsets = WindowInsets(0),
-                        interactionSource = null
-                    ) {}
-                }
                 items(state.members, key = { it.userId }) { member ->
                     TagMemberRow(
                         member = member,

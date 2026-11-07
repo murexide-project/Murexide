@@ -674,6 +674,7 @@ private fun GroupConversationDetail(
     onBotPermission: (BotItem) -> Unit,
     onOpenBot: (BotItem) -> Unit
 ) {
+    val context = LocalContext.current
     var introductionExpanded by remember(detail.introduction) { mutableStateOf(false) }
     val cardColor = MaterialTheme.colorScheme.surfaceContainerHigh
     val mediaRows = media.chunked(3)
@@ -746,7 +747,17 @@ private fun GroupConversationDetail(
                     CapsuleTabBar(
                         tabs = labels,
                         selectedTabIndex = selectedTab,
-                        onTabSelected = onTabSelected,
+                        onTabSelected = { index ->
+                            if (index == 3) {
+                                DiskActivity.start(
+                                    context = context,
+                                    chatId = detail.chatId,
+                                    canManage = detail.permissionLevel >= 2
+                                )
+                            } else {
+                                onTabSelected(index)
+                            }
+                        },
                         modifier = Modifier.padding(12.dp)
                     )
                 }
@@ -869,7 +880,7 @@ private fun GroupConversationDetail(
                     }
                 }
 
-                2 -> when {
+                else -> when {
                     isLoadingHistory && media.isEmpty() -> item(key = "media-loading") {
                         DetailCardSegment(
                             cardColor,
@@ -908,14 +919,6 @@ private fun GroupConversationDetail(
                             }
                         }
                     }
-                }
-
-                else -> item(key = "cloud-drive") {
-                    DetailCardSegment(
-                        cardColor,
-                        isBottom = true,
-                        minHeight = 180.dp
-                    ) { EmptyContent("群云盘功能即将推出") }
                 }
             }
         }

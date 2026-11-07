@@ -68,6 +68,7 @@ fun StyledScaffold(
     topBarScrollBehavior: TopAppBarScrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(),
     snackbarHost: (@Composable () -> Unit)? = null,
     isMediumTopAppBarDisabled: Boolean = false,
+    extraContent: @Composable () -> Unit = {},
     content: @Composable (PaddingValues) -> Unit
 ) {
     val hazeState = rememberHazeState()
@@ -107,7 +108,7 @@ fun StyledScaffold(
     Scaffold(
         modifier = modifier,
         topBar = {
-            Box(
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .then(
@@ -129,6 +130,7 @@ fun StyledScaffold(
                     scrollBehavior = topBarScrollBehavior,
                     isMediumTopAppBarDisabled = isMediumTopAppBarDisabled
                 )
+                extraContent()
             }
         },
         bottomBar = bottomBar,

@@ -4,6 +4,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -21,15 +22,17 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.juhao.murexide.data.StickerPack
 import com.juhao.murexide.data.resolveStickerUrl
 import com.juhao.murexide.datastore.AccountStorage
 import com.juhao.murexide.ui.icons.AppIcons
+import com.juhao.murexide.ui.components.*
+import kotlinx.coroutines.isActive
 import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
@@ -44,8 +47,6 @@ fun StickerPackManagerScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val accountStorage = remember { AccountStorage.getInstance(context) }
     var currentUserId by remember { mutableStateOf("") }
-    
-    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
 
     var showCreateDialog by remember { mutableStateOf(false) }
     var packToRemove by remember { mutableStateOf<StickerPack?>(null) }
@@ -59,63 +60,118 @@ fun StickerPackManagerScreen(
     }
 
     val listState = rememberLazyListState()
+    val packsState = rememberUpdatedState(state.packs)
     var draggingPackId by remember { mutableStateOf<Long?>(null) }
+    var fingerY by remember { mutableFloatStateOf(0f) }
+    var overlayTop by remember { mutableFloatStateOf(0f) }
+    var scrollSpeed by remember { mutableFloatStateOf(0f) }
     var dragOffsetY by remember { mutableFloatStateOf(0f) }
-    val itemHeightPx = remember { with(density) { 76.dp.toPx() } }
+    val touchOffsetY = remember { floatArrayOf(0f) }
+    val dragIndex = remember { intArrayOf(-1) }
+    val dragItemHeight = remember { floatArrayOf(0f) }
+    val edgePx = remember(density) { with(density) { 64.dp.toPx() } }
+    val maxSpeedPx = remember(density) { with(density) { 900.dp.toPx() } }
+    val maxStepPx = remember(density) { with(density) { 36.dp.toPx() } }
 
-    val currentPacks by rememberUpdatedState(state.packs)
+    fun clampToViewport(y: Float): Float {
+        val layout = listState.layoutInfo
+        val top = layout.beforeContentPadding.toFloat()
+        val bottom = (layout.viewportEndOffset - layout.afterContentPadding).toFloat()
+        return y.coerceIn(top, bottom)
+    }
 
-    Scaffold(
-        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
-        topBar = {
-            TopAppBar(
-                title = { Text("管理表情包") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(AppIcons.ArrowBack, contentDescription = "返回")
-                    }
-                },
-                scrollBehavior = scrollBehavior,
-                actions = {
-                    IconButton(onClick = { showCreateDialog = true }) {
-                        Icon(AppIcons.Add, contentDescription = "新建表情包")
-                    }
-                }
-            )
+    fun refreshScrollSpeed(y: Float) {
+        val layout = listState.layoutInfo
+        val top = layout.beforeContentPadding.toFloat()
+        val bottom = (layout.viewportEndOffset - layout.afterContentPadding).toFloat()
+        if (bottom <= top) {
+            scrollSpeed = 0f
+            return
+        }
+        scrollSpeed = when {
+            y < top + edgePx && listState.canScrollBackward ->
+                -maxSpeedPx * ((top + edgePx - y) / edgePx).coerceIn(0f, 1f)
+            y > bottom - edgePx && listState.canScrollForward ->
+                maxSpeedPx * ((y - (bottom - edgePx)) / edgePx).coerceIn(0f, 1f)
+            else -> 0f
+        }
+    }
+
+    fun reorderByOffset() {
+        val id = draggingPackId ?: return
+        val from = dragIndex[0]
+        if (from < 0) return
+        val height = dragItemHeight[0]
+        if (height <= 0f) return
+        val steps = (dragOffsetY / height).roundToInt()
+        if (steps == 0) return
+        val total = packsState.value.size
+        val to = (from + steps).coerceIn(0, total - 1)
+        if (to == from) {
+            dragOffsetY -= steps * height
+            return
+        }
+        viewModel.move(from, to)
+        dragIndex[0] = to
+        dragOffsetY -= steps * height
+    }
+
+    LaunchedEffect(draggingPackId) {
+        if (draggingPackId == null) return@LaunchedEffect
+        var last = withFrameNanos { it }
+        while (isActive) {
+            val frame = withFrameNanos { it }
+            val dt = ((frame - last) / 1_000_000_000f).coerceIn(0f, 0.034f)
+            last = frame
+            val speed = scrollSpeed
+            if (speed != 0f) {
+                val step = (speed * dt).coerceIn(-maxStepPx, maxStepPx)
+                listState.scrollBy(step)
+                reorderByOffset()
+            }
+        }
+    }
+
+    StyledScaffold(
+        title = { Text("管理表情包") },
+        navigationIcon = {
+            IconButton(onClick = onBack) {
+                Icon(AppIcons.ArrowBack, contentDescription = "返回")
+            }
+        },
+        actions = {
+            IconButton(onClick = { showCreateDialog = true }) {
+                Icon(AppIcons.Add, contentDescription = "新建表情包")
+            }
         },
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { innerPadding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-        ) {
+        Box(modifier = Modifier.fillMaxSize()) {
             when {
                 state.isLoading && state.packs.isEmpty() -> {
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Box(
+                        Modifier.fillMaxSize().padding(innerPadding),
+                        contentAlignment = Alignment.Center
+                    ) {
                         CircularProgressIndicator()
                     }
                 }
 
-                state.error != null && state.packs.isEmpty() -> {
-                    Column(
-                        modifier = Modifier.fillMaxSize(),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Text("加载失败", color = MaterialTheme.colorScheme.error)
-                        Spacer(Modifier.height(8.dp))
-                        Text(state.error ?: "")
-                        Spacer(Modifier.height(16.dp))
+                state.error != null && state.packs.isEmpty() -> EmptyPlaceholder(
+                    modifier = Modifier.fillMaxSize().padding(innerPadding),
+                    icon = AppIcons.Warning,
+                    title = "加载失败",
+                    subtitle = state.error,
+                    primaryButton = {
                         Button(onClick = { viewModel.load() }) { Text("重试") }
                     }
-                }
+                )
 
                 else -> {
                     LazyColumn(
                         state = listState,
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(8.dp),
+                        contentPadding = innerPadding,
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         itemsIndexed(
@@ -123,52 +179,10 @@ fun StickerPackManagerScreen(
                             key = { _, pack -> pack.id }
                         ) { _, pack ->
                             val isDragging = draggingPackId == pack.id
-
-                            val baseModifier = Modifier
-                                .zIndex(if (isDragging) 10f else 0f)
-                                .then(
-                                    if (isDragging) Modifier else Modifier.animateItem()
-                                )
-                                .pointerInput(pack.id) {
-                                    detectDragGesturesAfterLongPress(
-                                        onDragStart = {
-                                            draggingPackId = pack.id
-                                            dragOffsetY = 0f
-                                        },
-                                        onDrag = { change, dragAmount ->
-                                            change.consume()
-                                            dragOffsetY += dragAmount.y
-
-                                            val currentIndex = currentPacks
-                                                .indexOfFirst { it.id == pack.id }
-                                            if (currentIndex == -1) return@detectDragGesturesAfterLongPress
-
-                                            val steps = (dragOffsetY / itemHeightPx).roundToInt()
-                                            if (steps != 0) {
-                                                val target = (currentIndex + steps)
-                                                    .coerceIn(0, currentPacks.size - 1)
-                                                if (target != currentIndex) {
-                                                    viewModel.move(currentIndex, target)
-                                                    dragOffsetY -= steps * itemHeightPx
-                                                }
-                                            }
-                                        },
-                                        onDragEnd = {
-                                            draggingPackId = null
-                                            dragOffsetY = 0f
-                                            viewModel.persistSort()
-                                        },
-                                        onDragCancel = {
-                                            draggingPackId = null
-                                            dragOffsetY = 0f
-                                        }
-                                    )
-                                }
-
                             StickerPackRow(
                                 pack = pack,
-                                isDragging = isDragging,
-                                dragOffsetY = if (isDragging) dragOffsetY else 0f,
+                                isDragging = false,
+                                dragOffsetY = 0f,
                                 onClick = {
                                     if (draggingPackId == null) {
                                         StickerDetailActivity.start(
@@ -180,11 +194,87 @@ fun StickerPackManagerScreen(
                                     }
                                 },
                                 onRemove = { packToRemove = pack },
-                                modifier = baseModifier
+                                modifier = Modifier
+                                    .then(
+                                        if (!isDragging) Modifier.animateItem()
+                                        else Modifier
+                                    )
+                                    .graphicsLayer { alpha = if (isDragging) 0f else 1f }
+                                    .pointerInput(pack.id) {
+                                        detectDragGesturesAfterLongPress(
+                                            onDragStart = { start ->
+                                                val info = listState.layoutInfo.visibleItemsInfo
+                                                    .firstOrNull { it.key == pack.id }
+                                                    ?: return@detectDragGesturesAfterLongPress
+                                                val index = packsState.value.indexOfFirst { it.id == pack.id }
+                                                if (index < 0) return@detectDragGesturesAfterLongPress
+                                                draggingPackId = pack.id
+                                                touchOffsetY[0] = start.y
+                                                dragItemHeight[0] = info.size.toFloat().coerceAtLeast(1f)
+                                                dragIndex[0] = index
+                                                dragOffsetY = 0f
+                                                fingerY = clampToViewport(info.offset + start.y)
+                                                overlayTop = fingerY - touchOffsetY[0]
+                                                refreshScrollSpeed(fingerY)
+                                            },
+                                            onDrag = { change, dragAmount ->
+                                                if (draggingPackId != pack.id) {
+                                                    return@detectDragGesturesAfterLongPress
+                                                }
+                                                change.consume()
+                                                dragOffsetY += dragAmount.y
+                                                val info = listState.layoutInfo.visibleItemsInfo
+                                                    .firstOrNull { it.key == pack.id }
+                                                val rawFingerY = if (info != null) {
+                                                    info.offset + change.position.y
+                                                } else {
+                                                    fingerY + dragAmount.y
+                                                }
+                                                fingerY = clampToViewport(rawFingerY)
+                                                overlayTop = fingerY - touchOffsetY[0]
+                                                refreshScrollSpeed(fingerY)
+                                                reorderByOffset()
+                                            },
+                                            onDragEnd = {
+                                                scrollSpeed = 0f
+                                                draggingPackId = null
+                                                dragIndex[0] = -1
+                                                dragOffsetY = 0f
+                                                viewModel.persistSort()
+                                            },
+                                            onDragCancel = {
+                                                scrollSpeed = 0f
+                                                draggingPackId = null
+                                                dragIndex[0] = -1
+                                                dragOffsetY = 0f
+                                            }
+                                        )
+                                    }
                             )
                         }
                     }
                 }
+            }
+
+            val draggingPack = draggingPackId?.let { id ->
+                state.packs.firstOrNull { it.id == id }
+            }
+            if (draggingPack != null) {
+                val topPaddingPx = with(density) { innerPadding.calculateTopPadding().toPx() }
+                StickerPackRow(
+                    pack = draggingPack,
+                    isDragging = true,
+                    dragOffsetY = 0f,
+                    onClick = {},
+                    onRemove = {},
+                    interactive = false,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .zIndex(10f)
+                        .offset {
+                            IntOffset(0, (overlayTop + topPaddingPx).roundToInt())
+                        }
+                )
             }
         }
     }
@@ -249,7 +339,8 @@ private fun StickerPackRow(
     dragOffsetY: Float,
     onClick: () -> Unit,
     onRemove: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    interactive: Boolean = true
 ) {
     val context = LocalContext.current
     val coverUrl = pack.stickerItems.firstOrNull()?.url
@@ -276,10 +367,11 @@ private fun StickerPackRow(
         shadowElevation = if (isDragging) 8.dp else 0.dp,
         modifier = modifier
             .fillMaxWidth()
-            .graphicsLayer {
-                translationY = dragOffsetY
-            }
-            .combinedClickable(onClick = onClick)
+            .graphicsLayer { translationY = dragOffsetY }
+            .then(
+                if (interactive) Modifier.combinedClickable(onClick = onClick)
+                else Modifier
+            )
     ) {
         Row(
             modifier = Modifier
@@ -328,13 +420,27 @@ private fun StickerPackRow(
                 )
             }
 
-            IconButton(onClick = onRemove) {
-                Icon(
-                    imageVector = AppIcons.Delete,
-                    contentDescription = "移除",
-                    modifier = Modifier.size(20.dp),
-                    tint = MaterialTheme.colorScheme.error
-                )
+            if (interactive) {
+                IconButton(onClick = onRemove) {
+                    Icon(
+                        imageVector = AppIcons.Delete,
+                        contentDescription = "移除",
+                        modifier = Modifier.size(20.dp),
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                }
+            } else {
+                Box(
+                    modifier = Modifier.size(48.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = AppIcons.Delete,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                }
             }
 
             Icon(

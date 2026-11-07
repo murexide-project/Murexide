@@ -189,3 +189,55 @@ data class CreatePostResponse(
 data class CreatePostData(
     val audioUrl: Int? = null
 )
+
+@Serializable
+data class SearchResponse(
+    val code: Int = 0,
+    val msg: String = "",
+    val data: SearchData? = null
+)
+
+@Serializable
+data class SearchData(
+    val ba: List<BaItem> = emptyList(),
+    val posts: List<SearchPostItem> = emptyList()
+)
+
+@Serializable
+data class SearchPostItem(
+    val id: Int = 0,
+    val baId: Int = 0,
+    val senderId: String = "",
+    val senderNickname: String = "",
+    val senderAvatar: String = "",
+    val title: String = "",
+    val content: String = "",
+    val contentType: Int = 1,
+    val createTimeText: String = "",
+    val likeNum: Int = 0,
+    val commentNum: Int = 0,
+    val collectNum: Int = 0,
+    val isLiked: String = "0",
+    val isCollected: Int = 0,
+    val isReward: Int = 0,
+    val group: GroupInfo? = null
+) {
+    fun toPostItem(): PostItem = PostItem(
+        id = id,
+        baId = baId,
+        senderId = senderId,
+        senderNickname = senderNickname,
+        senderAvatar = senderAvatar,
+        title = title,
+        content = content,
+        contentType = contentType,
+        createTimeText = createTimeText,
+        likeNum = likeNum,
+        commentNum = commentNum,
+        collectNum = collectNum,
+        isLiked = isLiked,
+        isCollected = isCollected,
+        isReward = isReward,
+        group = group
+    )
+}

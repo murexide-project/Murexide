@@ -64,6 +64,7 @@ object AppIcons {
     val Face get() = MaterialSymbols.Rounded.Face
     val Favorite get() = MaterialSymbols.RoundedFilled.Favorite
     val FavoriteBorder get() = MaterialSymbols.Rounded.Favorite
+    val Folder get() = MaterialSymbols.Rounded.Folder
     val FolderZip get() = MaterialSymbols.Rounded.Folder_zip
     val FormatBold get() = MaterialSymbols.Rounded.Format_bold
     val FormatQuote get() = MaterialSymbols.Rounded.Format_quote

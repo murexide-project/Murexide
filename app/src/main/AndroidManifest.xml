@@ -238,6 +238,11 @@
             android:name=".ui.settings.switchAccount.SwitchAccountActivity"
             android:exported="false"
             android:theme="@style/Theme.Murexide" />
+        <activity
+            android:name=".ui.conversationdetail.DiskActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Murexide"
+            android:windowSoftInputMode="adjustResize" />
 
         <provider
             android:name="androidx.core.content.FileProvider"

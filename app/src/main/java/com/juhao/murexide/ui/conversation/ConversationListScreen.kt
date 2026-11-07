@@ -17,9 +17,10 @@ import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.anchoredDraggable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
-import androidx.compose.foundation.text.input.rememberTextFieldState
-import androidx.compose.foundation.text.input.clearText
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.input.clearText
+import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
@@ -27,21 +28,14 @@ import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.clearAndSetSemantics
-import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.positionInWindow
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import com.juhao.murexide.R
 import com.juhao.murexide.datastore.SettingsStorage
 import com.juhao.murexide.datastore.AccountStorage
 import com.juhao.murexide.data.ConversationItem
@@ -52,7 +46,6 @@ import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
-import androidx.compose.foundation.shape.CircleShape
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.juhao.murexide.ui.conversationdetail.ConversationDetailActivity
@@ -63,7 +56,6 @@ fun ConversationListScreen(
     modifier: Modifier = Modifier,
     token: String,
     accountId: String,
-    accountAvatar: String,
     innerPadding: PaddingValues,
     bigScreenMode: Boolean,
     onConversationClick: (ConversationItem) -> Unit,
@@ -88,10 +80,7 @@ fun ConversationListScreen(
     )
 
     val drafts by viewModel.drafts.collectAsState()
-
-    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
     val uiState by viewModel.uiState.collectAsState()
-    val isWsConnected by viewModel.isWsConnected.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
     val filter by viewModel.filter.collectAsState()
 
@@ -107,6 +96,13 @@ fun ConversationListScreen(
     val pullToRefreshState = rememberPullToRefreshState()
 
     var openSwipeKey by remember { mutableStateOf<String?>(null) }
+    var showCreateMenu by remember { mutableStateOf(false) }
+
+    val showSearchInTopBar by remember {
+        derivedStateOf {
+            listState.firstVisibleItemIndex > 0
+        }
+    }
 
     LaunchedEffect(uiState) {
         if (uiState is ConversationUiState.Success) {
@@ -114,7 +110,6 @@ fun ConversationListScreen(
             if (conversations.isNotEmpty()) {
                 val firstVisibleIndex = listState.firstVisibleItemIndex
                 val firstVisibleOffset = listState.firstVisibleItemScrollOffset
-
                 if (firstVisibleIndex <= 1 && firstVisibleOffset < 200) {
                     listState.animateScrollToItem(0)
                 }
@@ -127,15 +122,11 @@ fun ConversationListScreen(
         onDispose { viewModel.setForegroundSyncEnabled(false) }
     }
 
-    var showCreateMenu by remember { mutableStateOf(false) }
-    var searchButtonCenter by remember { mutableStateOf<IntOffset?>(null) }
-
     val scope = rememberCoroutineScope()
-
     val settingsStorage = remember { SettingsStorage(context) }
     val isStickyExpanded by settingsStorage.showStickyFlow.collectAsState(initial = true)
-
     val searchState by searchViewModel.uiState.collectAsState()
+
     val searchBarState = rememberSearchBarState()
     val textFieldState = rememberTextFieldState()
     val searchBarExpanded = searchBarState.targetValue != SearchBarValue.Collapsed
@@ -173,125 +164,73 @@ fun ConversationListScreen(
                 } else {
                     AutoMirroredIcon(AppIcons.Search, contentDescription = null)
                 }
-            },
-            trailingIcon = {
-                if (searchBarState.targetValue == SearchBarValue.Collapsed) {
-                    Avatar(url = accountAvatar, size = 36.dp, alwaysCircle = true, modifier = Modifier.padding(end = 2.dp))
-                } else if (textFieldState.text.isNotBlank()) {
-                    IconButton(
-                        onClick = {
-                            textFieldState.clearText()
-                            searchViewModel.updateQuery("")
-                        }
-                    ) {
-                        Icon(AppIcons.Close, contentDescription = null)
-                    }
-                }
             }
         )
     }
 
-    val hideFloatingButton by remember {
-        derivedStateOf {
-            val isScrollInProgress = listState.isScrollInProgress
-
-            val layoutInfo = listState.layoutInfo
-            val visibleItems = layoutInfo.visibleItemsInfo
-            val isAtBottom = visibleItems.isNotEmpty() && !listState.canScrollForward
-            isScrollInProgress || isAtBottom
-        }
+    val tabs = listOf("全部", "未读", "群聊", "用户", "机器人")
+    val selectedTabIndex = when (filter) {
+        ConversationFilter.ALL -> 0
+        ConversationFilter.UNREAD -> 1
+        ConversationFilter.GROUP -> 2
+        ConversationFilter.USER -> 3
+        ConversationFilter.BOT -> 4
     }
 
-    val topBarColor = MaterialTheme.colorScheme.surfaceContainer
+    val expandSearch: () -> Unit = {
+        scope.launch { searchBarState.animateToExpanded() }
+    }
 
-    Scaffold(
-        modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
-        containerColor = topBarColor,
-        topBar = {
-            Box {
-                Box(
-                    modifier = Modifier
-                        .matchParentSize()
-                        .background(
-                            Brush.verticalGradient(
-                                colors = listOf(
-                                    topBarColor,
-                                    topBarColor.copy(alpha = 0.8f),
-                                    Color.Transparent
-                                )
-                            )
-                        )
-                )
-
-                SearchBar(
-                    modifier = Modifier
-                        .statusBarsPadding()
-                        .padding(
-                            start = 12.dp,
-                            end = 12.dp,
-                            top = 12.dp
-                        )
-                        .fillMaxWidth(),
-                    state = searchBarState,
-                    inputField = inputField
-                )
-            }
-        },
-        floatingActionButton = {
-            Crossfade(targetState = hideFloatingButton) { hide ->
-                if (hide) return@Crossfade
-                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(bottom = innerPadding.calculateBottomPadding())) {
-                    FloatingActionButton(
-                        onClick = { showCreateMenu = true }
-                    ) {
-                        Icon(AppIcons.Add, contentDescription = "添加")
-                    }
-                    DropdownMenu(
-                        expanded = showCreateMenu,
-                        onDismissRequest = { showCreateMenu = false },
-                        shape = MenuDefaults.standaloneGroupShape
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text("添加会话") },
-                            onClick = {
-                                showCreateMenu = false
-                                NewConversationActivity.start(context)
-                            },
-                            leadingIcon = {
-                                Icon(
-                                    AppIcons.Add,
-                                    contentDescription = null
-                                )
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("创建群聊") },
-                            onClick = {
-                                showCreateMenu = false; onCreateClick(CreationKind.GROUP)
-                            },
-                            leadingIcon = {
-                                Icon(
-                                    AppIcons.Group,
-                                    contentDescription = null
-                                )
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("创建机器人") },
-                            onClick = {
-                                showCreateMenu = false; onCreateClick(CreationKind.BOT)
-                            },
-                            leadingIcon = {
-                                Icon(
-                                    AppIcons.SmartToy,
-                                    contentDescription = null
-                                )
-                            }
-                        )
-                    }
+    StyledScaffold(
+        modifier = modifier,
+        title = { Text("Murexide") },
+        actions = {
+            AnimatedVisibility(
+                visible = showSearchInTopBar,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically()
+            ) {
+                IconButton(onClick = expandSearch) {
+                    Icon(AppIcons.Search, contentDescription = "搜索")
                 }
             }
-        }
+            Box {
+                IconButton(onClick = { showCreateMenu = true }) {
+                    Icon(AppIcons.Add, contentDescription = "添加")
+                }
+                DropdownMenu(
+                    expanded = showCreateMenu,
+                    onDismissRequest = { showCreateMenu = false },
+                    shape = MenuDefaults.standaloneGroupShape
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("添加会话") },
+                        onClick = {
+                            showCreateMenu = false
+                            NewConversationActivity.start(context)
+                        },
+                        leadingIcon = { Icon(AppIcons.Add, contentDescription = null) }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("创建群聊") },
+                        onClick = {
+                            showCreateMenu = false
+                            onCreateClick(CreationKind.GROUP)
+                        },
+                        leadingIcon = { Icon(AppIcons.Group, contentDescription = null) }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("创建机器人") },
+                        onClick = {
+                            showCreateMenu = false
+                            onCreateClick(CreationKind.BOT)
+                        },
+                        leadingIcon = { Icon(AppIcons.SmartToy, contentDescription = null) }
+                    )
+                }
+            }
+        },
+        isMediumTopAppBarDisabled = true
     ) { contentPadding ->
         Box(
             modifier = Modifier
@@ -317,15 +256,6 @@ fun ConversationListScreen(
                 val allowCollapseSticky = stickyConvs.size > 5
                 val isStickyCollapsed = !isStickyExpanded && allowCollapseSticky
 
-                val tabs = listOf("全部", "未读", "群聊", "用户", "机器人")
-                val selectedTabIndex = when (filter) {
-                    ConversationFilter.ALL -> 0
-                    ConversationFilter.UNREAD -> 1
-                    ConversationFilter.GROUP -> 2
-                    ConversationFilter.USER -> 3
-                    ConversationFilter.BOT -> 4
-                }
-
                 PullToRefreshBox(
                     isRefreshing = isRefreshing,
                     onRefresh = { viewModel.refresh() },
@@ -342,15 +272,16 @@ fun ConversationListScreen(
                     }
                 ) {
                     LazyColumn(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(bottom = contentPadding.calculateBottomPadding()),
+                        modifier = Modifier.fillMaxSize(),
                         state = listState,
-                        contentPadding = PaddingValues(
-                            top = contentPadding.calculateTopPadding(),
-                            bottom = innerPadding.calculateBottomPadding()
-                        )
+                        contentPadding = contentPadding
                     ) {
+                        item(key = "searchBar") {
+                            ConversationSearchHeader(
+                                onSearchClick = expandSearch
+                            )
+                        }
+
                         item(key = "tabBar") {
                             CapsuleTabBar(
                                 tabs = tabs,
@@ -391,11 +322,11 @@ fun ConversationListScreen(
                                             ConversationFilter.BOT -> "还没有机器人"
                                         },
                                         subtitle = when (filter) {
-                                            ConversationFilter.ALL -> "点右下角按钮开始创建群聊或机器人"
+                                            ConversationFilter.ALL -> "点右上角按钮开始创建群聊或机器人"
                                             ConversationFilter.UNREAD -> "全部消息都已读完"
-                                            ConversationFilter.GROUP -> "点右下角按钮创建一个群聊"
+                                            ConversationFilter.GROUP -> "点右上角按钮创建一个群聊"
                                             ConversationFilter.USER -> "去联系人页面开始一段对话吧"
-                                            ConversationFilter.BOT -> "点右下角按钮创建一个机器人"
+                                            ConversationFilter.BOT -> "点右上角按钮创建一个机器人"
                                         }
                                     )
                                 }
@@ -460,7 +391,7 @@ fun ConversationListScreen(
                                         onDelete = { viewModel.removeConversation(conversation) }
                                     )
                                 }
-    
+
                                 item(key = "divider") {
                                     HorizontalDivider()
                                 }
@@ -536,9 +467,7 @@ fun ConversationListScreen(
                 title = if (searchState.hasSearched) "未找到相关结果" else "暂无搜索内容",
                 subtitle = if (searchState.hasSearched) "换个关键词试试" else "输入关键词开始搜索"
             )
-            else -> LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-            ) {
+            else -> LazyColumn(Modifier.fillMaxSize()) {
                 listOf(1 to "用户", 2 to "群聊", 3 to "机器人").forEach { (type, title) ->
                     val items = searchState.resultsFor(type)
                     if (items.isNotEmpty()) {
@@ -563,6 +492,37 @@ fun ConversationListScreen(
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun ConversationSearchHeader(
+    onSearchClick: () -> Unit
+) {
+    Surface(
+        onClick = onSearchClick,
+        shape = RoundedCornerShape(24.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                AppIcons.Search,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = "搜索&发现",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
@@ -657,7 +617,7 @@ private fun SwipeableConversationItem(
                     .weight(1f)
                     .fillMaxHeight()
                     .background(MaterialTheme.colorScheme.primaryContainer)
-                    .clickable(role = Role.Button) {
+                    .clickable(role = androidx.compose.ui.semantics.Role.Button) {
                         scope.launch { state.animateTo(SwipeState.Closed) }
                         onOpen(null)
                         if (isSticky) onUnpin() else onPin()
@@ -682,7 +642,7 @@ private fun SwipeableConversationItem(
                     .weight(1f)
                     .fillMaxHeight()
                     .background(MaterialTheme.colorScheme.errorContainer)
-                    .clickable(role = Role.Button) {
+                    .clickable(role = androidx.compose.ui.semantics.Role.Button) {
                         scope.launch { state.animateTo(SwipeState.Closed) }
                         onOpen(null)
                         onDelete()
@@ -747,21 +707,14 @@ fun ConversationItem(
         modifier = modifier,
         onClick = onClick,
         leadingContent = {
-            Box{
-                Avatar(
-                    url = conversation.avatarUrl,
-                    size = 52.dp
-                )
+            Box {
+                Avatar(url = conversation.avatarUrl, size = 52.dp)
                 if (conversation.certificationLevel >= 1) {
                     Badge(
                         containerColor = MaterialTheme.colorScheme.secondary,
                         contentColor = MaterialTheme.colorScheme.onSecondary,
                         modifier = Modifier
-                            .border(
-                                width = 1.dp,
-                                color = listItemColor,
-                                shape = CircleShape
-                            )
+                            .border(width = 1.dp, color = listItemColor, shape = CircleShape)
                             .align(Alignment.BottomEnd)
                     ) {
                         Text(if (conversation.certificationLevel == 1) "官" else "城")
@@ -769,9 +722,7 @@ fun ConversationItem(
                 }
             }
         },
-        colors = ListItemDefaults.colors(
-            containerColor = listItemColor
-        )
+        colors = ListItemDefaults.colors(containerColor = listItemColor)
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             Row(
@@ -786,9 +737,7 @@ fun ConversationItem(
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f)
                 )
-
                 Spacer(modifier = Modifier.width(8.dp))
-
                 Text(
                     text = formatTime(conversation.timestampMs),
                     style = MaterialTheme.typography.bodySmall,
@@ -842,7 +791,6 @@ fun ConversationItem(
 
                 if (conversation.hasUnread || conversation.isAtMentioned) {
                     Spacer(modifier = Modifier.width(8.dp))
-
                     Badges(
                         doNotDisturb = conversation.doNotDisturb == 1,
                         hasUnread = conversation.hasUnread,
@@ -876,9 +824,7 @@ private fun SearchRow(result: HomeSearchResult, onClick: (HomeSearchResult) -> U
                 contentDescription = null
             )
         },
-        colors = ListItemDefaults.colors(
-            containerColor = Color.Transparent
-        )
+        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             Text(result.name, maxLines = 1, overflow = TextOverflow.Ellipsis)

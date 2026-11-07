@@ -65,8 +65,9 @@ class QiniuUploader(
     context: Context,
     private val userToken: String,
     private val enableWebp: Boolean = false,
-    private val uploadType: Int = 1, //1图片2视频3文件
-    private val webpQuality: Int = 95
+    private val uploadType: Int = 1,
+    private val webpQuality: Int = 95,
+    private val keyPrefix: String = ""
 ) {
     companion object {
         // 图片配置
@@ -436,7 +437,7 @@ class QiniuUploader(
                 }
     
                 val md5 = md5Hex(uploadFile)
-                val key = "$md5.$safeExt"
+                val key = if (keyPrefix.isNotEmpty()) "$keyPrefix$md5" else "$md5.$safeExt"
     
                 val uploadToken = try {
                     getUploadToken()

@@ -560,4 +560,43 @@ class CommunityRepository(
             }
         }
     }
+    
+    suspend fun searchPosts(
+        keyword: String,
+        size: Int = 20,
+        page: Int = 1
+    ): Result<List<PostItem>> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val params = buildJsonObject {
+                    put("typ", 3)
+                    put("keyword", keyword)
+                    put("size", size)
+                    put("page", page)
+                }
+                val requestBody = json.encodeToString(params).toRequestBody("application/json".toMediaType())
+    
+                val httpRequest = Request.Builder()
+                    .url("$baseUrl/v1/community/search")
+                    .post(requestBody)
+                    .header("token", token)
+                    .build()
+    
+                client.newCall(httpRequest).execute().use { response ->
+                    if (response.isSuccessful) {
+                        val result = json.decodeFromString<SearchResponse>(response.body.string())
+                        if (result.code == 1) {
+                            Result.success(result.data?.posts.orEmpty().map { it.toPostItem() })
+                        } else {
+                            Result.failure(Exception(result.msg.ifEmpty { "搜索失败" }))
+                        }
+                    } else {
+                        Result.failure(Exception("HTTP error: ${response.code}"))
+                    }
+                }
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+        }
+    }
 }
