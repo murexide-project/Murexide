@@ -217,7 +217,7 @@ data class SearchPostItem(
     val likeNum: Int = 0,
     val commentNum: Int = 0,
     val collectNum: Int = 0,
-    val isLiked: String = "0",
+    val isLiked: Int = 0,
     val isCollected: Int = 0,
     val isReward: Int = 0,
     val group: GroupInfo? = null
@@ -235,7 +235,7 @@ data class SearchPostItem(
         likeNum = likeNum,
         commentNum = commentNum,
         collectNum = collectNum,
-        isLiked = isLiked,
+        isLiked = if (isLiked == 1) "1" else "0",
         isCollected = isCollected,
         isReward = isReward,
         group = group

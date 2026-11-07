@@ -1,7 +1,5 @@
 package com.juhao.murexide.ui.community
 
-import com.juhao.murexide.ui.icons.AppIcons
-
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -9,13 +7,17 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.input.rememberTextFieldState
+import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
+import androidx.compose.foundation.text.input.clearText
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -27,8 +29,12 @@ import com.juhao.murexide.ui.community.ba.BaDetailActivity
 import com.juhao.murexide.ui.community.detail.PostDetailActivity
 import com.juhao.murexide.ui.community.myposts.MyPostsActivity
 import com.juhao.murexide.ui.components.Avatar
+import com.juhao.murexide.ui.components.EmptyPlaceholder
 import com.juhao.murexide.ui.components.SettingsGroup
 import com.juhao.murexide.ui.components.SettingsItem
+import com.juhao.murexide.ui.icons.AppIcons
+import com.juhao.murexide.ui.icons.AutoMirroredIcon
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -48,7 +54,50 @@ fun CommunityScreen(
     )
 
     val uiState by viewModel.uiState.collectAsState()
-    val context = androidx.compose.ui.platform.LocalContext.current
+    val searchState by viewModel.searchState.collectAsState()
+    val context = LocalContext.current
+    
+    val searchBarState = rememberSearchBarState()
+    val textFieldState = rememberTextFieldState()
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(textFieldState) {
+        snapshotFlow { textFieldState.text.toString() }
+            .collect { query ->
+                viewModel.searchPosts(query)
+            }
+    }
+
+    LaunchedEffect(searchState.keyword) {
+        if (textFieldState.text.toString() != searchState.keyword) {
+            textFieldState.setTextAndPlaceCursorAtEnd(searchState.keyword)
+        }
+    }
+
+    val inputField = @Composable {
+        SearchBarDefaults.InputField(
+            textFieldState = textFieldState,
+            searchBarState = searchBarState,
+            onSearch = { scope.launch { searchBarState.animateToCollapsed() } },
+            placeholder = { Text("搜索文章") },
+            leadingIcon = {
+                if (searchBarState.targetValue != SearchBarValue.Collapsed) {
+                    IconButton(onClick = { scope.launch { searchBarState.animateToCollapsed() } }) {
+                        AutoMirroredIcon(AppIcons.ArrowBack, contentDescription = "返回")
+                    }
+                } else {
+                    Icon(AppIcons.Search, contentDescription = null)
+                }
+            },
+            trailingIcon = {
+                if (textFieldState.text.isNotEmpty()) {
+                    IconButton(onClick = { textFieldState.clearText() }) {
+                        Icon(AppIcons.Close, contentDescription = "清除")
+                    }
+                }
+            }
+        )
+    }
 
     val tabs = listOf(
         CommunityTab.RECOMMEND to "推荐",
@@ -63,7 +112,21 @@ fun CommunityScreen(
                 TopAppBar(
                     title = { Text("社区") },
                     actions = {
-                        IconButton(onClick = { /* TODO: 搜索 */ }) {
+                        if (uiState.currentTab == CommunityTab.RECOMMEND) {
+                            IconButton(onClick = { viewModel.toggleSort() }) {
+                                Icon(
+                                    imageVector = if (uiState.sort == CommunitySort.RECOMMEND) {
+                                        AppIcons.LocalFireDepartment
+                                    } else {
+                                        AppIcons.Update
+                                    },
+                                    contentDescription = if (uiState.sort == CommunitySort.RECOMMEND) "推荐" else "最新"
+                                )
+                            }
+                        }
+                        IconButton(onClick = {
+                            scope.launch { searchBarState.animateToExpanded() }
+                        }) {
                             Icon(AppIcons.Search, contentDescription = "搜索")
                         }
                     }
@@ -86,18 +149,35 @@ fun CommunityScreen(
                 .padding(contentPadding)
         ) {
             when (uiState.currentTab) {
-                CommunityTab.RECOMMEND -> PostsList(
-                    posts = uiState.posts,
-                    innerPadding = innerPadding,
-                    isLoading = uiState.isLoadingPosts,
-                    isRefreshing = uiState.isRefreshingPosts,
-                    isLoadingMore = uiState.isLoadingMore,
-                    onRefresh = viewModel::loadRecommend,
-                    onLikeClick = viewModel::toggleLike,
-                    onCollectClick = viewModel::toggleCollect,
-                    onPostClick = { post -> PostDetailActivity.start(context, post.id) },
-                    onLoadMore = viewModel::loadMorePosts
-                )
+                CommunityTab.RECOMMEND -> {
+                    if (uiState.sort == CommunitySort.RECOMMEND) {
+                        PostsList(
+                            posts = uiState.posts,
+                            innerPadding = innerPadding,
+                            isLoading = uiState.isLoadingPosts,
+                            isRefreshing = uiState.isRefreshingPosts,
+                            isLoadingMore = uiState.isLoadingMore,
+                            onRefresh = viewModel::loadRecommend,
+                            onLikeClick = viewModel::toggleLike,
+                            onCollectClick = viewModel::toggleCollect,
+                            onPostClick = { post -> PostDetailActivity.start(context, post.id) },
+                            onLoadMore = viewModel::loadMorePosts
+                        )
+                    } else {
+                        PostsList(
+                            posts = uiState.latestPosts,
+                            innerPadding = innerPadding,
+                            isLoading = uiState.isLatestLoading,
+                            isRefreshing = uiState.isLatestRefreshing,
+                            isLoadingMore = uiState.isLatestLoadingMore,
+                            onRefresh = viewModel::loadLatest,
+                            onLikeClick = viewModel::toggleLike,
+                            onCollectClick = viewModel::toggleCollect,
+                            onPostClick = { post -> PostDetailActivity.start(context, post.id) },
+                            onLoadMore = viewModel::loadMoreLatest
+                        )
+                    }
+                }
 
                 CommunityTab.ALL_BA -> AllBaContent(
                     innerPadding = innerPadding,
@@ -115,6 +195,81 @@ fun CommunityScreen(
                     onMyPostsClick = { MyPostsActivity.start(context) },
                     onBaClick = { ba -> BaDetailActivity.start(context, ba.id) }
                 )
+            }
+        }
+    }
+
+    ExpandedFullScreenSearchBar(
+        state = searchBarState,
+        inputField = inputField
+    ) {
+        val listState = rememberLazyListState()
+        
+        val shouldLoadMore by remember {
+            derivedStateOf {
+                val layoutInfo = listState.layoutInfo
+                val lastVisible = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+                val totalItems = layoutInfo.totalItemsCount
+                totalItems > 0 && lastVisible >= totalItems - 3
+            }
+        }
+
+        LaunchedEffect(shouldLoadMore) {
+            if (shouldLoadMore) viewModel.loadMoreSearch()
+        }
+
+        when {
+            searchState.isSearching && searchState.results.isEmpty() -> Box(
+                Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) { CircularProgressIndicator() }
+
+            searchState.error != null && searchState.results.isEmpty() -> EmptyPlaceholder(
+                modifier = Modifier.fillMaxSize(),
+                icon = AppIcons.Warning,
+                title = "搜索失败",
+                subtitle = searchState.error
+            )
+
+            searchState.results.isEmpty() && searchState.hasSearched -> EmptyPlaceholder(
+                modifier = Modifier.fillMaxSize(),
+                icon = AppIcons.Search,
+                title = "未找到相关文章",
+                subtitle = "换个关键词试试"
+            )
+
+            searchState.results.isEmpty() -> EmptyPlaceholder(
+                modifier = Modifier.fillMaxSize(),
+                icon = AppIcons.Inbox,
+                title = "搜索文章",
+                subtitle = "输入关键词开始搜索"
+            )
+
+            else -> LazyColumn(
+                state = listState,
+                modifier = Modifier.fillMaxSize()
+            ) {
+                items(searchState.results, key = { "search_${it.id}" }) { post ->
+                    PostCard(
+                        modifier = Modifier.animateItem(),
+                        post = post,
+                        onLikeClick = viewModel::toggleLike,
+                        onCollectClick = viewModel::toggleCollect,
+                        onPostClick = { PostDetailActivity.start(context, it.id) }
+                    )
+                }
+                if (searchState.isLoadingMore) {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 12.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator(Modifier.size(28.dp))
+                        }
+                    }
+                }
             }
         }
     }
@@ -176,7 +331,6 @@ fun AllBaContent(
     }
 }
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun ManageContent(
     innerPadding: PaddingValues,
@@ -208,9 +362,7 @@ fun ManageContent(
                             Modifier.fillMaxWidth().padding(24.dp),
                             contentAlignment = Alignment.Center
                         ) {
-                            ContainedLoadingIndicator(
-                                modifier = Modifier.size(28.dp)
-                            )
+                            CircularProgressIndicator(Modifier.size(28.dp))
                         }
                     }
 
@@ -237,7 +389,6 @@ fun ManageContent(
     }
 }
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun BaList(
     innerPadding: PaddingValues,
@@ -248,7 +399,7 @@ fun BaList(
 ) {
     if (isLoading && baList.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            ContainedLoadingIndicator()
+            CircularProgressIndicator()
         }
     } else if (baList.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -295,7 +446,7 @@ fun BaRow(modifier: Modifier = Modifier, ba: BaItem, onClick: () -> Unit) {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PostsList(
     posts: List<PostItem>,
@@ -319,7 +470,7 @@ fun PostsList(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
-                ContainedLoadingIndicator()
+                CircularProgressIndicator()
             }
         } else if (posts.isEmpty()) {
             LazyColumn(modifier = Modifier.fillMaxSize()) {
@@ -374,9 +525,7 @@ fun PostsList(
                                 .padding(vertical = 12.dp),
                             contentAlignment = Alignment.Center
                         ) {
-                            ContainedLoadingIndicator(
-                                modifier = Modifier.size(32.dp)
-                            )
+                            CircularProgressIndicator(Modifier.size(32.dp))
                         }
                     }
                 }
@@ -402,17 +551,9 @@ fun PostCard(
             .clickable { onPostClick(post) }
             .padding(horizontal = 20.dp, vertical = 16.dp)
     ) {
-        // 作者信息
-        Row(
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Avatar(
-                url = post.senderAvatar,
-                size = 36.dp
-            )
-
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Avatar(url = post.senderAvatar, size = 36.dp)
             Spacer(modifier = Modifier.width(10.dp))
-
             Column {
                 Text(
                     text = post.senderNickname,
@@ -429,7 +570,6 @@ fun PostCard(
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        // 标题
         Text(
             text = post.title,
             fontWeight = FontWeight.Bold,
@@ -451,12 +591,10 @@ fun PostCard(
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        // 互动按钮
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            // 点赞
             InteractionButton(
                 icon = if (post.isLiked == "1") AppIcons.Favorite else AppIcons.FavoriteBorder,
                 count = post.likeNum,
@@ -464,15 +602,13 @@ fun PostCard(
                 onClick = { onLikeClick(post.id) }
             )
 
-            // 评论
             InteractionButton(
                 icon = AppIcons.ChatBubble,
                 count = post.commentNum,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                onClick = { /* TODO: 打开评论 */ }
+                onClick = { }
             )
 
-            // 收藏
             InteractionButton(
                 icon = if (post.isCollected == 1) AppIcons.Bookmark else AppIcons.BookmarkBorder,
                 count = post.collectNum,

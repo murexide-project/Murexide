@@ -53,6 +53,39 @@ class CommunityRepository(
             }
         }
     }
+    
+    suspend fun getLatestPosts(size: Int = 20, page: Int = 1): Result<PostListData> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val params = mapOf(
+                    "typ" to 4,
+                    "baId" to 0,
+                    "size" to size,
+                    "page" to page
+                )
+                val requestBody = json.encodeToString(params).toRequestBody("application/json".toMediaType())
+                val httpRequest = Request.Builder()
+                    .url("$baseUrl/v1/community/posts/post-list")
+                    .post(requestBody)
+                    .header("token", token)
+                    .build()
+                client.newCall(httpRequest).execute().use { response ->
+                    if (response.isSuccessful) {
+                        val result = json.decodeFromString<PostListResponse>(response.body.string())
+                        if (result.code == 1) {
+                            Result.success(result.data ?: PostListData(emptyList(), 0))
+                        } else {
+                            Result.failure(Exception(result.msg.ifEmpty { "获取最新文章失败" }))
+                        }
+                    } else {
+                        Result.failure(Exception("HTTP error: ${response.code}"))
+                    }
+                }
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+        }
+    }
 
     suspend fun getBaListByCreate(userId: String): Result<List<BaItem>> {
         return withContext(Dispatchers.IO) {
