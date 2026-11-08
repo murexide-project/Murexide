@@ -24,14 +24,16 @@ class SettingsActivity : ComponentActivity() {
 
         val accountStorage = AccountStorage.getInstance(this)
         val authRepository = AuthRepository()
-        
+
         val page = intent.getIntExtra("page", 0)
+        val highlightId = intent.getStringExtra("highlight_id")
 
         setContent {
             MurexideTheme {
                 SettingsScreen(
                     onBack = { finish() },
                     page = page,
+                    highlightId = highlightId,
                     onLogout = {
                         lifecycleScope.launch {
                             val token = accountStorage.getCurrentToken()
@@ -61,16 +63,11 @@ class SettingsActivity : ComponentActivity() {
 
                             Toast.makeText(
                                 this@SettingsActivity,
-                                if (remoteLogoutError == null) {
-                                    "已登出"
-                                } else {
-                                    "已在本机退出，服务器会话退出失败"
-                                },
+                                if (remoteLogoutError == null) "已登出" else "已在本机退出，服务器会话退出失败",
                                 Toast.LENGTH_SHORT
                             ).show()
                             val intent = Intent(this@SettingsActivity, LoginActivity::class.java)
-                            intent.flags =
-                                Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                             startActivity(intent)
                             finish()
                         }

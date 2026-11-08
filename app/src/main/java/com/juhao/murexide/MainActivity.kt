@@ -92,6 +92,7 @@ import com.juhao.murexide.ui.theme.LocalLiquidGlassBlur
 import com.juhao.murexide.ui.theme.liquidGlass
 import com.juhao.murexide.ui.theme.liquidGlassContentColor
 import com.juhao.murexide.ui.theme.liquidglass.LiquidBottomTabs
+import androidx.compose.material3.VerticalDivider
 
 private data class NavItem(
     val route: String,
@@ -707,6 +708,7 @@ fun MainScreen(account: UserAccount) {
                             )
 
                             if (isBigScreen && bigScreenEnabled) {
+                                VerticalDivider()
                                 if (currentConversation != null) {
                                     BackHandler {
                                         currentConversation = null

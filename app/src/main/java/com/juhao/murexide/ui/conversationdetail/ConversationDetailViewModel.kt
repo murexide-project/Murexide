@@ -19,6 +19,7 @@ import com.juhao.murexide.repository.GroupMemberRepository
 import com.juhao.murexide.repository.GroupRepository
 import com.juhao.murexide.repository.InstructionRepository
 import com.juhao.murexide.repository.MessageRepository
+import com.juhao.murexide.repository.ReportRepository
 import com.juhao.murexide.repository.ShareRepository
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -42,6 +43,16 @@ data class BackgroundUploadState(
     val error: String? = null
 )
 
+data class ReportUiState(
+    val isOpen: Boolean = false,
+    val reason: String = "",
+    val content: String = "",
+    val imageUrl: String = "",
+    val isUploadingImage: Boolean = false,
+    val isSubmitting: Boolean = false,
+    val error: String? = null
+)
+
 class ConversationDetailViewModel(
     val token: String,
     private val chatId: String,
@@ -56,6 +67,7 @@ class ConversationDetailViewModel(
     private val messageRepository: MessageRepository = MessageRepository(),
     private val communityRepository: CommunityRepository = CommunityRepository(token),
     private val shareRepository: ShareRepository = ShareRepository(),
+    private val reportRepository: ReportRepository = ReportRepository(),
     private val botRepository: BotRepository = BotRepository(),
     private val backgroundRepository: ChatBackgroundRepository = ChatBackgroundRepository()
 ) : ViewModel() {
@@ -78,6 +90,9 @@ class ConversationDetailViewModel(
 
     private val _backgroundUploadState = MutableStateFlow(BackgroundUploadState())
     val backgroundUploadState: StateFlow<BackgroundUploadState> = _backgroundUploadState.asStateFlow()
+
+    private val _reportState = MutableStateFlow(ReportUiState())
+    val reportState: StateFlow<ReportUiState> = _reportState.asStateFlow()
 
     private var memberSearchJob: Job? = null
 
@@ -118,6 +133,60 @@ class ConversationDetailViewModel(
 
     fun closeShareDialog() {
         _shareState.value = ShareLinkDialogState()
+    }
+
+    fun openReportDialog() {
+        _reportState.value = ReportUiState(isOpen = true)
+    }
+
+    fun closeReportDialog() {
+        if (_reportState.value.isSubmitting) return
+        _reportState.value = ReportUiState()
+    }
+
+    fun updateReportReason(reason: String) =
+        _reportState.update { it.copy(reason = reason, error = null) }
+
+    fun updateReportContent(content: String) =
+        _reportState.update { it.copy(content = content) }
+
+    fun updateReportImage(url: String) =
+        _reportState.update { it.copy(imageUrl = url, error = null) }
+
+    fun setReportImageUploading(uploading: Boolean) =
+        _reportState.update { it.copy(isUploadingImage = uploading) }
+
+    fun submitReport() {
+        val state = _reportState.value
+        val detail = _uiState.value.detail ?: return
+        if (state.isSubmitting) return
+        if (state.reason.isBlank()) {
+            _reportState.update { it.copy(error = "请选择举报理由") }
+            return
+        }
+        if (state.content.isBlank()) {
+            _reportState.update { it.copy(error = "请填写举报内容") }
+            return
+        }
+        _reportState.update { it.copy(isSubmitting = true, error = null) }
+        viewModelScope.launch {
+            reportRepository.submitReport(
+                token = token,
+                chatId = detail.chatId,
+                chatType = detail.chatType,
+                chatName = detail.name,
+                content = state.content.trim(),
+                reason = state.reason,
+                url = state.imageUrl
+            ).onSuccess {
+                _reportState.value = ReportUiState()
+                _uiState.update { it.copy(message = "举报已提交，感谢你的反馈") }
+            }.onFailure { error ->
+                _reportState.update {
+                    it.copy(isSubmitting = false, error = error.message ?: "举报失败，请稍后重试")
+                }
+            }
+        }
     }
 
     fun loadDetail() {

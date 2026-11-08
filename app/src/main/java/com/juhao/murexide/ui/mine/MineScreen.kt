@@ -211,35 +211,26 @@ private fun MineContent(
             modifier = Modifier.padding(horizontal = 16.dp)
         )
 
-        SettingsGroup(title = "账号信息") {
+        SettingsGroupHeader("账号信息")
+        SettingsGroupSurface(index = 0, count = 3) {
             InfoItem(
                 icon = AppIcons.Phone,
                 title = "手机号",
                 value = displayPhone,
-                endIcon = if (isPhoneVisible) {
-                    AppIcons.Visibility
-                } else {
-                    AppIcons.VisibilityOff
-                },
-                onClick = {
-                    isPhoneVisible = !isPhoneVisible
-                }
+                endIcon = if (isPhoneVisible) AppIcons.Visibility else AppIcons.VisibilityOff,
+                onClick = { isPhoneVisible = !isPhoneVisible }
             )
-
+        }
+        SettingsGroupSurface(index = 1, count = 3) {
             InfoItem(
                 icon = AppIcons.Email,
                 title = "邮箱",
                 value = displayEmail,
-                endIcon = if (isEmailVisible) {
-                    AppIcons.Visibility
-                } else {
-                    AppIcons.VisibilityOff
-                },
-                onClick = {
-                    isEmailVisible = !isEmailVisible
-                }
+                endIcon = if (isEmailVisible) AppIcons.Visibility else AppIcons.VisibilityOff,
+                onClick = { isEmailVisible = !isEmailVisible }
             )
-
+        }
+        SettingsGroupSurface(index = 2, count = 3) {
             InfoItem(
                 icon = AppIcons.CardGiftcard,
                 title = "邀请码",

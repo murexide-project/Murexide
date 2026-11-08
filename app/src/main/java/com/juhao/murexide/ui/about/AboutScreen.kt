@@ -5,7 +5,6 @@ import com.juhao.murexide.ui.icons.AppFilledIcons
 import com.juhao.murexide.ui.icons.AutoMirroredIcon
 
 import android.content.Intent
-import android.widget.Toast
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
@@ -94,23 +93,17 @@ fun AboutScreen(
         scope.launch {
             launch {
                 settleX.snapTo(startX)
-                settleX.animateTo(
-                    0f,
-                    spring(
-                        dampingRatio = Spring.DampingRatioMediumBouncy,
-                        stiffness = Spring.StiffnessMediumLow
-                    )
-                )
+                settleX.animateTo(0f, spring(
+                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                    stiffness = Spring.StiffnessMediumLow
+                ))
             }
             launch {
                 settleY.snapTo(startY)
-                settleY.animateTo(
-                    0f,
-                    spring(
-                        dampingRatio = Spring.DampingRatioMediumBouncy,
-                        stiffness = Spring.StiffnessMediumLow
-                    )
-                )
+                settleY.animateTo(0f, spring(
+                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                    stiffness = Spring.StiffnessMediumLow
+                ))
             }
         }
     }
@@ -261,9 +254,7 @@ fun AboutScreen(
                             style = MaterialTheme.typography.headlineSmall,
                             fontWeight = FontWeight.Bold
                         )
-
                         Spacer(modifier = Modifier.height(6.dp))
-
                         Surface(
                             shape = MaterialTheme.shapes.small,
                             color = MaterialTheme.colorScheme.primaryContainer
@@ -275,17 +266,13 @@ fun AboutScreen(
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                             )
                         }
-
                         Spacer(modifier = Modifier.height(6.dp))
-
                         Text(
                             text = "为云湖而生的原生体验",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-
                         Spacer(modifier = Modifier.height(4.dp))
-
                         Text(
                             text = "versionCode ${versionInfo.versionCode}",
                             style = MaterialTheme.typography.labelSmall,
@@ -295,7 +282,8 @@ fun AboutScreen(
                 }
             }
 
-            SettingsGroup(title = "贡献者") {
+            SettingsGroupHeader("贡献者")
+            SettingsGroupSurface(index = 0, count = 2) {
                 SettingsItem(
                     icon = AppIcons.Person,
                     title = "贡献者",
@@ -309,7 +297,8 @@ fun AboutScreen(
                         )
                     }
                 )
-
+            }
+            SettingsGroupSurface(index = 1, count = 2) {
                 SettingsItemCell(
                     icon = AppIcons.Code,
                     title = "编程语言",
@@ -318,7 +307,8 @@ fun AboutScreen(
                 )
             }
 
-            SettingsGroup(title = "许可证") {
+            SettingsGroupHeader("许可证")
+            SettingsGroupSurface(index = 0, count = 1) {
                 SettingsItemCell(
                     icon = AppIcons.Book,
                     title = "许可证",
@@ -327,7 +317,8 @@ fun AboutScreen(
                 )
             }
 
-            SettingsGroup(title = "相关链接") {
+            SettingsGroupHeader("相关链接")
+            SettingsGroupSurface(index = 0, count = 3) {
                 SettingsItem(
                     icon = AppIcons.Code,
                     title = "GitHub",
@@ -341,6 +332,8 @@ fun AboutScreen(
                         )
                     }
                 )
+            }
+            SettingsGroupSurface(index = 1, count = 3) {
                 SettingsItem(
                     icon = AppIcons.BugReport,
                     title = "问题反馈",
@@ -354,6 +347,8 @@ fun AboutScreen(
                         )
                     }
                 )
+            }
+            SettingsGroupSurface(index = 2, count = 3) {
                 SettingsItem(
                     icon = AppIcons.People,
                     title = "交流群",

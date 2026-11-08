@@ -1,21 +1,24 @@
 package com.juhao.murexide.ui.settings
 
 import com.juhao.murexide.ui.icons.AppIcons
-import com.juhao.murexide.ui.icons.AppFilledIcons
 
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -30,9 +33,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import com.juhao.murexide.ui.components.*
 import com.juhao.murexide.datastore.SettingsStorage
+import com.juhao.murexide.ui.components.*
 import com.juhao.murexide.ui.theme.*
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
@@ -55,14 +57,16 @@ private fun encodeCustomThemeColor(color: Color): String {
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun AppearancePage() {
+fun AppearanceControl(
+    highlightId: String? = null,
+    contentPadding: PaddingValues = PaddingValues(0.dp)
+) {
     val context = LocalContext.current
     val settingsStorage = remember { SettingsStorage(context) }
     val scope = rememberCoroutineScope()
 
     val themeMode by UiState.themeMode
     val themeColor by UiState.themeColor
-
     val squareAvatar by UiState.squareAvatar
 
     val liquidGlassEnabled by settingsStorage.liquidGlassEnabledFlow.collectAsState(initial = false)
@@ -74,7 +78,6 @@ fun AppearancePage() {
     val mergeStickyEnabled by settingsStorage.mergeStickyFlow.collectAsState(initial = false)
 
     val isDark = usesDarkTheme(themeMode, isSystemInDarkTheme())
-
     var showCustomColorDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
@@ -95,269 +98,326 @@ fun AppearancePage() {
         )
     }
 
-    SettingsGroup {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            ConversationListPreview(squareAvatar = squareAvatar, mergeSticky = mergeStickyEnabled)
+    // 收集所有 item id，用于跳转索引
+    val allIds = remember(isDark, liquidGlassEnabled, showBackground) {
+        buildList {
+            add("header_preview")
+            add("appearance_preview")
+            add("header_theme")
+            add("appearance_theme_mode")
+            if (isDark) add("appearance_oled")
+            add("appearance_theme_color")
+            add("appearance_liquid_glass")
+            if (liquidGlassEnabled) add("appearance_liquid_glass_blur")
+            add("header_interface")
+            add("appearance_background")
+            if (showBackground) add("appearance_background_opacity")
+            add("appearance_square_avatar")
+            add("appearance_float_bar")
+            add("appearance_merge_sticky")
         }
     }
 
-    SettingsGroup(title = "主题") {
-        CustomItemCell {
-            Column(modifier = Modifier.fillMaxWidth()) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = AppIcons.WbSunny,
-                        contentDescription = null,
-                        modifier = Modifier.size(24.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Text(
-                        text = "主题模式",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurface
+    val listState = rememberLazyListState()
+    LaunchedEffect(highlightId, allIds) {
+        if (!highlightId.isNullOrBlank()) {
+            val index = allIds.indexOf(highlightId)
+            if (index >= 0) listState.animateScrollToItem(index)
+        }
+    }
+
+    LazyColumn(
+        state = listState,
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(
+            top = contentPadding.calculateTopPadding(),
+            bottom = contentPadding.calculateBottomPadding() + 16.dp
+        )
+    ) {
+        // 预览
+        item { SettingsGroupHeader("预览") }
+        item {
+            SettingsGroupSurface(index = 0, count = 1, id = "appearance_preview", highlightId = highlightId) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    ConversationListPreview(
+                        squareAvatar = squareAvatar,
+                        mergeSticky = mergeStickyEnabled
                     )
                 }
-                Spacer(modifier = Modifier.height(12.dp))
-                ThemeModeButtonGroup(
-                    selectedMode = themeMode,
-                    onModeSelected = { value ->
-                        UiState.themeMode.value = value
-                        scope.launch { settingsStorage.setThemeMode(value) }
+            }
+        }
+
+        // 主题
+        item { SettingsGroupHeader("主题") }
+        val themeItems = buildList {
+            add(Triple("appearance_theme_mode", { /* placeholder */ }, 1))
+        }
+        item {
+            SettingsGroupSurface(index = 0, count = if (isDark) 5 else 4, id = "appearance_theme_mode", highlightId = highlightId) {
+                SettingsCustomItem {
+                    Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = AppIcons.WbSunny,
+                                contentDescription = null,
+                                modifier = Modifier.size(24.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Text(
+                                text = "主题模式",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(12.dp))
+                        ThemeModeButtonGroup(
+                            selectedMode = themeMode,
+                            onModeSelected = { value ->
+                                UiState.themeMode.value = value
+                                scope.launch { settingsStorage.setThemeMode(value) }
+                            }
+                        )
+                    }
+                }
+            }
+        }
+        if (isDark) {
+            item {
+                SettingsGroupSurface(index = 1, count = 5, id = "appearance_oled", highlightId = highlightId) {
+                    SettingsSwitchItem(
+                        icon = AppIcons.Contrast,
+                        title = "纯黑模式",
+                        subtitle = "使用纯黑背景，适合 OLED 屏幕",
+                        checked = themeMode == "oled",
+                        onCheckedChange = { enabled ->
+                            val value = if (enabled) "oled" else "dark"
+                            UiState.themeMode.value = value
+                            scope.launch { settingsStorage.setThemeMode(value) }
+                        }
+                    )
+                }
+            }
+        }
+        val themeIdx = if (isDark) 2 else 1
+        val themeCount = if (isDark) 5 else 4
+        item {
+            SettingsGroupSurface(index = themeIdx, count = themeCount, id = "appearance_theme_color", highlightId = highlightId) {
+                ThemeColorPicker(
+                    selectedColor = themeColor,
+                    isDark = isDark,
+                    onColorSelected = { selected ->
+                        UiState.themeColor.value = selected
+                        scope.launch { settingsStorage.setThemeColor(selected) }
+                    },
+                    onCustomClick = { showCustomColorDialog = true }
+                )
+            }
+        }
+        item {
+            SettingsGroupSurface(index = themeIdx + 1, count = themeCount, id = "appearance_liquid_glass", highlightId = highlightId) {
+                SettingsSwitchItem(
+                    icon = AppIcons.Opacity,
+                    title = "启用液态玻璃效果",
+                    subtitle = "使用液态玻璃风格显示界面元素，仅在 Android 13 及以上效果最佳",
+                    checked = liquidGlassEnabled,
+                    onCheckedChange = { enabled ->
+                        scope.launch { settingsStorage.setLiquidGlassEnabled(enabled) }
                     }
                 )
             }
         }
-        if (isDark) {
-            SettingsSwitchItem(
-                icon = AppIcons.Contrast,
-                title = "纯黑模式",
-                subtitle = "使用纯黑背景，适合 OLED 屏幕",
-                checked = themeMode == "oled",
-                onCheckedChange = { enabled ->
-                    val value = if (enabled) "oled" else "dark"
-                    UiState.themeMode.value = value
-                    scope.launch { settingsStorage.setThemeMode(value) }
-                }
-            )
-        }
-        ThemeColorPicker(
-            selectedColor = themeColor,
-            isDark = isDark,
-            onColorSelected = { selected ->
-                UiState.themeColor.value = selected
-                scope.launch { settingsStorage.setThemeColor(selected) }
-            },
-            onCustomClick = { showCustomColorDialog = true }
-        )
-
-        SettingsSwitchItem(
-            icon = AppIcons.Opacity,
-            title = "启用液态玻璃效果",
-            subtitle = "使用液态玻璃风格显示界面元素，仅在 Android 13 及以上效果最佳",
-            checked = liquidGlassEnabled,
-            onCheckedChange = { enabled ->
-                scope.launch {
-                    settingsStorage.setLiquidGlassEnabled(enabled)
-                }
-            }
-        )
         if (liquidGlassEnabled) {
-            CustomItemCell {
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                AppIcons.Opacity,
-                                contentDescription = null,
-                                modifier = Modifier.size(20.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text(
-                                "液态玻璃模糊",
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                        }
-                        Surface(
-                            shape = RoundedCornerShape(6.dp),
-                            color = MaterialTheme.colorScheme.secondaryContainer
-                        ) {
-                            Text(
-                                text = "${
-                                    "%.1f".format(
-                                        java.util.Locale.US,
-                                        liquidGlassBlur
+            item {
+                SettingsGroupSurface(index = themeIdx + 2, count = themeCount, id = "appearance_liquid_glass_blur", highlightId = highlightId) {
+                    CustomItemCell {
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        AppIcons.Opacity,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(20.dp),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
-                                }x",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSecondaryContainer,
-                                modifier = Modifier.padding(
-                                    horizontal = 8.dp,
-                                    vertical = 2.dp
-                                ),
-                                textAlign = TextAlign.Center
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Text("液态玻璃模糊", style = MaterialTheme.typography.bodyMedium)
+                                }
+                                Surface(
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = MaterialTheme.colorScheme.secondaryContainer
+                                ) {
+                                    Text(
+                                        text = "${
+                                            "%.1f".format(java.util.Locale.US, liquidGlassBlur)
+                                        }x",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                                        textAlign = TextAlign.Center
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Slider(
+                                value = liquidGlassBlur,
+                                onValueChange = { liquidGlassBlur = it },
+                                onValueChangeFinished = {
+                                    scope.launch { settingsStorage.setLiquidGlassBlur(liquidGlassBlur) }
+                                },
+                                valueRange = 0f..4f,
+                                modifier = Modifier.fillMaxWidth()
                             )
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Slider(
-                        value = liquidGlassBlur,
-                        onValueChange = { liquidGlassBlur = it },
-                        onValueChangeFinished = {
-                            scope.launch {
-                                settingsStorage.setLiquidGlassBlur(
-                                    liquidGlassBlur
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    "0",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    "4",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
-                        },
-                        valueRange = 0f..4f,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(
-                            "0",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            "4",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        }
                     }
                 }
             }
         }
-    }
 
-    SettingsGroup(title = "界面") {
-        SettingsSwitchItem(
-            icon = AppIcons.Image,
-            title = "显示会话背景",
-            subtitle = "在会话页面显示设定的背景",
-            checked = showBackground,
-            onCheckedChange = { checked ->
-                scope.launch {
-                    settingsStorage.setShowBackground(checked)
-                }
+        // 界面
+        item { SettingsGroupHeader("界面") }
+        val interfaceCount = if (showBackground) 5 else 4
+        item {
+            SettingsGroupSurface(index = 0, count = interfaceCount, id = "appearance_background", highlightId = highlightId) {
+                SettingsSwitchItem(
+                    icon = AppIcons.Image,
+                    title = "显示会话背景",
+                    subtitle = "在会话页面显示设定的背景",
+                    checked = showBackground,
+                    onCheckedChange = { checked ->
+                        scope.launch { settingsStorage.setShowBackground(checked) }
+                    }
+                )
             }
-        )
-
+        }
         if (showBackground) {
-            CustomItemCell {
-                Column(
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                AppIcons.Image,
-                                contentDescription = null,
-                                modifier = Modifier.size(20.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text(
-                                text = "背景不透明度",
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                        }
-                        Surface(
-                            shape = RoundedCornerShape(6.dp),
-                            color = MaterialTheme.colorScheme.secondaryContainer
-                        ) {
-                            Text(
-                                text = "${(backgroundOpacity * 100).toInt()}%",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSecondaryContainer,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                                textAlign = TextAlign.Center
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(4.dp))
-
-                    Slider(
-                        value = backgroundOpacity,
-                        onValueChange = { backgroundOpacity = it },
-                        onValueChangeFinished = {
-                            scope.launch {
-                                settingsStorage.setBackgroundOpacity(backgroundOpacity)
+            item {
+                SettingsGroupSurface(index = 1, count = interfaceCount, id = "appearance_background_opacity", highlightId = highlightId) {
+                    CustomItemCell {
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        AppIcons.Image,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(20.dp),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Text("背景不透明度", style = MaterialTheme.typography.bodyMedium)
+                                }
+                                Surface(
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = MaterialTheme.colorScheme.secondaryContainer
+                                ) {
+                                    Text(
+                                        text = "${(backgroundOpacity * 100).toInt()}%",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                                        textAlign = TextAlign.Center
+                                    )
+                                }
                             }
-                        },
-                        valueRange = 0.2f..1f,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(
-                            text = "20%",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            text = "100%",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Slider(
+                                value = backgroundOpacity,
+                                onValueChange = { backgroundOpacity = it },
+                                onValueChangeFinished = {
+                                    scope.launch { settingsStorage.setBackgroundOpacity(backgroundOpacity) }
+                                },
+                                valueRange = 0.2f..1f,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    "20%",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    "100%",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
                     }
                 }
             }
         }
-
-        SettingsSwitchItem(
-            icon = AppIcons.People,
-            title = "圆角矩形头像",
-            subtitle = "将好友和群组头像显示为圆角矩形",
-            checked = squareAvatar,
-            onCheckedChange = { checked ->
-                UiState.squareAvatar.value = checked
-                scope.launch {
-                    settingsStorage.setSquareAvatar(checked)
-                }
+        val interfaceStartIdx = if (showBackground) 2 else 1
+        item {
+            SettingsGroupSurface(index = interfaceStartIdx, count = interfaceCount, id = "appearance_square_avatar", highlightId = highlightId) {
+                SettingsSwitchItem(
+                    icon = AppIcons.People,
+                    title = "圆角矩形头像",
+                    subtitle = "将好友和群组头像显示为圆角矩形",
+                    checked = squareAvatar,
+                    onCheckedChange = { checked ->
+                        UiState.squareAvatar.value = checked
+                        scope.launch { settingsStorage.setSquareAvatar(checked) }
+                    }
+                )
             }
-        )
-        SettingsSwitchItem(
-            icon = AppIcons.Settings,
-            title = "主页悬浮底栏",
-            subtitle = "开启悬浮底栏可同时显示玻璃效果",
-            checked = floatBottomBarEnabled,
-            onCheckedChange = { checked ->
-                scope.launch {
-                    settingsStorage.setFloatBottomBar(checked)
-                }
+        }
+        item {
+            SettingsGroupSurface(index = interfaceStartIdx + 1, count = interfaceCount, id = "appearance_float_bar", highlightId = highlightId) {
+                SettingsSwitchItem(
+                    icon = AppIcons.BottomBar,
+                    title = "主页悬浮底栏",
+                    subtitle = "开启悬浮底栏可同时显示玻璃效果",
+                    checked = floatBottomBarEnabled,
+                    onCheckedChange = { checked ->
+                        scope.launch { settingsStorage.setFloatBottomBar(checked) }
+                    }
+                )
             }
-        )
-        SettingsSwitchItem(
-            icon = AppIcons.Keep,
-            title = "合并置顶会话",
-            subtitle = "开启后置顶会话将合并至会话列表中而不是单独显示置顶栏",
-            checked = mergeStickyEnabled,
-            onCheckedChange = { checked ->
-                scope.launch {
-                    settingsStorage.setMergeSticky(checked)
-                }
+        }
+        item {
+            SettingsGroupSurface(index = interfaceStartIdx + 2, count = interfaceCount, id = "appearance_merge_sticky", highlightId = highlightId) {
+                SettingsSwitchItem(
+                    icon = AppIcons.Keep,
+                    title = "合并置顶会话",
+                    subtitle = "开启后置顶会话将合并至会话列表中而不是单独显示置顶栏",
+                    checked = mergeStickyEnabled,
+                    onCheckedChange = { checked ->
+                        scope.launch { settingsStorage.setMergeSticky(checked) }
+                    }
+                )
             }
-        )
+        }
     }
 }
 
@@ -386,10 +446,7 @@ private fun themeColorScheme(value: String, isDark: Boolean): ColorScheme {
     }
 }
 
-private data class ThemeModeOption(
-    val value: String,
-    val label: String
-)
+private data class ThemeModeOption(val value: String, val label: String)
 
 private val themeModeOptions = listOf(
     ThemeModeOption("system", "系统"),
@@ -417,21 +474,14 @@ private fun ThemeModeButtonGroup(
                     count = themeModeOptions.size
                 ),
                 label = {
-                    Text(
-                        text = option.label,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                    Text(option.label, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             )
         }
     }
 }
 
-private data class ThemeColorOption(
-    val value: String,
-    val label: String
-)
+private data class ThemeColorOption(val value: String, val label: String)
 
 private val themeColorOptions = listOf(
     ThemeColorOption("DYNAMIC", "动态取色"),
@@ -504,10 +554,7 @@ private fun ThemeColorBall(
     isDark: Boolean,
     onClick: () -> Unit
 ) {
-    val scheme = remember(option.value, isDark) {
-        themeColorScheme(option.value, isDark)
-    }
-
+    val scheme = remember(option.value, isDark) { themeColorScheme(option.value, isDark) }
     val borderWidth by animateDpAsState(
         targetValue = if (selected) 2.dp else 0.dp,
         label = "themeBallBorderWidth"
@@ -517,33 +564,18 @@ private fun ThemeColorBall(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
             .semantics { contentDescription = "${option.label}主题" }
-            .selectable(
-                selected = selected,
-                onClick = onClick,
-                role = Role.RadioButton
-            )
+            .selectable(selected = selected, onClick = onClick, role = Role.RadioButton)
     ) {
         Card(
             onClick = onClick,
             modifier = Modifier.size(64.dp),
             shape = RoundedCornerShape(16.dp),
-            border = if (selected) {
-                BorderStroke(borderWidth, MaterialTheme.colorScheme.primary)
-            } else {
-                null
-            },
+            border = if (selected) BorderStroke(borderWidth, MaterialTheme.colorScheme.primary) else null,
             colors = CardDefaults.cardColors(containerColor = scheme.surfaceContainer)
         ) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Box(
-                    modifier = Modifier.size(48.dp)
-                ) {
-                    Canvas(
-                        modifier = Modifier.fillMaxSize()
-                    ) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Box(modifier = Modifier.size(48.dp)) {
+                    Canvas(modifier = Modifier.fillMaxSize()) {
                         drawArc(
                             color = scheme.secondaryContainer,
                             startAngle = -90f,
@@ -551,7 +583,6 @@ private fun ThemeColorBall(
                             useCenter = true,
                             size = size
                         )
-
                         drawArc(
                             color = scheme.tertiaryContainer,
                             startAngle = 90f,
@@ -560,7 +591,6 @@ private fun ThemeColorBall(
                             size = size
                         )
                     }
-
                     Box(
                         modifier = Modifier
                             .size(24.dp)
@@ -569,7 +599,6 @@ private fun ThemeColorBall(
                             .align(Alignment.Center)
                     )
                 }
-
                 if (selected) {
                     Box(
                         modifier = Modifier
@@ -587,17 +616,12 @@ private fun ThemeColorBall(
                 }
             }
         }
-
         Spacer(modifier = Modifier.height(8.dp))
-
         Text(
             text = option.label,
             style = MaterialTheme.typography.labelSmall,
-            color = if (selected) {
-                MaterialTheme.colorScheme.primary
-            } else {
-                MaterialTheme.colorScheme.onSurfaceVariant
-            }
+            color = if (selected) MaterialTheme.colorScheme.primary
+            else MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }
@@ -617,7 +641,6 @@ private fun CustomThemeColorBall(
             isDay = !isDark
         )
     }
-
     val borderWidth by animateDpAsState(
         targetValue = if (selected) 2.dp else 0.dp,
         label = "customThemeBallBorderWidth"
@@ -627,27 +650,16 @@ private fun CustomThemeColorBall(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
             .semantics { contentDescription = "自定义主题" }
-            .selectable(
-                selected = selected,
-                onClick = onClick,
-                role = Role.RadioButton
-            )
+            .selectable(selected = selected, onClick = onClick, role = Role.RadioButton)
     ) {
         Card(
             onClick = onClick,
             modifier = Modifier.size(64.dp),
             shape = RoundedCornerShape(16.dp),
-            border = if (selected) {
-                BorderStroke(borderWidth, MaterialTheme.colorScheme.primary)
-            } else {
-                null
-            },
+            border = if (selected) BorderStroke(borderWidth, MaterialTheme.colorScheme.primary) else null,
             colors = CardDefaults.cardColors(containerColor = scheme.surfaceContainer)
         ) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Box(
                     modifier = Modifier
                         .size(48.dp)
@@ -674,7 +686,6 @@ private fun CustomThemeColorBall(
                             .background(previewColor)
                     )
                 }
-
                 if (selected) {
                     Box(
                         modifier = Modifier
@@ -692,17 +703,12 @@ private fun CustomThemeColorBall(
                 }
             }
         }
-
         Spacer(modifier = Modifier.height(8.dp))
-
         Text(
             text = "自定义",
             style = MaterialTheme.typography.labelSmall,
-            color = if (selected) {
-                MaterialTheme.colorScheme.primary
-            } else {
-                MaterialTheme.colorScheme.onSurfaceVariant
-            }
+            color = if (selected) MaterialTheme.colorScheme.primary
+            else MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }
@@ -722,9 +728,7 @@ private fun CustomThemeColorDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = {
-            Text("自定义主题色")
-        },
+        title = { Text("自定义主题色") },
         text = {
             Column(
                 modifier = Modifier
@@ -738,38 +742,17 @@ private fun CustomThemeColorDialog(
                         .clip(RoundedCornerShape(16.dp))
                         .background(currentColor)
                 )
-
                 Spacer(modifier = Modifier.height(20.dp))
-
-                ColorChannelSlider(
-                    label = "红",
-                    value = red,
-                    tint = Color(0xFFFF5252),
-                    onValueChange = { red = it }
-                )
-                ColorChannelSlider(
-                    label = "绿",
-                    value = green,
-                    tint = Color(0xFF69F0AE),
-                    onValueChange = { green = it }
-                )
-                ColorChannelSlider(
-                    label = "蓝",
-                    value = blue,
-                    tint = Color(0xFF40C4FF),
-                    onValueChange = { blue = it }
-                )
+                ColorChannelSlider(label = "红", value = red, tint = Color(0xFFFF5252), onValueChange = { red = it })
+                ColorChannelSlider(label = "绿", value = green, tint = Color(0xFF69F0AE), onValueChange = { green = it })
+                ColorChannelSlider(label = "蓝", value = blue, tint = Color(0xFF40C4FF), onValueChange = { blue = it })
             }
         },
         confirmButton = {
-            TextButton(onClick = { onConfirm(currentColor) }) {
-                Text("应用")
-            }
+            TextButton(onClick = { onConfirm(currentColor) }) { Text("应用") }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("取消")
-            }
+            TextButton(onClick = onDismiss) { Text("取消") }
         }
     )
 }
@@ -798,10 +781,7 @@ private fun ColorChannelSlider(
             onValueChange = onValueChange,
             valueRange = 0f..1f,
             modifier = Modifier.weight(1f),
-            colors = SliderDefaults.colors(
-                thumbColor = tint,
-                activeTrackColor = tint
-            )
+            colors = SliderDefaults.colors(thumbColor = tint, activeTrackColor = tint)
         )
         Text(
             text = "${(value * 255f).roundToInt()}",
@@ -817,9 +797,7 @@ private fun ColorChannelSlider(
 private fun ConversationListPreview(squareAvatar: Boolean, mergeSticky: Boolean) {
     val scheme = MaterialTheme.colorScheme
 
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Card(
             modifier = Modifier.width(240.dp),
             shape = MaterialTheme.shapes.extraLarge,
@@ -833,11 +811,7 @@ private fun ConversationListPreview(squareAvatar: Boolean, mergeSticky: Boolean)
                         .padding(horizontal = 16.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = "消息",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = scheme.onSurface
-                    )
+                    Text("消息", style = MaterialTheme.typography.titleMedium, color = scheme.onSurface)
                     Spacer(Modifier.weight(1f))
                     Box(
                         modifier = Modifier
@@ -846,11 +820,7 @@ private fun ConversationListPreview(squareAvatar: Boolean, mergeSticky: Boolean)
                             .background(scheme.primaryContainer)
                     )
                 }
-
-                HorizontalDivider(
-                    color = scheme.outlineVariant.copy(alpha = 0.5f)
-                )
-
+                HorizontalDivider(color = scheme.outlineVariant.copy(alpha = 0.5f))
                 if (!mergeSticky) {
                     Row(
                         modifier = Modifier
@@ -876,7 +846,6 @@ private fun ConversationListPreview(squareAvatar: Boolean, mergeSticky: Boolean)
                         color = scheme.outlineVariant.copy(alpha = 0.5f)
                     )
                 }
-
                 ConversationPreviewItem(
                     name = "设计团队",
                     message = "明天上午十点开会",
@@ -897,7 +866,6 @@ private fun ConversationListPreview(squareAvatar: Boolean, mergeSticky: Boolean)
                     squareAvatar = squareAvatar,
                     isSticky = mergeSticky
                 )
-
                 ConversationPreviewItem(
                     name = "Alex",
                     message = "好的，收到 👍",
@@ -908,9 +876,7 @@ private fun ConversationListPreview(squareAvatar: Boolean, mergeSticky: Boolean)
                     squareAvatar = squareAvatar,
                     isSticky = false
                 )
-
                 Spacer(Modifier.height(16.dp))
-
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -995,11 +961,10 @@ private fun ConversationPreviewItem(
         modifier = Modifier
             .fillMaxWidth()
             .background(
-                if ((isSticky && themeColor != "WHITE") || (!isSticky && themeColor == "WHITE")) {
+                if ((isSticky && themeColor != "WHITE") || (!isSticky && themeColor == "WHITE"))
                     MaterialTheme.colorScheme.surfaceContainerHigh
-                } else {
+                else
                     MaterialTheme.colorScheme.surface
-                }
             )
             .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -1018,9 +983,7 @@ private fun ConversationPreviewItem(
                 modifier = Modifier.size(20.dp)
             )
         }
-
         Spacer(modifier = Modifier.width(10.dp))
-
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = name,
@@ -1038,12 +1001,8 @@ private fun ConversationPreviewItem(
                 overflow = TextOverflow.Ellipsis
             )
         }
-
         Spacer(modifier = Modifier.width(8.dp))
-
-        Column(
-            horizontalAlignment = Alignment.End
-        ) {
+        Column(horizontalAlignment = Alignment.End) {
             Text(
                 text = time,
                 style = MaterialTheme.typography.labelSmall,

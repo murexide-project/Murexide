@@ -14,18 +14,18 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import com.juhao.murexide.ui.components.Avatar
 import com.juhao.murexide.ui.components.CustomItemCell
-import com.juhao.murexide.ui.components.SettingsGroup
+import com.juhao.murexide.ui.components.SettingsGroupHeader
+import com.juhao.murexide.ui.components.SettingsGroupSurface
 import com.juhao.murexide.ui.components.SettingsItem
 import com.juhao.murexide.ui.components.SettingsSwitchItem
 import kotlinx.coroutines.flow.collectLatest
 
-/** 可选的受限消息类型：type 到展示名。 */
 private val MsgTypeOptions = listOf(
     1 to "文本消息",
     2 to "图片消息",
@@ -154,7 +154,8 @@ fun GroupSettingsScreen(
                 )
             }
 
-            SettingsGroup(title = "基本信息") {
+            SettingsGroupHeader("基本信息")
+            SettingsGroupSurface(index = 0, count = 2) {
                 CustomItemCell {
                     OutlinedTextField(
                         value = uiState.name,
@@ -164,6 +165,8 @@ fun GroupSettingsScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
+            }
+            SettingsGroupSurface(index = 1, count = 2) {
                 CustomItemCell {
                     OutlinedTextField(
                         value = uiState.introduction,
@@ -176,7 +179,8 @@ fun GroupSettingsScreen(
                 }
             }
 
-            SettingsGroup(title = "群聊设置") {
+            SettingsGroupHeader("群聊设置")
+            SettingsGroupSurface(index = 0, count = 4) {
                 SettingsSwitchItem(
                     icon = AppIcons.HowToReg,
                     title = "进群免审核",
@@ -184,12 +188,16 @@ fun GroupSettingsScreen(
                     checked = uiState.directJoin,
                     onCheckedChange = viewModel::toggleDirectJoin
                 )
+            }
+            SettingsGroupSurface(index = 1, count = 4) {
                 SettingsSwitchItem(
                     icon = AppIcons.History,
                     title = "新成员可见历史消息",
                     checked = uiState.historyMsg,
                     onCheckedChange = viewModel::toggleHistoryMsg
                 )
+            }
+            SettingsGroupSurface(index = 2, count = 4) {
                 SettingsSwitchItem(
                     icon = AppIcons.Lock,
                     title = "群聊私有",
@@ -197,6 +205,8 @@ fun GroupSettingsScreen(
                     checked = uiState.isPrivate,
                     onCheckedChange = viewModel::togglePrivate
                 )
+            }
+            SettingsGroupSurface(index = 3, count = 4) {
                 SettingsSwitchItem(
                     icon = AppIcons.VisibilityOff,
                     title = "隐藏群成员",
@@ -206,7 +216,8 @@ fun GroupSettingsScreen(
             }
 
             if (uiState.isOwner) {
-                SettingsGroup(title = "群云盘") {
+                SettingsGroupHeader("群云盘")
+                SettingsGroupSurface(index = 0, count = 1) {
                     SettingsSwitchItem(
                         icon = AppIcons.Folder,
                         title = "禁止成员上传到群云盘",
@@ -219,7 +230,8 @@ fun GroupSettingsScreen(
             }
 
             if (uiState.canManage) {
-                SettingsGroup(title = "高级设置") {
+                SettingsGroupHeader("高级设置")
+                SettingsGroupSurface(index = 0, count = if (uiState.isOwner) 2 else 1) {
                     SettingsItem(
                         icon = AppIcons.TextFields,
                         title = "消息类型限制",
@@ -230,7 +242,9 @@ fun GroupSettingsScreen(
                         },
                         onClick = { showMsgTypeDialog = true }
                     )
-                    if (uiState.isOwner) {
+                }
+                if (uiState.isOwner) {
+                    SettingsGroupSurface(index = 1, count = 2) {
                         SettingsItem(
                             icon = AppIcons.Key,
                             title = "群口令",
@@ -272,11 +286,7 @@ fun GroupSettingsScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable(enabled = !uiState.isSavingMsgTypeLimit) {
-                                    selected = if (type in selected) {
-                                        selected - type
-                                    } else {
-                                        selected + type
-                                    }
+                                    selected = if (type in selected) selected - type else selected + type
                                 }
                                 .padding(vertical = 6.dp),
                             verticalAlignment = Alignment.CenterVertically
@@ -287,10 +297,7 @@ fun GroupSettingsScreen(
                                 enabled = !uiState.isSavingMsgTypeLimit
                             )
                             Spacer(Modifier.width(4.dp))
-                            Text(
-                                text = label,
-                                style = MaterialTheme.typography.bodyMedium
-                            )
+                            Text(label, style = MaterialTheme.typography.bodyMedium)
                         }
                     }
                 }

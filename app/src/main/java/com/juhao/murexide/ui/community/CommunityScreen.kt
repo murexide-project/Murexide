@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.input.rememberTextFieldState
@@ -28,10 +29,7 @@ import com.juhao.murexide.data.BaItem
 import com.juhao.murexide.ui.community.ba.BaDetailActivity
 import com.juhao.murexide.ui.community.detail.PostDetailActivity
 import com.juhao.murexide.ui.community.myposts.MyPostsActivity
-import com.juhao.murexide.ui.components.Avatar
-import com.juhao.murexide.ui.components.EmptyPlaceholder
-import com.juhao.murexide.ui.components.SettingsGroup
-import com.juhao.murexide.ui.components.SettingsItem
+import com.juhao.murexide.ui.components.*
 import com.juhao.murexide.ui.icons.AppIcons
 import com.juhao.murexide.ui.icons.AutoMirroredIcon
 import kotlinx.coroutines.launch
@@ -341,10 +339,16 @@ fun ManageContent(
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(top = 8.dp, bottom = innerPadding.calculateBottomPadding())
+        contentPadding = PaddingValues(
+            top = 8.dp,
+            bottom = innerPadding.calculateBottomPadding()
+        )
     ) {
         item {
-            SettingsGroup {
+            SettingsGroupHeader("管理")
+        }
+        item {
+            SettingsGroupSurface(index = 0, count = 1) {
                 SettingsItem(
                     icon = AppIcons.Article,
                     title = "我的文章",
@@ -355,34 +359,34 @@ fun ManageContent(
         }
 
         item {
-            SettingsGroup(title = "我的分区") {
-                when {
-                    isLoading && baList.isEmpty() -> {
-                        Box(
-                            Modifier.fillMaxWidth().padding(24.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            CircularProgressIndicator(Modifier.size(28.dp))
-                        }
-                    }
+            SettingsGroupHeader("我的分区")
+        }
 
-                    baList.isEmpty() -> {
-                        Box(
-                            Modifier.fillMaxWidth().padding(24.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                "你还没有创建分区",
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
+        when {
+            isLoading && baList.isEmpty() -> item {
+                Box(
+                    Modifier.fillMaxWidth().padding(24.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(Modifier.size(28.dp))
+                }
+            }
 
-                    else -> {
-                        baList.forEach { ba ->
-                            BaRow(ba = ba, onClick = { onBaClick(ba) })
-                        }
-                    }
+            baList.isEmpty() -> item {
+                Box(
+                    Modifier.fillMaxWidth().padding(24.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        "你还没有创建分区",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            else -> itemsIndexed(baList) { index, ba ->
+                SettingsGroupSurface(index = index, count = baList.size) {
+                    BaRow(ba = ba, onClick = { onBaClick(ba) })
                 }
             }
         }
@@ -419,30 +423,34 @@ fun BaList(
 
 @Composable
 fun BaRow(modifier: Modifier = Modifier, ba: BaItem, onClick: () -> Unit) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable { onClick() }
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
+    ListItem(
+        modifier = modifier,
+        onClick = onClick,
+        leadingContent = {
+            Avatar(url = ba.avatar, size = 48.dp)
+        },
+        trailingContent = {
+            Icon(
+                AppIcons.ChevronRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     ) {
-        Avatar(url = ba.avatar, size = 48.dp)
-        Spacer(Modifier.width(12.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(ba.name, fontWeight = FontWeight.Medium, fontSize = 16.sp)
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Text(
+                text = ba.name,
+                fontWeight = FontWeight.Medium,
+                fontSize = 16.sp
+            )
             if (ba.memberNum > 0 || ba.postNum > 0) {
                 Text(
-                    "${ba.memberNum} 关注 · ${ba.postNum} 文章",
+                    text = "${ba.memberNum} 关注 · ${ba.postNum} 文章",
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
-        Icon(
-            AppIcons.ChevronRight,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant
-        )
     }
 }
 

@@ -413,110 +413,112 @@ private fun MessageBubbleBody(
                     colors = CardDefaults.cardColors(containerColor = cardColor),
                     modifier = Modifier.weight(1f, fill = false)
                 ) {
-                    Box {
-                        Column(modifier = Modifier.padding(if (hideCard) 0.dp else 8.dp)) {
-                            val displayName = if (hideSenderInfo && anonymousNameProvider != null) {
-                                anonymousNameProvider(message.senderId)
-                            } else {
-                                message.senderName
-                            }
-
-                            if (!hideCard && !isMine && isLastFromSender) {
-                                SenderHeader(
-                                    displayName = displayName,
-                                    roleLabel = roleLabel,
-                                    message = message,
-                                    showTags = showTags,
-                                    hideSenderInfo = hideSenderInfo
-                                )
-                            }
-
-                            message.cmdName?.let {
-                                Text(
-                                    text = "/$it",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                                )
-                            }
-
-                            if (hasQuote && !hideCard) {
-                                QuoteCard(
-                                    message = message,
-                                    hideSenderInfo = hideSenderInfo,
-                                    hideImages = hideImages,
-                                    isSelectionMode = isSelectionMode,
-                                    onQuoteClick = onQuoteClick
-                                )
-                            }
-
-                            CompositionLocalProvider(LocalLayoutDirection provides defaultLayoutDirection) {
-                                MessageMenu(
-                                    message = message,
-                                    showMenu = showMenu,
-                                    showMenuChanged = showMenuChanged,
-                                    isMine = isMine,
-                                    isAdmin = isAdmin,
-                                    onRecall = onRecall,
-                                    onEdit = onEdit,
-                                    onReply = onReply,
-                                    onForward = onForward,
-                                    onEditIconClick = onEditIconClick,
-                                    clipboardManager = clipboardManager,
-                                    scope = scope,
-                                    context = context,
-                                    onCreateExpression = onCreateExpression
-                                )
-
-                                MessageContentRouter(
-                                    message = message,
-                                    isMine = isMine,
-                                    isSelected = isSelected,
-                                    isSelectionMode = isSelectionMode,
-                                    onLongPress = onLongPress,
-                                    onImageClick = onImageClick,
-                                    onMarkdownImageClick = onMarkdownImageClick,
-                                    onDownloadClick = onDownloadClick,
-                                    downloadProgress = downloadProgress,
-                                    isDownloaded = isDownloaded,
-                                    hideImages = hideImages,
-                                    timestampDisplay = timestampDisplay,
-                                    incomingAttachmentBackgroundColor = incomingAttachmentBackgroundColor,
-                                    audioPlaybackState = audioPlaybackState,
-                                    context = context,
-                                    bubbleCornerRadius = bubbleCornerRadius,
-                                    bubbleOpacity = bubbleOpacity,
-                                    incomingBubbleColor = incomingBubbleColor
-                                )
-
-                                if (!message.isRecalled && message.buttons.isNotEmpty()) {
-                                    MessageButtons(
-                                        buttons = message.buttons,
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(
-                                                top = if (hideCard) 4.dp else 6.dp,
-                                                start = if (hideCard) 8.dp else 0.dp,
-                                                end = if (hideCard) 8.dp else 0.dp,
-                                                bottom = if (hideCard) 4.dp else 0.dp
-                                            ),
-                                        onButtonClick = { button -> onButtonClick(message, button) }
+                    CompositionLocalProvider(LocalLayoutDirection provides defaultLayoutDirection) {
+                        Box {
+                            Column(modifier = Modifier.padding(if (hideCard) 0.dp else 8.dp)) {
+                                val displayName = if (hideSenderInfo && anonymousNameProvider != null) {
+                                    anonymousNameProvider(message.senderId)
+                                } else {
+                                    message.senderName
+                                }
+    
+                                if (!hideCard && !isMine && isLastFromSender) {
+                                    SenderHeader(
+                                        displayName = displayName,
+                                        roleLabel = roleLabel,
+                                        message = message,
+                                        showTags = showTags,
+                                        hideSenderInfo = hideSenderInfo
                                     )
                                 }
+    
+                                message.cmdName?.let {
+                                    Text(
+                                        text = "/$it",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                    )
+                                }
+    
+                                if (hasQuote && !hideCard) {
+                                    QuoteCard(
+                                        message = message,
+                                        hideSenderInfo = hideSenderInfo,
+                                        hideImages = hideImages,
+                                        isSelectionMode = isSelectionMode,
+                                        onQuoteClick = onQuoteClick
+                                    )
+                                }
+    
+                                CompositionLocalProvider(LocalLayoutDirection provides defaultLayoutDirection) {
+                                    MessageMenu(
+                                        message = message,
+                                        showMenu = showMenu,
+                                        showMenuChanged = showMenuChanged,
+                                        isMine = isMine,
+                                        isAdmin = isAdmin,
+                                        onRecall = onRecall,
+                                        onEdit = onEdit,
+                                        onReply = onReply,
+                                        onForward = onForward,
+                                        onEditIconClick = onEditIconClick,
+                                        clipboardManager = clipboardManager,
+                                        scope = scope,
+                                        context = context,
+                                        onCreateExpression = onCreateExpression
+                                    )
+    
+                                    MessageContentRouter(
+                                        message = message,
+                                        isMine = isMine,
+                                        isSelected = isSelected,
+                                        isSelectionMode = isSelectionMode,
+                                        onLongPress = onLongPress,
+                                        onImageClick = onImageClick,
+                                        onMarkdownImageClick = onMarkdownImageClick,
+                                        onDownloadClick = onDownloadClick,
+                                        downloadProgress = downloadProgress,
+                                        isDownloaded = isDownloaded,
+                                        hideImages = hideImages,
+                                        timestampDisplay = timestampDisplay,
+                                        incomingAttachmentBackgroundColor = incomingAttachmentBackgroundColor,
+                                        audioPlaybackState = audioPlaybackState,
+                                        context = context,
+                                        bubbleCornerRadius = bubbleCornerRadius,
+                                        bubbleOpacity = bubbleOpacity,
+                                        incomingBubbleColor = incomingBubbleColor
+                                    )
+    
+                                    if (!message.isRecalled && message.buttons.isNotEmpty()) {
+                                        MessageButtons(
+                                            buttons = message.buttons,
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(
+                                                    top = if (hideCard) 4.dp else 6.dp,
+                                                    start = if (hideCard) 8.dp else 0.dp,
+                                                    end = if (hideCard) 8.dp else 0.dp,
+                                                    bottom = if (hideCard) 4.dp else 0.dp
+                                                ),
+                                            onButtonClick = { button -> onButtonClick(message, button) }
+                                        )
+                                    }
+                                }
                             }
+    
+                            MessageFooter(
+                                timestampDisplay = timestampDisplay,
+                                isEdited = message.isEdited,
+                                isRecalled = message.isRecalled,
+                                modifier = Modifier
+                                    .align(Alignment.BottomEnd)
+                                    .padding(4.dp)
+                                    .then(
+                                        if (hideCard) Modifier.background(cardColor.copy(alpha = 0.6f), RoundedCornerShape(24.dp)) else Modifier
+                                    )
+                                    .padding(horizontal = 4.dp, vertical = 2.dp)
+                            )
                         }
-
-                        MessageFooter(
-                            timestampDisplay = timestampDisplay,
-                            isEdited = message.isEdited,
-                            isRecalled = message.isRecalled,
-                            modifier = Modifier
-                                .align(if (isMine) Alignment.BottomStart else Alignment.BottomEnd)
-                                .padding(4.dp)
-                                .then(
-                                    if (hideCard) Modifier.background(cardColor.copy(alpha = 0.6f), RoundedCornerShape(24.dp)) else Modifier
-                                )
-                                .padding(horizontal = 4.dp, vertical = 2.dp)
-                        )
                     }
                 }
 

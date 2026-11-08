@@ -2,18 +2,9 @@ package com.juhao.murexide.ui.settings.userbot
 
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.*
@@ -32,8 +23,7 @@ import androidx.compose.ui.unit.dp
 import com.juhao.murexide.data.UserBotMatchType
 import com.juhao.murexide.data.UserBotRule
 import com.juhao.murexide.datastore.SettingsStorage
-import com.juhao.murexide.ui.components.SettingsGroup
-import com.juhao.murexide.ui.components.SettingsItemCell
+import com.juhao.murexide.ui.components.*
 import com.juhao.murexide.ui.icons.AppIcons
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -403,39 +393,51 @@ private fun AutoReplyTab(
         contentPadding = PaddingValues(bottom = 16.dp)
     ) {
         item {
-            SettingsGroup(title = "自动回复规则") {
-                if (loading) {
+            SettingsGroupHeader("自动回复规则")
+        }
+        when {
+            loading -> item {
+                SettingsGroupSurface(index = 0, count = 1) {
                     SettingsItemCell(
                         icon = AppIcons.Info,
                         title = "加载中…"
                     )
-                } else if (rules.isEmpty()) {
+                }
+            }
+            rules.isEmpty() -> item {
+                SettingsGroupSurface(index = 0, count = 1) {
                     SettingsItemCell(
                         icon = AppIcons.Info,
                         title = "暂无规则",
                         subtitle = "点击下方按钮添加"
                     )
-                } else {
-                    rules.forEachIndexed { index, rule ->
-                        val currentIndex = index
-                        val modeLabel = when (rule.matchType) {
-                            UserBotMatchType.EXACT -> "完全匹配"
-                            UserBotMatchType.REGEX -> "正则匹配"
-                            UserBotMatchType.CONTAINS -> "包含匹配"
-                        }
-                        SettingsItemCell(
-                            icon = AppIcons.ChatBubble,
-                            title = rule.keyword,
-                            subtitle = "回复：${rule.reply} · $modeLabel",
-                            endIcon = AppIcons.Edit,
-                            onClick = { onEdit(currentIndex, rule) }
-                        )
-                    }
+                }
+            }
+            else -> itemsIndexed(rules) { index, rule ->
+                val modeLabel = when (rule.matchType) {
+                    UserBotMatchType.EXACT -> "完全匹配"
+                    UserBotMatchType.REGEX -> "正则匹配"
+                    UserBotMatchType.CONTAINS -> "包含匹配"
+                }
+                SettingsGroupSurface(index = index, count = rules.size) {
+                    SettingsItemCell(
+                        icon = AppIcons.ChatBubble,
+                        title = rule.keyword,
+                        subtitle = "回复：${rule.reply} · $modeLabel",
+                        endIcon = AppIcons.Edit,
+                        onClick = { onEdit(index, rule) }
+                    )
                 }
             }
         }
         item {
-            SettingsGroup {
+            Spacer(Modifier.height(16.dp))
+        }
+        item {
+            SettingsGroupHeader("操作")
+        }
+        item {
+            SettingsGroupSurface(index = 0, count = 1) {
                 SettingsItemCell(
                     icon = AppIcons.Add,
                     title = "添加规则",
@@ -458,28 +460,39 @@ private fun AutoRecallTab(
         contentPadding = PaddingValues(bottom = 16.dp)
     ) {
         item {
-            SettingsGroup(title = "要撤回的发送者") {
-                if (senderIds.isEmpty()) {
+            SettingsGroupHeader("要撤回的发送者")
+        }
+        if (senderIds.isEmpty()) {
+            item {
+                SettingsGroupSurface(index = 0, count = 1) {
                     SettingsItemCell(
                         icon = AppIcons.Info,
                         title = "暂无撤回目标",
                         subtitle = "点击下方按钮添加发送者 ID"
                     )
-                } else {
-                    senderIds.forEach { id ->
-                        SettingsItemCell(
-                            icon = AppIcons.Person,
-                            title = id,
-                            subtitle = "收到该用户的消息时自动撤回",
-                            endIcon = AppIcons.Edit,
-                            onClick = { onEdit(id) }
-                        )
-                    }
+                }
+            }
+        } else {
+            itemsIndexed(senderIds) { index, id ->
+                SettingsGroupSurface(index = index, count = senderIds.size) {
+                    SettingsItemCell(
+                        icon = AppIcons.Person,
+                        title = id,
+                        subtitle = "收到该用户的消息时自动撤回",
+                        endIcon = AppIcons.Edit,
+                        onClick = { onEdit(id) }
+                    )
                 }
             }
         }
         item {
-            SettingsGroup {
+            Spacer(Modifier.height(16.dp))
+        }
+        item {
+            SettingsGroupHeader("操作")
+        }
+        item {
+            SettingsGroupSurface(index = 0, count = 1) {
                 SettingsItemCell(
                     icon = AppIcons.Add,
                     title = "添加撤回目标",

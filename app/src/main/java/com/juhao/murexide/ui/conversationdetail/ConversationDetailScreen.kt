@@ -45,8 +45,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
@@ -60,13 +61,13 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.juhao.murexide.data.BaItem
 import com.juhao.murexide.data.BotItem
 import com.juhao.murexide.data.ConversationDetail
 import com.juhao.murexide.data.GroupBotPermission
 import com.juhao.murexide.data.GroupMember
 import com.juhao.murexide.data.MessageItem
-import com.juhao.murexide.data.UserMedal
 import com.juhao.murexide.ui.components.*
 import com.juhao.murexide.ui.icons.AppIcons
 import com.juhao.murexide.ui.icons.AppFilledIcons
@@ -104,6 +105,7 @@ fun ConversationDetailScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val shareState by viewModel.shareState.collectAsStateWithLifecycle()
     val backgroundUploadState by viewModel.backgroundUploadState.collectAsStateWithLifecycle()
+    val reportState by viewModel.reportState.collectAsStateWithLifecycle()
     LaunchedEffect(refreshSignal) {
         if (refreshSignal > 0) viewModel.loadDetail()
     }
@@ -278,6 +280,20 @@ fun ConversationDetailScreen(
                             }
                         }
                     )
+                    DropdownMenuItem(
+                        text = { Text("举报", color = MaterialTheme.colorScheme.error) },
+                        leadingIcon = {
+                            Icon(
+                                AppIcons.Report,
+                                null,
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                        },
+                        onClick = {
+                            showMore = false
+                            viewModel.openReportDialog()
+                        }
+                    )
                 }
             }
         },
@@ -449,6 +465,19 @@ fun ConversationDetailScreen(
         )
     }
 
+    if (reportState.isOpen) {
+        ReportDialog(
+            state = reportState,
+            token = viewModel.token,
+            onDismiss = viewModel::closeReportDialog,
+            onReasonChange = viewModel::updateReportReason,
+            onContentChange = viewModel::updateReportContent,
+            onImageChange = viewModel::updateReportImage,
+            onImageUploadingChange = viewModel::setReportImageUploading,
+            onSubmit = viewModel::submitReport
+        )
+    }
+
     MemberManagementDialogs(
         kickTarget = state.kickTarget,
         gagTarget = state.gagTarget,
@@ -492,6 +521,198 @@ fun ConversationDetailScreen(
                     putExtra(Intent.EXTRA_TEXT, html)
                 }
                 context.startActivity(intent)
+            }
+        }
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ReportDialog(
+    state: ReportUiState,
+    token: String,
+    onDismiss: () -> Unit,
+    onReasonChange: (String) -> Unit,
+    onContentChange: (String) -> Unit,
+    onImageChange: (String) -> Unit,
+    onImageUploadingChange: (Boolean) -> Unit,
+    onSubmit: () -> Unit
+) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
+    val imagePicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        uri ?: return@rememberLauncherForActivityResult
+        scope.launch {
+            onImageUploadingChange(true)
+            QiniuUploader(
+                context = context,
+                userToken = token,
+                uploadType = 1
+            ).uploadFromUri(context, uri)
+                .onSuccess { response ->
+                    onImageChange(response.key)
+                }
+                .onFailure { e ->
+                    Toast.makeText(context, e.message ?: "截图上传失败", Toast.LENGTH_SHORT).show()
+                }
+            onImageUploadingChange(false)
+        }
+    }
+
+    val reasons = listOf(
+        "色情低俗",
+        "时政不实信息",
+        "垃圾广告",
+        "青少年不易",
+        "辱骂攻击",
+        "侵犯权益",
+        "违法犯罪",
+        "开盒网暴",
+        "其他"
+    )
+
+    AlertDialog(
+        onDismissRequest = { if (!state.isSubmitting) onDismiss() },
+        icon = { Icon(AppIcons.Report, contentDescription = null) },
+        title = { Text("举报") },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+            ) {
+                Text(
+                    text = "举报理由",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(6.dp))
+
+                reasons.forEach { reason ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable(enabled = !state.isSubmitting) {
+                                onReasonChange(reason)
+                            },
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = state.reason == reason,
+                            onClick = { onReasonChange(reason) },
+                            enabled = !state.isSubmitting
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Text(
+                            text = reason,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(12.dp))
+
+                OutlinedTextField(
+                    value = state.content,
+                    onValueChange = onContentChange,
+                    label = { Text("补充说明") },
+                    minLines = 3,
+                    maxLines = 6,
+                    enabled = !state.isSubmitting,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(Modifier.height(12.dp))
+
+                if (state.imageUrl.isBlank()) {
+                    OutlinedButton(
+                        onClick = {
+                            imagePicker.launch(
+                                PickVisualMediaRequest(
+                                    ActivityResultContracts.PickVisualMedia.ImageOnly
+                                )
+                            )
+                        },
+                        enabled = !state.isSubmitting && !state.isUploadingImage,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        if (state.isUploadingImage) {
+                            CircularProgressIndicator(
+                                Modifier.size(18.dp),
+                                strokeWidth = 2.dp
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text("上传中…")
+                        } else {
+                            Icon(AppIcons.Image, null, Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text("添加截图（可选）")
+                        }
+                    }
+                } else {
+                    Box {
+                        val reportImageRequest = remember(state.imageUrl) {
+                            ImageRequest.Builder(context)
+                                .data("https://chat-img.jwznb.com/${state.imageUrl}")
+                                .setHeader("Referer", "https://myapp.jwznb.com")
+                                .crossfade(true)
+                                .build()
+                        }
+                        
+                        AsyncImage(
+                            model = reportImageRequest,
+                            contentDescription = "举报截图",
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(160.dp)
+                                .clip(RoundedCornerShape(12.dp)),
+                            contentScale = ContentScale.Crop
+                        )
+                        if (!state.isSubmitting) {
+                            IconButton(
+                                onClick = { onImageChange("") },
+                                modifier = Modifier.align(Alignment.TopEnd)
+                            ) {
+                                Icon(AppIcons.Close, contentDescription = "移除截图")
+                            }
+                        }
+                    }
+                }
+
+                state.error?.let { error ->
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = error,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = onSubmit,
+                enabled = !state.isSubmitting &&
+                        !state.isUploadingImage &&
+                        state.reason.isNotBlank() &&
+                        state.content.isNotBlank()
+            ) {
+                if (state.isSubmitting) {
+                    CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                } else {
+                    Text("提交")
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = onDismiss,
+                enabled = !state.isSubmitting
+            ) {
+                Text("取消")
             }
         }
     )
