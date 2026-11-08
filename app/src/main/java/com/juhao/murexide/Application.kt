@@ -23,7 +23,6 @@ import coil.decode.ImageDecoderDecoder
 import coil.decode.VideoFrameDecoder
 import coil.request.ImageRequest
 import coil.request.SuccessResult
-import com.flyjingfish.openimagelib.OpenImageConfig
 import com.juhao.murexide.datastore.AccountStorage
 import com.juhao.murexide.datastore.SettingsStorage
 import com.juhao.murexide.data.local.LocalCache
@@ -36,9 +35,6 @@ import com.juhao.murexide.ui.lock.GateActivity
 import com.juhao.murexide.ui.settings.userbot.UserBotManager
 import com.juhao.murexide.ui.theme.UiCache
 import com.juhao.murexide.ui.theme.UiState
-import com.juhao.murexide.ui.components.MurexideBigImageHelper
-import com.juhao.murexide.ui.components.MurexideDownloadMediaHelper
-import com.juhao.murexide.ui.components.MurexideVideoFragmentCreate
 import com.juhao.murexide.utils.AppForegroundState
 import com.juhao.murexide.utils.NotificationHelper
 import com.juhao.murexide.utils.isYunhuImageUrl
@@ -134,11 +130,6 @@ class MyApplication : Application(), ImageLoaderFactory {
         }
 
         LocalCache.initialize(this)
-        OpenImageConfig.getInstance().apply {
-            bigImageHelper = MurexideBigImageHelper()
-            downloadMediaHelper = MurexideDownloadMediaHelper()
-            videoFragmentCreate = MurexideVideoFragmentCreate()
-        }
         NotificationHelper.createNotificationChannel(this)
         AppForegroundState.init(this)
         UserBotManager.start(this)

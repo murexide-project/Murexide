@@ -1130,7 +1130,7 @@ private fun GroupConversationDetail(
                             key = { row -> row.joinToString(separator = ":") { it.msgId } }) { row ->
                             DetailCardSegment(
                                 cardColor,
-                                isTop = true,
+                                isTop = row == mediaRows.first(),
                                 isBottom = row == mediaRows.last() && !hasMoreHistory
                             ) {
                                 MediaRow(
@@ -2295,22 +2295,24 @@ private fun MediaRow(
                     .weight(1f)
                     .aspectRatio(1f)
                     .clickable {
-                        val previews = media.map { item ->
+                        val items = media.map { item ->
                             if (item.contentType == MessageItem.CONTENT_TYPE_VIDEO) {
-                                videoMessagePreviewItem(
-                                    item.videoUrl.orEmpty(),
-                                    item.msgId,
-                                    item.msgSeq
+                                videoMediaItem(
+                                    url = item.videoUrl.orEmpty(),
+                                    messageId = item.msgId,
+                                    sequence = item.msgSeq
                                 )
-                            } else imageMessagePreviewItem(
-                                item.imageUrl.orEmpty(),
-                                item.msgId,
-                                item.msgSeq
+                            } else imageMediaItem(
+                                url = item.imageUrl.orEmpty(),
+                                messageId = item.msgId,
+                                sequence = item.msgSeq
                             )
                         }
-                        showImageViewer(
-                            context, previews, media.indexOfFirst { it.msgId == message.msgId },
-                            MediaViewerPagination(detail.chatId, detail.chatType)
+                        showMediaViewer(
+                            context = context,
+                            items = items,
+                            initialIndex = media.indexOfFirst { it.msgId == message.msgId },
+                            pagination = MediaViewerPagination(detail.chatId, detail.chatType)
                         )
                     }
             ) {

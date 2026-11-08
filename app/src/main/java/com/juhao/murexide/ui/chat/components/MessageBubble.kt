@@ -67,12 +67,7 @@ import coil.request.videoFrameMillis
 import com.juhao.murexide.data.MessageButton
 import com.juhao.murexide.data.MessageItem
 import com.juhao.murexide.data.resolveStickerMessageUrl
-import com.juhao.murexide.ui.components.Avatar
-import com.juhao.murexide.ui.components.ImageViewerSourceBounds
-import com.juhao.murexide.ui.components.LiteHtmlContent
-import com.juhao.murexide.ui.components.fullImagePreviewItem
-import com.juhao.murexide.ui.components.MarkdownText
-import com.juhao.murexide.ui.components.showImageViewer
+import com.juhao.murexide.ui.components.*
 import com.juhao.murexide.ui.theme.UiState
 import com.juhao.murexide.ui.theme.usesDarkTheme
 import com.juhao.murexide.ui.community.detail.PostDetailActivity
@@ -117,7 +112,7 @@ fun MessageBubble(
     showMenu: Boolean = false,
     showMenuMsgId: String? = null,
     showMenuChanged: (String?) -> Unit = {},
-    onImageClick: (MessageItem, ImageViewerSourceBounds?) -> Unit = { _, _ -> },
+    onImageClick: (MessageItem) -> Unit = {},
     onMarkdownImageClick: (String) -> Unit = {},
     onAvatarClick: () -> Unit = {},
     onAvatarLongClick: () -> Unit = {},
@@ -312,7 +307,7 @@ private fun MessageBubbleBody(
     showTags: Boolean,
     showMenu: Boolean,
     showMenuChanged: (String?) -> Unit,
-    onImageClick: (MessageItem, ImageViewerSourceBounds?) -> Unit,
+    onImageClick: (MessageItem) -> Unit,
     onMarkdownImageClick: (String) -> Unit,
     onAvatarClick: () -> Unit,
     onAvatarLongClick: () -> Unit,
@@ -744,7 +739,7 @@ private fun MessageContentRouter(
     isSelected: Boolean,
     isSelectionMode: Boolean,
     onLongPress: (MessageItem) -> Unit,
-    onImageClick: (MessageItem, ImageViewerSourceBounds?) -> Unit,
+    onImageClick: (MessageItem) -> Unit,
     onMarkdownImageClick: (String) -> Unit,
     onDownloadClick: (MessageItem) -> Unit,
     downloadProgress: Float?,
@@ -867,9 +862,9 @@ private fun HtmlContent(
         modifier = Modifier.fillMaxWidth(),
         onImageClick = { imageUrl ->
             val allImages = extractImageUrls(text)
-            showImageViewer(
+            showMediaViewer(
                 context = context,
-                images = allImages.map(::fullImagePreviewItem),
+                items = allImages.map { imageMediaItem(it) },
                 initialIndex = allImages.indexOf(imageUrl).coerceAtLeast(0)
             )
         },
@@ -934,7 +929,7 @@ private fun MediaContent(
     message: MessageItem,
     isSelectionMode: Boolean,
     onLongPress: (MessageItem) -> Unit,
-    onImageClick: (MessageItem, ImageViewerSourceBounds?) -> Unit,
+    onImageClick: (MessageItem) -> Unit,
     hideImages: Boolean,
     incomingAttachmentBackgroundColor: Color,
     context: android.content.Context
@@ -983,8 +978,6 @@ private fun MediaContent(
         request.build()
     }
 
-    val sourceCoordinates = remember(message.msgId, mediaUrl) { ImageSourceCoordinates() }
-
     Box(
         modifier = Modifier
             .then(
@@ -996,16 +989,12 @@ private fun MediaContent(
                         .aspectRatio(imageRatio)
                 }
             )
-            .onGloballyPositioned { coordinates -> sourceCoordinates.value = coordinates }
             .background(
                 if (isImageMessage || isVideoMessage) incomingAttachmentBackgroundColor else Color.Transparent
             )
             .combinedClickable(
                 onClick = {
-                    val sourceBounds = sourceCoordinates.value
-                        ?.takeIf { it.isAttached }
-                        ?.toImageViewerSourceBounds(isCropped = isImageMessage || isVideoMessage)
-                    onImageClick(message, sourceBounds)
+                    onImageClick(message)
                 },
                 onLongClick = { onLongPress(message) }
             )
@@ -1587,23 +1576,6 @@ internal fun formatVideoDuration(totalSeconds: Int?): String? {
 
 internal fun chatMediaAllowsHardwareBitmaps(contentType: Int): Boolean {
     return contentType != MessageItem.CONTENT_TYPE_IMAGE
-}
-
-private class ImageSourceCoordinates {
-    var value: LayoutCoordinates? = null
-}
-
-private fun LayoutCoordinates.toImageViewerSourceBounds(
-    isCropped: Boolean
-): ImageViewerSourceBounds {
-    val bounds = boundsInWindow()
-    return ImageViewerSourceBounds(
-        left = bounds.left.roundToInt(),
-        top = bounds.top.roundToInt(),
-        width = bounds.width.roundToInt(),
-        height = bounds.height.roundToInt(),
-        isCropped = isCropped
-    )
 }
 
 private fun extractImageUrls(html: String): List<String> {

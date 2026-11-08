@@ -149,10 +149,6 @@
             android:theme="@style/Theme.Murexide"
             android:windowSoftInputMode="adjustResize" />
         <activity
-            android:name=".ui.components.MurexideOpenImageActivity"
-            android:exported="false"
-            android:theme="@style/Theme.Murexide.OpenImage" />
-        <activity
             android:name=".ui.sticker.StickerDetailActivity"
             android:exported="false"
             android:theme="@style/Theme.Murexide" />
@@ -219,6 +215,10 @@
             android:exported="false"
             android:theme="@style/Theme.Murexide"
             android:windowSoftInputMode="adjustResize" />
+        <activity
+            android:name=".ui.components.MediaViewerActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Murexide" />
         <activity
             android:name=".ui.conversationdetail.BotSettingsActivity"
             android:exported="false"

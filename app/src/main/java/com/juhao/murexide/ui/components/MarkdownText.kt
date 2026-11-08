@@ -171,9 +171,9 @@ fun MarkdownText(
                                 } catch (_: Exception) {
                                 }
                             } else {
-                                onImageClick?.invoke(url) ?: showImageViewer(
+                                onImageClick?.invoke(url) ?: showMediaViewer(
                                     context = context,
-                                    images = listOf(fullImagePreviewItem(url))
+                                    items = listOf(imageMediaItem(url))
                                 )
                             }
                         }

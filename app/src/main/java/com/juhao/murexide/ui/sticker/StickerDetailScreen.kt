@@ -523,9 +523,9 @@ private fun StickerPreviewHeader(
             .background(MaterialTheme.colorScheme.surfaceContainerLow)
             .combinedClickable(
                 onClick = {
-                    showImageViewer(
+                    showMediaViewer(
                         context = context,
-                        images = listOf(fullImagePreviewItem(resolvedUrl))
+                        items = listOf(imageMediaItem(resolvedUrl))
                     )
                 }
             ),
@@ -695,9 +695,9 @@ private fun StickerDetailItem(
                 .clip(RoundedCornerShape(8.dp))
                 .combinedClickable(
                     onClick = {
-                        showImageViewer(
+                        showMediaViewer(
                             context = context,
-                            images = listOf(fullImagePreviewItem(stickerUrl))
+                            items = listOf(imageMediaItem(stickerUrl))
                         )
                     },
                     onLongClick = { menuExpanded = true }

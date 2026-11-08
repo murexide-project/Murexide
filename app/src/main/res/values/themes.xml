@@ -5,25 +5,10 @@
         <item name="isLightTheme">true</item>
     </style>
 
-    <style name="Theme.Murexide.Search" parent="Theme.Murexide">
-        <item name="android:windowIsTranslucent">true</item>
-        <item name="android:windowBackground">@android:color/transparent</item>
-        <item name="android:backgroundDimEnabled">false</item>
-        <item name="android:windowDisablePreview">true</item>
-    </style>
-
     <style name="Theme.App.Starting" parent="Theme.Murexide">
         <item name="android:windowBackground">@drawable/launch_background</item>
         <item name="android:statusBarColor">?attr/colorSurface</item>
         <item name="android:navigationBarColor">?attr/colorSurface</item>
         <item name="android:windowLightStatusBar">?attr/isLightTheme</item>
-    </style>
-
-    <!-- Keep the media canvas full-bleed and let the viewer activity hide only
-         the status bar while retaining system navigation. -->
-    <style name="Theme.Murexide.OpenImage" parent="Theme.OpenImageTheme">
-        <item name="openImage.indicator.type">none</item>
-        <item name="openImage.statusBar.fontStyle">full_screen</item>
-        <item name="openImage.background">@android:color/black</item>
     </style>
 </resources>

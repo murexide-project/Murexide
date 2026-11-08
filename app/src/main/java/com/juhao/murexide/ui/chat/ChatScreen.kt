@@ -66,14 +66,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.juhao.murexide.ui.components.Avatar
-import com.juhao.murexide.ui.components.ExpressiveDropdownMenu
-import com.juhao.murexide.ui.components.FloatingTopBar
-import com.juhao.murexide.ui.components.fullImagePreviewItem
-import com.juhao.murexide.ui.components.imageMessagePreviewItem
-import com.juhao.murexide.ui.components.videoMessagePreviewItem
-import com.juhao.murexide.ui.components.MediaViewerPagination
-import com.juhao.murexide.ui.components.showImageViewer
+import com.juhao.murexide.ui.components.*
 import com.juhao.murexide.ui.chat.components.MessageBubble
 import com.juhao.murexide.ui.chat.components.BoardPanel
 import com.juhao.murexide.ui.chat.components.MessageInput
@@ -93,7 +86,6 @@ import com.juhao.murexide.data.resolveStickerMessageUrl
 import com.juhao.murexide.repository.ConversationDetailRepository
 import com.juhao.murexide.ui.conversationdetail.ConversationDetailActivity
 import com.juhao.murexide.ui.sticker.*
-import com.juhao.murexide.ui.components.*
 import com.juhao.murexide.ui.chatsearch.ChatSearchActivity
 import com.juhao.murexide.ui.theme.UiState
 import com.juhao.murexide.utils.NotificationHelper
@@ -1235,9 +1227,9 @@ fun ChatScreen(
                             BoardPanel(
                                 boards = uiState.boardPanel.boards,
                                 onImageClick = { url ->
-                                    showImageViewer(
+                                    showMediaViewer(
                                         context = context,
-                                        images = listOf(fullImagePreviewItem(url))
+                                        items = listOf(imageMediaItem(url))
                                     )
                                 }
                             )
@@ -1800,7 +1792,7 @@ fun ChatScreen(
                                     showMenuMsgId = msgId
                                 }
                             },
-                            onImageClick = { msg, sourceBounds ->
+                            onImageClick = { msg ->
                                 if (!selectionMode) {
                                     when (msg.contentType) {
                                         MessageItem.CONTENT_TYPE_IMAGE,
@@ -1809,17 +1801,16 @@ fun ChatScreen(
                                                 messages = uiState.messages,
                                                 selectedMessageId = msg.msgId
                                             )?.let { gallery ->
-                                                showImageViewer(
+                                                showMediaViewer(
                                                     context = context,
-                                                    images = gallery.entries.map { entry ->
+                                                    items = gallery.entries.map { entry ->
                                                         when (entry.kind) {
-                                                            ChatMediaKind.IMAGE -> imageMessagePreviewItem(
+                                                            ChatMediaKind.IMAGE -> imageMediaItem(
                                                                 url = entry.url,
                                                                 messageId = entry.messageId,
-                                                                imageId = entry.sequence
+                                                                sequence = entry.sequence
                                                             )
-
-                                                            ChatMediaKind.VIDEO -> videoMessagePreviewItem(
+                                                            ChatMediaKind.VIDEO -> videoMediaItem(
                                                                 url = entry.url,
                                                                 messageId = entry.messageId,
                                                                 sequence = entry.sequence
@@ -1827,15 +1818,10 @@ fun ChatScreen(
                                                         }
                                                     },
                                                     initialIndex = gallery.initialIndex,
-                                                    pagination = MediaViewerPagination(
-                                                        chatId = chatId,
-                                                        chatType = chatType
-                                                    ),
-                                                    sourceBounds = sourceBounds
+                                                    pagination = MediaViewerPagination(chatId, chatType)
                                                 )
                                             }
                                         }
-
                                         MessageItem.CONTENT_TYPE_STICKER -> {
                                             val packId = msg.stickerPackId
                                             if (packId != null && packId != 0L) {
@@ -1855,10 +1841,9 @@ fun ChatScreen(
                                                     imageUrl = msg.imageUrl,
                                                     stickerUrl = msg.stickerUrl
                                                 )?.let { url ->
-                                                    showImageViewer(
+                                                    showMediaViewer(
                                                         context = context,
-                                                        images = listOf(fullImagePreviewItem(url)),
-                                                        sourceBounds = sourceBounds
+                                                        items = listOf(imageMediaItem(url))
                                                     )
                                                 }
                                             }
@@ -1869,9 +1854,9 @@ fun ChatScreen(
                                 }
                             },
                             onMarkdownImageClick = { url ->
-                                showImageViewer(
+                                showMediaViewer(
                                     context = context,
-                                    images = listOf(fullImagePreviewItem(url))
+                                    items = listOf(imageMediaItem(url))
                                 )
                             },
                             downloadProgress = downloadingFiles[message.msgId],

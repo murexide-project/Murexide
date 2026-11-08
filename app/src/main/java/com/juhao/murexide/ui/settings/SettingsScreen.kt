@@ -46,145 +46,143 @@ fun SettingsScreen(
         onBack()
     }
 
-    Box(Modifier.fillMaxSize()) {
-        if (page == 0) {
-            SettingsHomeScreen(
-                onBack = onBack,
-                onOpenPage = { targetPage ->
-                    context.startActivity(
-                        Intent(context, SettingsActivity::class.java).putExtra("page", targetPage)
-                    )
-                },
-                onOpenSearch = {
+    if (page == 0) {
+        SettingsHomeScreen(
+            onBack = onBack,
+            onOpenPage = { targetPage ->
+                context.startActivity(
+                    Intent(context, SettingsActivity::class.java).putExtra("page", targetPage)
+                )
+            },
+            onOpenSearch = {
+                searchScope.launch {
+                    textFieldState.clearText()
+                    searchBarState.animateToExpanded()
+                }
+            },
+            onOpenAbout = {
+                context.startActivity(Intent(context, AboutActivity::class.java))
+            }
+        )
+    } else {
+        StyledScaffold(
+            title = { Text(SettingsPageTitles[page] ?: "设置") },
+            navigationIcon = {
+                IconButton(onClick = onBack) {
+                    AutoMirroredIcon(AppIcons.ArrowBack, contentDescription = "返回")
+                }
+            },
+            actions = {
+                IconButton(onClick = {
                     searchScope.launch {
                         textFieldState.clearText()
                         searchBarState.animateToExpanded()
                     }
+                }) {
+                    Icon(AppIcons.Search, contentDescription = "搜索")
+                }
+            }
+        ) { padding ->
+            when (page) {
+                1 -> AppearanceControl(highlightId, contentPadding = padding)
+                2 -> BubbleControl(highlightId, contentPadding = padding)
+                3 -> ActionControl(highlightId, contentPadding = padding)
+                4 -> UpdateControl(highlightId, contentPadding = padding)
+                5 -> WebSocketControl(highlightId, contentPadding = padding)
+                6 -> ScreenshotControl(highlightId, contentPadding = padding)
+                7 -> AccountControl(highlightId, contentPadding = padding, onLogout = onLogout)
+            }
+        }
+    }
+
+    ExpandedFullScreenSearchBar(
+        state = searchBarState,
+        inputField = {
+            SearchBarDefaults.InputField(
+                textFieldState = textFieldState,
+                searchBarState = searchBarState,
+                onSearch = {
+                    searchScope.launch { searchBarState.animateToCollapsed() }
                 },
-                onOpenAbout = {
-                    context.startActivity(Intent(context, AboutActivity::class.java))
+                placeholder = { Text("搜索设置") },
+                leadingIcon = {
+                    if (searchBarState.targetValue != SearchBarValue.Collapsed) {
+                        IconButton(onClick = {
+                            searchScope.launch { searchBarState.animateToCollapsed() }
+                        }) {
+                            AutoMirroredIcon(AppIcons.ArrowBack, contentDescription = "返回")
+                        }
+                    } else {
+                        Icon(AppIcons.Search, contentDescription = null)
+                    }
+                },
+                trailingIcon = {
+                    if (textFieldState.text.isNotEmpty()) {
+                        IconButton(onClick = { textFieldState.clearText() }) {
+                            Icon(AppIcons.Close, contentDescription = "清除")
+                        }
+                    }
                 }
             )
-        } else {
-            StyledScaffold(
-                title = { Text(SettingsPageTitles[page] ?: "设置") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        AutoMirroredIcon(AppIcons.ArrowBack, contentDescription = "返回")
-                    }
-                },
-                actions = {
-                    IconButton(onClick = {
-                        searchScope.launch {
-                            textFieldState.clearText()
-                            searchBarState.animateToExpanded()
-                        }
-                    }) {
-                        Icon(AppIcons.Search, contentDescription = "搜索")
-                    }
-                }
-            ) { padding ->
-                when (page) {
-                    1 -> AppearanceControl(highlightId, contentPadding = padding)
-                    2 -> BubbleControl(highlightId, contentPadding = padding)
-                    3 -> ActionControl(highlightId, contentPadding = padding)
-                    4 -> UpdateControl(highlightId, contentPadding = padding)
-                    5 -> WebSocketControl(highlightId, contentPadding = padding)
-                    6 -> ScreenshotControl(highlightId, contentPadding = padding)
-                    7 -> AccountControl(highlightId, contentPadding = padding, onLogout = onLogout)
-                }
+        }
+    ) {
+        val query = textFieldState.text.toString()
+        val results = remember(query) {
+            if (query.isBlank()) AllSettingsIndex
+            else AllSettingsIndex.filter {
+                it.title.contains(query, ignoreCase = true)
             }
         }
 
-        ExpandedFullScreenSearchBar(
-            state = searchBarState,
-            inputField = {
-                SearchBarDefaults.InputField(
-                    textFieldState = textFieldState,
-                    searchBarState = searchBarState,
-                    onSearch = {
-                        searchScope.launch { searchBarState.animateToCollapsed() }
-                    },
-                    placeholder = { Text("搜索设置") },
-                    leadingIcon = {
-                        if (searchBarState.targetValue != SearchBarValue.Collapsed) {
-                            IconButton(onClick = {
-                                searchScope.launch { searchBarState.animateToCollapsed() }
-                            }) {
-                                AutoMirroredIcon(AppIcons.ArrowBack, contentDescription = "返回")
-                            }
-                        } else {
-                            Icon(AppIcons.Search, contentDescription = null)
-                        }
-                    },
-                    trailingIcon = {
-                        if (textFieldState.text.isNotEmpty()) {
-                            IconButton(onClick = { textFieldState.clearText() }) {
-                                Icon(AppIcons.Close, contentDescription = "清除")
-                            }
-                        }
-                    }
-                )
-            }
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(bottom = 16.dp)
         ) {
-            val query = textFieldState.text.toString()
-            val results = remember(query) {
-                if (query.isBlank()) AllSettingsIndex
-                else AllSettingsIndex.filter {
-                    it.title.contains(query, ignoreCase = true)
-                }
-            }
-
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(bottom = 16.dp)
-            ) {
-                if (results.isEmpty()) {
-                    item {
-                        Box(
-                            Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 64.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Icon(
-                                    AppIcons.Search,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(48.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Text(
-                                    "未找到相关设置",
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
+            if (results.isEmpty()) {
+                item {
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 64.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                AppIcons.Search,
+                                contentDescription = null,
+                                modifier = Modifier.size(48.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                "未找到相关设置",
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
-                } else {
-                    val grouped = results.groupBy { it.group }
-                    grouped.forEach { (group, items) ->
-                        item(key = "header_$group") {
-                            SettingsGroupHeader(group)
-                        }
-                        itemsIndexed(items, key = { _, it -> it.id }) { index, item ->
-                            SettingsGroupSurface(index = index, count = items.size) {
-                                SettingsItem(
-                                    icon = item.icon,
-                                    title = item.title,
-                                    onClick = {
-                                        searchScope.launch {
-                                            searchBarState.animateToCollapsed()
-                                        }
-                                        context.startActivity(
-                                            Intent(context, SettingsActivity::class.java)
-                                                .putExtra("page", item.page)
-                                                .putExtra("highlight_id", item.id)
-                                        )
+                }
+            } else {
+                val grouped = results.groupBy { it.group }
+                grouped.forEach { (group, items) ->
+                    item(key = "header_$group") {
+                        SettingsGroupHeader(group)
+                    }
+                    itemsIndexed(items, key = { _, it -> it.id }) { index, item ->
+                        SettingsGroupSurface(index = index, count = items.size) {
+                            SettingsItem(
+                                icon = item.icon,
+                                title = item.title,
+                                onClick = {
+                                    searchScope.launch {
+                                        searchBarState.animateToCollapsed()
                                     }
-                                )
-                            }
+                                    context.startActivity(
+                                        Intent(context, SettingsActivity::class.java)
+                                            .putExtra("page", item.page)
+                                            .putExtra("highlight_id", item.id)
+                                    )
+                                }
+                            )
                         }
                     }
                 }

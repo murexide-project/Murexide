@@ -25,7 +25,7 @@ fun Avatar(
 ) {
     val context = LocalContext.current
     val squareAvatar by UiState.squareAvatar
-    
+
     val shape = remember(squareAvatar) {
         if (squareAvatar && !alwaysCircle) {
             RoundedCornerShape(size / 4)
@@ -56,9 +56,9 @@ fun Avatar(
             .then(
                 if (canView)
                     Modifier.clickable {
-                        showImageViewer(
+                        showMediaViewer(
                             context = context,
-                            images = listOf(fullImagePreviewItem(url))
+                            items = listOf(imageMediaItem(url))
                         )
                     }
                 else Modifier
