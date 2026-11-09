@@ -780,6 +780,7 @@ fun ChatScreen(
         ScreenshotBottomSheet(
             messages = orderedSelected,
             chatName = chatName,
+            chatId = chatId,
             chatAvatar = chatAvatar,
             onDismiss = { showScreenshotSheet = false }
         )

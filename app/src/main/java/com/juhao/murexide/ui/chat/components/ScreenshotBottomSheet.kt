@@ -20,7 +20,6 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -46,7 +45,6 @@ import com.juhao.murexide.ui.theme.MurexideTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.text.SimpleDateFormat
 import java.util.*
 import java.io.File
 import java.io.IOException
@@ -69,6 +67,7 @@ private enum class ScreenshotAction {
 fun ScreenshotBottomSheet(
     messages: List<MessageItem>,
     chatName: String,
+    chatId: String,
     chatAvatar: String,
     onDismiss: () -> Unit
 ) {
@@ -175,6 +174,7 @@ fun ScreenshotBottomSheet(
                                     ScreenshotContent(
                                         messages = messages,
                                         chatName = chatName,
+                                        chatId = chatId,
                                         chatAvatar = chatAvatar,
                                         hideSenderInfo = hideSenderInfo,
                                         hideMyInfo = hideMyInfo,
@@ -228,6 +228,7 @@ fun ScreenshotBottomSheet(
 private fun ScreenshotContent(
     messages: List<MessageItem>,
     chatName: String,
+    chatId: String,
     chatAvatar: String,
     hideSenderInfo: Boolean = false,
     hideMyInfo: Boolean = false,
@@ -236,40 +237,32 @@ private fun ScreenshotContent(
 ) {
     val anonymousCache = remember { mutableMapOf<String, String>() }
     var counter by remember { mutableIntStateOf(0) }
-    val configuration = LocalConfiguration.current
-    @Suppress("DEPRECATION")
-    val locale = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-        configuration.locales[0]
-    } else {
-        configuration.locale
-    }
-
+    
     Surface(
         modifier = Modifier.fillMaxWidth(),
         color = MaterialTheme.colorScheme.surfaceContainer,
         shape = RoundedCornerShape(16.dp)
     ) {
         Column(
-            modifier = Modifier
-                .padding(12.dp),
+            modifier = Modifier.padding(vertical = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // 会话头部
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 12.dp),
+                    .padding(bottom = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center
             ) {
                 if (hideSessionInfo) {
                     Surface(
-                        modifier = Modifier.size(36.dp),
-                        shape = RoundedCornerShape(18.dp),
+                        modifier = Modifier.size(24.dp),
+                        shape = RoundedCornerShape(12.dp),
                         color = MaterialTheme.colorScheme.surface
                     ) {
                         Box(contentAlignment = Alignment.Center) {
-                            Icon(AppIcons.VisibilityOff, contentDescription = null, modifier = Modifier.size(24.dp))
+                            Icon(AppIcons.VisibilityOff, contentDescription = null, modifier = Modifier.size(16.dp))
                         }
                     }
                 } else {
@@ -279,26 +272,25 @@ private fun ScreenshotContent(
 
                 Column {
                     Text(
-                        text = if (hideSessionInfo) "隐藏会话" else chatName,
+                        text = if (hideSessionInfo) "会话" else chatName,
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Bold
                     )
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = SimpleDateFormat("yyyy-MM-dd HH:mm", locale).format(Date()),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                    )
+                    if (!hideSessionInfo) {
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = "ID:$chatId",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        )
+                    }
                 }
             }
 
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(
-                        MaterialTheme.colorScheme.surface,
-                        RoundedCornerShape(12.dp)
-                    ),
+                    .background(MaterialTheme.colorScheme.surface),
                 verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
                 messages.forEachIndexed { index, message ->
@@ -335,7 +327,7 @@ private fun ScreenshotContent(
                 modifier = Modifier
                     .fillMaxWidth()
                     .alpha(0.6f)
-                    .padding(top = 12.dp),
+                    .padding(top = 8.dp),
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically
             ) {

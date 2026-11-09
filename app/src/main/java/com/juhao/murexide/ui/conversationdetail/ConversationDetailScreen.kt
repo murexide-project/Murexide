@@ -2276,13 +2276,12 @@ private fun MediaRow(
     hasBottomSpacing: Boolean
 ) {
     val context = LocalContext.current
-    val spacing = with(LocalDensity.current) { 5.toDp() }
+    val spacing = 2.dp
+    
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(
-                start = spacing,
-                end = spacing,
                 bottom = if (hasBottomSpacing) spacing else 0.dp
             ),
         horizontalArrangement = Arrangement.spacedBy(spacing)
