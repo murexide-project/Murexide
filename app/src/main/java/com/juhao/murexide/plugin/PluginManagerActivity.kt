@@ -7,6 +7,7 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -17,6 +18,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -29,6 +31,7 @@ import java.io.File
 class PluginManagerActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
         setContent {
             MurexideTheme {
                 PluginManagerScreen(onBack = { finish() })
@@ -512,7 +515,7 @@ fun PluginManagerScreen(onBack: () -> Unit) {
                     color = MaterialTheme.colorScheme.error
                 )
             },
-            text = { Text("插件有修改页面等危险操作，请确认插件安全后导入。") },
+            text = { Text("插件可能有修改页面、重启应用等危险操作，请确认插件安全后导入。") },
             confirmButton = {
                 TextButton(onClick = {
                     showReplaceWarning = false
@@ -614,7 +617,9 @@ fun PluginManagerScreen(onBack: () -> Unit) {
             ) {
                 items(manifests, key = { it.id }) { m ->
                     Surface(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                        modifier = Modifier.fillMaxWidth()
+                            .padding(horizontal = 16.dp)
+                            .alpha(if (m.enabled) 1f else 0.6f),
                         shape = RoundedCornerShape(16.dp),
                         color = MaterialTheme.colorScheme.surfaceContainer
                     ) {

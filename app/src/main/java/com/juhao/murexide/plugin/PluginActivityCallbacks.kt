@@ -16,16 +16,19 @@ class PluginActivityCallbacks : Application.ActivityLifecycleCallbacks {
         val pageId = activity.javaClass.name
         val rules = PluginManager.rulesFor(pageId, "created")
         dispatchToast(activity, rules)
+        dispatchCreatedActions(activity, rules)
 
         val replaceRule = rules.firstOrNull {
-            it.action == "replace" && it.content.type != "toast"
+            it.action == "replace" && it.content.type != "toast" && it.content.type != "action"
         }
         if (replaceRule != null) {
             activity.window.decorView.post { injectReplace(activity, pageId, replaceRule.content) }
             return
         }
 
-        val hasOverlay = rules.any { it.action == "decorate" && it.content.type != "toast" }
+        val hasOverlay = rules.any {
+            it.action == "decorate" && it.content.type != "toast" && it.content.type != "action"
+        }
         if (hasOverlay) {
             activity.window.decorView.post { injectOverlay(activity, pageId) }
         }
@@ -33,27 +36,37 @@ class PluginActivityCallbacks : Application.ActivityLifecycleCallbacks {
 
     override fun onActivityStarted(activity: Activity) {
         if (activity is GateActivity) return
-        dispatchToast(activity, PluginManager.rulesFor(activity.javaClass.name, "started"))
+        val rules = PluginManager.rulesFor(activity.javaClass.name, "started")
+        dispatchToast(activity, rules)
+        dispatchCreatedActions(activity, rules)
     }
 
     override fun onActivityResumed(activity: Activity) {
         if (activity is GateActivity) return
-        dispatchToast(activity, PluginManager.rulesFor(activity.javaClass.name, "resumed"))
+        val rules = PluginManager.rulesFor(activity.javaClass.name, "resumed")
+        dispatchToast(activity, rules)
+        dispatchCreatedActions(activity, rules)
     }
 
     override fun onActivityPaused(activity: Activity) {
         if (activity is GateActivity) return
-        dispatchToast(activity, PluginManager.rulesFor(activity.javaClass.name, "paused"))
+        val rules = PluginManager.rulesFor(activity.javaClass.name, "paused")
+        dispatchToast(activity, rules)
+        dispatchCreatedActions(activity, rules)
     }
 
     override fun onActivityStopped(activity: Activity) {
         if (activity is GateActivity) return
-        dispatchToast(activity, PluginManager.rulesFor(activity.javaClass.name, "stopped"))
+        val rules = PluginManager.rulesFor(activity.javaClass.name, "stopped")
+        dispatchToast(activity, rules)
+        dispatchCreatedActions(activity, rules)
     }
 
     override fun onActivityDestroyed(activity: Activity) {
         if (activity is GateActivity) return
-        dispatchToast(activity, PluginManager.rulesFor(activity.javaClass.name, "destroyed"))
+        val rules = PluginManager.rulesFor(activity.javaClass.name, "destroyed")
+        dispatchToast(activity, rules)
+        dispatchCreatedActions(activity, rules)
     }
 
     override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) {}
@@ -67,6 +80,14 @@ class PluginActivityCallbacks : Application.ActivityLifecycleCallbacks {
                     else -> Toast.LENGTH_SHORT
                 }
                 Toast.makeText(activity, text, duration).show()
+            }
+        }
+    }
+
+    private fun dispatchCreatedActions(activity: Activity, rules: List<PluginRule>) {
+        rules.forEach { rule ->
+            if (rule.content.type == "action") {
+                rule.content.execute?.let { PluginActions.execute(activity, it) }
             }
         }
     }

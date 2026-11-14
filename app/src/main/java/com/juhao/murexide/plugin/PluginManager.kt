@@ -292,7 +292,11 @@ object PluginManager {
             val rulesText = zip.getInputStream(rulesEntry).bufferedReader().readText()
             val arr = JSONObject(rulesText).getJSONArray("rules")
             (0 until arr.length()).any { i ->
-                arr.getJSONObject(i).optString("action", "decorate") == "replace"
+                val rule = arr.getJSONObject(i)
+                val action = rule.optString("action", "decorate")
+                val executeObj = rule.optJSONObject("content")?.optJSONObject("execute")
+                val isRestart = executeObj?.optString("action") == "restartApp"
+                action == "replace" || isRestart
             }
         }
     }.getOrDefault(false)
