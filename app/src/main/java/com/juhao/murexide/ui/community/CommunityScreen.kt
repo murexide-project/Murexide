@@ -348,7 +348,7 @@ fun ManageContent(
             SettingsGroupHeader("管理")
         }
         item {
-            SettingsGroupSurface(index = 0, count = 1) {
+            SettingsGroupSurface(isTop = true, isBottom = true) {
                 SettingsItem(
                     icon = AppIcons.Article,
                     title = "我的文章",
@@ -385,7 +385,7 @@ fun ManageContent(
             }
 
             else -> itemsIndexed(baList) { index, ba ->
-                SettingsGroupSurface(index = index, count = baList.size) {
+                SettingsGroupSurface(isTop = index == 0, isBottom = index == baList.size - 1) {
                     BaRow(ba = ba, onClick = { onBaClick(ba) })
                 }
             }

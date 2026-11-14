@@ -58,7 +58,7 @@ private data class ContactTab(
 
 private val ContactTabs = listOf(
     ContactTab("好友", 1, AppIcons.People, "还没有好友", "添加好友后会显示在这里"),
-    ContactTab("我加入的群聊", 2, AppIcons.Groups, "还没有加入群聊", "加入的群聊会显示在这里"),
+    ContactTab("群聊", 2, AppIcons.Groups, "还没有加入群聊", "加入的群聊会显示在这里"),
     ContactTab("机器人", 3, AppIcons.SmartToy, "还没有机器人", "添加的机器人会显示在这里")
 )
 
@@ -177,7 +177,12 @@ private fun ContactDirectoryScreen(
     }
 
     Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
+        snackbarHost = {
+            SnackbarHost(
+                snackbarHostState,
+                modifier = Modifier.padding(innerPadding)
+            )
+        },
         topBar = {
             Column {
                 TopAppBar(
@@ -203,21 +208,12 @@ private fun ContactDirectoryScreen(
                     },
                 )
 
-                PrimaryTabRow(selectedTabIndex = selectedTabIndex) {
-                    ContactTabs.forEachIndexed { index, tab ->
-                        Tab(
-                            selected = selectedTabIndex == index,
-                            onClick = { selectedTabIndex = index },
-                            text = {
-                                Text(
-                                    text = tab.title,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
-                        )
-                    }
-                }
+                CapsuleTabBar(
+                    tabs = ContactTabs.map { it.title },
+                    selectedTabIndex = selectedTabIndex,
+                    onTabSelected = { selectedTabIndex = it },
+                    modifier = Modifier.padding(bottom = 6.dp)
+                )
             }
         }
     ) { paddingValues ->

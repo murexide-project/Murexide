@@ -188,6 +188,8 @@ data class ChatUiState(
     val isUploading: Boolean = false,
     val uploadProgress: Float = 0f,
     val uploadImagePath: String? = null,
+    val isRecordingVoice: Boolean = false,
+    val voiceRecordingSeconds: Int = 0,
     val selectionMode: Boolean = false,
     val selectedMessages: Set<MessageItem> = emptySet(),
     val downloadedFiles: Set<String> = emptySet(),

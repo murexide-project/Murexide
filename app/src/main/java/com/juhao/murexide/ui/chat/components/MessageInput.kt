@@ -28,6 +28,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
@@ -50,6 +51,7 @@ import androidx.compose.ui.window.PopupProperties
 import com.juhao.murexide.R
 import com.juhao.murexide.data.MentionToken
 import com.juhao.murexide.data.MessageItem
+import com.juhao.murexide.datastore.SettingsStorage
 import com.juhao.murexide.datastore.UserAccount
 import com.juhao.murexide.ui.components.Avatar
 import kotlin.math.abs
@@ -108,6 +110,7 @@ fun MessageInput(
     onEmojiClick: () -> Unit,
     isInstructionPanelVisible: Boolean = false,
     onInstructionClick: () -> Unit = {},
+    onVoiceClick: () -> Unit = {},
     mentions: List<MentionToken> = emptyList(),
     onMentionTriggered: (Int) -> Unit = {},
     focusRequester: FocusRequester,
@@ -117,13 +120,46 @@ fun MessageInput(
     activeAccountId: String = "",
     onSwitchAccount: (UserAccount) -> Unit = {}
 ) {
-    val fieldValue = TextFieldValue(
-        text = inputText,
-        selection = TextRange(
-            start = inputSelectionStart.coerceIn(0, inputText.length),
-            end = inputSelectionEnd.coerceIn(0, inputText.length)
+    val localFieldValue = remember {
+        mutableStateOf(
+            TextFieldValue(
+                text = inputText,
+                selection = TextRange(
+                    start = inputSelectionStart.coerceIn(0, inputText.length),
+                    end = inputSelectionEnd.coerceIn(0, inputText.length)
+                )
+            )
         )
-    )
+    }
+    var lastEmittedText by remember { mutableStateOf(inputText) }
+    var lastEmittedMentions by remember { mutableStateOf(mentions) }
+
+    LaunchedEffect(inputText, inputSelectionStart, inputSelectionEnd, mentions) {
+        if (inputText != lastEmittedText || mentions != lastEmittedMentions) {
+            localFieldValue.value = TextFieldValue(
+                text = inputText,
+                selection = TextRange(
+                    start = inputSelectionStart.coerceIn(0, inputText.length),
+                    end = inputSelectionEnd.coerceIn(0, inputText.length)
+                )
+            )
+            lastEmittedText = inputText
+            lastEmittedMentions = mentions
+        } else if (localFieldValue.value.composition == null) {
+            val targetSelection = TextRange(
+                start = inputSelectionStart.coerceIn(0, inputText.length),
+                end = inputSelectionEnd.coerceIn(0, inputText.length)
+            )
+            if (localFieldValue.value.selection != targetSelection) {
+                localFieldValue.value = localFieldValue.value.copy(selection = targetSelection)
+            }
+        }
+    }
+
+    val context = LocalContext.current
+    val sendOnEnter by remember { SettingsStorage(context.applicationContext) }
+        .enterKeyToSendFlow
+        .collectAsState(initial = false)
 
     Row(
         modifier = Modifier
@@ -192,7 +228,7 @@ fun MessageInput(
         }
 
         MessageTextField(
-            value = fieldValue,
+            value = localFieldValue.value,
             mentions = mentions,
             enabled = true,
             textColor = MaterialTheme.colorScheme.onSurface,
@@ -200,6 +236,9 @@ fun MessageInput(
             textSizeSp = MaterialTheme.typography.bodyLarge.fontSize.value,
             focusRequester = focusRequester,
             onValueChange = { new, updatedMentions, insertedText, insertPosition ->
+                localFieldValue.value = new
+                lastEmittedText = new.text
+                lastEmittedMentions = updatedMentions
                 onTextChange(
                     new.text,
                     updatedMentions,
@@ -209,17 +248,12 @@ fun MessageInput(
                 if (insertedText == "@") onMentionTriggered(insertPosition)
             },
             onFocused = onInputFocused,
+            sendOnEnter = sendOnEnter,
+            onSendKey = onSendClick,
             modifier = Modifier
                 .weight(1f)
                 .heightIn(max = 144.dp)
                 .padding(horizontal = 4.dp)
-        )
-
-        MoreActionsButton(
-            visible = inputText.isEmpty(),
-            onAddAlbumClick = onAddAlbumClick,
-            onAddFileClick = onAddFileClick,
-            limitedMsgType = limitedMsgType
         )
 
         AnimatedContent(
@@ -238,19 +272,27 @@ fun MessageInput(
                     onSendWithType = onSendWithType
                 )
             } else {
-                IconButton(
-                    onClick = onInstructionClick,
-                    modifier = Modifier.size(36.dp)
-                ) {
-                    Icon(
-                        imageVector = if (isInstructionPanelVisible) {
-                            AppIcons.Keyboard
-                        } else {
-                            AppIcons.Code
-                        },
-                        contentDescription = if (isInstructionPanelVisible) "切换到键盘" else "指令",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    MoreActionsButton(
+                        onAddAlbumClick = onAddAlbumClick,
+                        onAddFileClick = onAddFileClick,
+                        onVoiceClick = onVoiceClick,
+                        limitedMsgType = limitedMsgType
                     )
+                    IconButton(
+                        onClick = onInstructionClick,
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (isInstructionPanelVisible) {
+                                AppIcons.Keyboard
+                            } else {
+                                AppIcons.Code
+                            },
+                            contentDescription = if (isInstructionPanelVisible) "切换到键盘" else "指令",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
         }
@@ -493,73 +535,73 @@ private fun FormatSendButton(
 
 @Composable
 private fun MoreActionsButton(
-    visible: Boolean,
     onAddAlbumClick: () -> Unit,
     onAddFileClick: () -> Unit,
+    onVoiceClick: () -> Unit = {},
     limitedMsgType: List<Int> = emptyList()
 ) {
     var showMenu by remember { mutableStateOf(false) }
 
-    AnimatedVisibility(
-        visible = visible,
-        enter = fadeIn(animationSpec = tween(200)) +
-                expandHorizontally(animationSpec = tween(200)),
-        exit = fadeOut(animationSpec = tween(200)) +
-                shrinkHorizontally(animationSpec = tween(200))
-    ) {
-        Box {
-            IconButton(
-                onClick = { showMenu = true },
-                modifier = Modifier.padding(horizontal = 4.dp).size(36.dp)
-            ) {
-                AnimatedContent(
-                    targetState = showMenu,
-                    transitionSpec = {
-                        fadeIn(animationSpec = tween(200)) togetherWith
-                                fadeOut(animationSpec = tween(200))
-                    },
-                    label = "more_actions_icon"
-                ) { expanded ->
-                    Icon(
-                        imageVector = if (expanded) AppIcons.Close else AppIcons.AttachFile,
-                        contentDescription = if (expanded) "关闭菜单" else "媒体"
-                    )
-                }
-            }
-
-            DropdownMenu(
-                expanded = showMenu,
-                onDismissRequest = { showMenu = false },
-                shape = MenuDefaults.standaloneGroupShape
-            ) {
-                DropdownMenuItem(
-                    text = { Text("相册") },
-                    onClick = {
-                        showMenu = false
-                        onAddAlbumClick()
-                    },
-                    leadingIcon = {
-                        Icon(AppIcons.Image, contentDescription = null)
-                    },
-                    enabled = MessageItem.CONTENT_TYPE_IMAGE !in limitedMsgType &&
-                            MessageItem.CONTENT_TYPE_VIDEO !in limitedMsgType
-                )
-                DropdownMenuItem(
-                    text = { Text("文件") },
-                    onClick = {
-                        showMenu = false
-                        onAddFileClick()
-                    },
-                    leadingIcon = {
-                        Icon(AppIcons.AttachFile, contentDescription = null)
-                    },
-                    enabled = MessageItem.CONTENT_TYPE_FILE !in limitedMsgType
+    Box {
+        IconButton(
+            onClick = { showMenu = true },
+            modifier = Modifier.size(36.dp)
+        ) {
+            AnimatedContent(
+                targetState = showMenu,
+                transitionSpec = {
+                    fadeIn(animationSpec = tween(200)) togetherWith
+                            fadeOut(animationSpec = tween(200))
+                },
+                label = "more_actions_icon"
+            ) { expanded ->
+                Icon(
+                    imageVector = if (expanded) AppIcons.Close else AppIcons.AttachFile,
+                    contentDescription = if (expanded) "关闭菜单" else "媒体",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
-    }
 
-    if (!visible && showMenu) {
-        showMenu = false
+        DropdownMenu(
+            expanded = showMenu,
+            onDismissRequest = { showMenu = false },
+            shape = MenuDefaults.standaloneGroupShape
+        ) {
+            DropdownMenuItem(
+                text = { Text("相册") },
+                onClick = {
+                    showMenu = false
+                    onAddAlbumClick()
+                },
+                leadingIcon = {
+                    Icon(AppIcons.Image, contentDescription = null)
+                },
+                enabled = MessageItem.CONTENT_TYPE_IMAGE !in limitedMsgType &&
+                        MessageItem.CONTENT_TYPE_VIDEO !in limitedMsgType
+            )
+            DropdownMenuItem(
+                text = { Text("文件") },
+                onClick = {
+                    showMenu = false
+                    onAddFileClick()
+                },
+                leadingIcon = {
+                    Icon(AppIcons.AttachFile, contentDescription = null)
+                },
+                enabled = MessageItem.CONTENT_TYPE_FILE !in limitedMsgType
+            )
+            DropdownMenuItem(
+                text = { Text("语音") },
+                onClick = {
+                    showMenu = false
+                    onVoiceClick()
+                },
+                leadingIcon = {
+                    Icon(AppIcons.Mic, contentDescription = null)
+                },
+                enabled = MessageItem.CONTENT_TYPE_AUDIO !in limitedMsgType
+            )
+        }
     }
 }

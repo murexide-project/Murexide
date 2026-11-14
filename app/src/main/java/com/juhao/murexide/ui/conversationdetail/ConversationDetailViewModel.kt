@@ -619,7 +619,12 @@ class ConversationDetailViewModel(
             showRemoveBotConfirm = false,
             botPermissionTarget = null,
             showBotPermissionDialog = false,
-            isLoadingBotPermission = false
+            isLoadingBotPermission = false,
+            botSettingsTarget = null,
+            showBotSettingsDialog = false,
+            isLoadingBotSettings = false,
+            isSavingBotSettings = false,
+            botSettingsItems = emptyList()
         )
     }
 
@@ -667,6 +672,78 @@ class ConversationDetailViewModel(
                         it.copy(
                             isSavingBotPermission = false,
                             message = error.message ?: "保存机器人权限失败"
+                        )
+                    }
+                }
+        }
+    }
+
+    /** 打开群机器人设置表单（/v1/bot/get-user-settings-json）。 */
+    fun requestBotSettings(bot: BotItem) {
+        if (!canManageBots()) return
+        _uiState.update {
+            it.copy(
+                botSettingsTarget = bot,
+                showBotSettingsDialog = true,
+                isLoadingBotSettings = true,
+                isSavingBotSettings = false,
+                botSettingsItems = emptyList()
+            )
+        }
+        viewModelScope.launch {
+            botRepository.getUserSettingsJson(token, bot.id, chatId)
+                .onSuccess { items ->
+                    _uiState.update {
+                        it.copy(botSettingsItems = items, isLoadingBotSettings = false)
+                    }
+                }
+                .onFailure { error ->
+                    _uiState.update {
+                        it.copy(
+                            isLoadingBotSettings = false,
+                            showBotSettingsDialog = false,
+                            botSettingsTarget = null,
+                            message = error.message ?: "获取机器人设置失败"
+                        )
+                    }
+                }
+        }
+    }
+
+    fun dismissBotSettings() = _uiState.update {
+        it.copy(
+            botSettingsTarget = null,
+            showBotSettingsDialog = false,
+            isLoadingBotSettings = false,
+            isSavingBotSettings = false,
+            botSettingsItems = emptyList()
+        )
+    }
+
+    /** 保存群机器人设置表单（/v1/bot/send-setting-json）。settingJson 为表单 JSON 数组字符串。 */
+    fun saveBotSettings(settingJson: String) {
+        val state = _uiState.value
+        val target = state.botSettingsTarget ?: return
+        if (state.isSavingBotSettings) return
+        _uiState.update { it.copy(isSavingBotSettings = true) }
+        viewModelScope.launch {
+            botRepository.sendGroupSettingJson(token, target.id, chatId, settingJson)
+                .onSuccess {
+                    _uiState.update {
+                        it.copy(
+                            isSavingBotSettings = false,
+                            botSettingsTarget = null,
+                            showBotSettingsDialog = false,
+                            botSettingsItems = emptyList(),
+                            message = "机器人设置已更新"
+                        )
+                    }
+                }
+                .onFailure { error ->
+                    _uiState.update {
+                        it.copy(
+                            isSavingBotSettings = false,
+                            message = error.message ?: "保存机器人设置失败"
                         )
                     }
                 }

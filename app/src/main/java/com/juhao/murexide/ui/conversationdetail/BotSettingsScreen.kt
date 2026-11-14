@@ -161,7 +161,7 @@ fun BotSettingsScreen(
             }
 
             SettingsGroupHeader("基本信息")
-            SettingsGroupSurface(index = 0, count = 3) {
+            SettingsGroupSurface(isTop = true, isBottom = false) {
                 CustomItemCell {
                     OutlinedTextField(
                         value = uiState.name,
@@ -172,7 +172,7 @@ fun BotSettingsScreen(
                     )
                 }
             }
-            SettingsGroupSurface(index = 1, count = 3) {
+            SettingsGroupSurface(isTop = false, isBottom = false) {
                 CustomItemCell {
                     OutlinedTextField(
                         value = uiState.introduction,
@@ -184,7 +184,7 @@ fun BotSettingsScreen(
                     )
                 }
             }
-            SettingsGroupSurface(index = 2, count = 3) {
+            SettingsGroupSurface(isTop = false, isBottom = true) {
                 SettingsSwitchItem(
                     icon = AppIcons.Lock,
                     title = "私有机器人",
@@ -195,7 +195,7 @@ fun BotSettingsScreen(
             }
 
             SettingsGroupHeader("消息订阅")
-            SettingsGroupSurface(index = 0, count = 2) {
+            SettingsGroupSurface(isTop = true, isBottom = false) {
                 CustomItemCell {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         FilterChip(
@@ -211,7 +211,7 @@ fun BotSettingsScreen(
                     }
                 }
             }
-            SettingsGroupSurface(index = 1, count = 2) {
+            SettingsGroupSurface(isTop = false, isBottom = true) {
                 CustomItemCell {
                     OutlinedTextField(
                         value = uiState.link,
@@ -230,7 +230,7 @@ fun BotSettingsScreen(
             }
 
             SettingsGroupHeader("机器人设置 JSON")
-            SettingsGroupSurface(index = 0, count = 1) {
+            SettingsGroupSurface(isTop = true, isBottom = true) {
                 CustomItemCell {
                     OutlinedTextField(
                         value = uiState.settingJson,
@@ -247,7 +247,7 @@ fun BotSettingsScreen(
             }
 
             SettingsGroupHeader("Token")
-            SettingsGroupSurface(index = 0, count = 3) {
+            SettingsGroupSurface(isTop = true, isBottom = false) {
                 SettingsItemCell(
                     icon = AppIcons.Key,
                     endIcon = if (uiState.tokenVisible) AppIcons.VisibilityOff else AppIcons.Visibility,
@@ -256,7 +256,7 @@ fun BotSettingsScreen(
                     onClick = viewModel::toggleTokenVisible
                 )
             }
-            SettingsGroupSurface(index = 1, count = 3) {
+            SettingsGroupSurface(isTop = false, isBottom = false) {
                 SettingsItemCell(
                     icon = AppIcons.ContentCopy,
                     title = "复制 Token",
@@ -271,7 +271,7 @@ fun BotSettingsScreen(
                     }
                 )
             }
-            SettingsGroupSurface(index = 2, count = 3) {
+            SettingsGroupSurface(isTop = false, isBottom = true) {
                 SettingsItemCell(
                     icon = AppIcons.Refresh,
                     title = if (uiState.isResettingToken) "重置中…" else "重置 Token",

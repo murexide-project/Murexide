@@ -75,6 +75,7 @@ fun AppearanceControl(
     var backgroundOpacity by remember { mutableFloatStateOf(0.5f) }
 
     val floatBottomBarEnabled by settingsStorage.isFloatBottomBarEnabledFlow.collectAsState(initial = true)
+    val floatingTopBarEnabled by settingsStorage.floatingTopBarFlow.collectAsState(initial = true)
     val mergeStickyEnabled by settingsStorage.mergeStickyFlow.collectAsState(initial = false)
 
     val isDark = usesDarkTheme(themeMode, isSystemInDarkTheme())
@@ -137,7 +138,7 @@ fun AppearanceControl(
         // 预览
         item { SettingsGroupHeader("预览") }
         item {
-            SettingsGroupSurface(index = 0, count = 1, id = "appearance_preview", highlightId = highlightId) {
+            SettingsGroupSurface(isTop = true, isBottom = true, id = "appearance_preview", highlightId = highlightId) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -158,7 +159,7 @@ fun AppearanceControl(
             add(Triple("appearance_theme_mode", { /* placeholder */ }, 1))
         }
         item {
-            SettingsGroupSurface(index = 0, count = if (isDark) 5 else 4, id = "appearance_theme_mode", highlightId = highlightId) {
+            SettingsGroupSurface(isTop = true, isBottom = false, id = "appearance_theme_mode", highlightId = highlightId) {
                 SettingsCustomItem {
                     Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -189,7 +190,7 @@ fun AppearanceControl(
         }
         if (isDark) {
             item {
-                SettingsGroupSurface(index = 1, count = 5, id = "appearance_oled", highlightId = highlightId) {
+                SettingsGroupSurface(isTop = false, isBottom = false, id = "appearance_oled", highlightId = highlightId) {
                     SettingsSwitchItem(
                         icon = AppIcons.Contrast,
                         title = "纯黑模式",
@@ -204,10 +205,8 @@ fun AppearanceControl(
                 }
             }
         }
-        val themeIdx = if (isDark) 2 else 1
-        val themeCount = if (isDark) 5 else 4
         item {
-            SettingsGroupSurface(index = themeIdx, count = themeCount, id = "appearance_theme_color", highlightId = highlightId) {
+            SettingsGroupSurface(isTop = false, isBottom = false, id = "appearance_theme_color", highlightId = highlightId) {
                 ThemeColorPicker(
                     selectedColor = themeColor,
                     isDark = isDark,
@@ -220,7 +219,7 @@ fun AppearanceControl(
             }
         }
         item {
-            SettingsGroupSurface(index = themeIdx + 1, count = themeCount, id = "appearance_liquid_glass", highlightId = highlightId) {
+            SettingsGroupSurface(isTop = false, isBottom = !liquidGlassEnabled, id = "appearance_liquid_glass", highlightId = highlightId) {
                 SettingsSwitchItem(
                     icon = AppIcons.Opacity,
                     title = "启用液态玻璃效果",
@@ -234,7 +233,7 @@ fun AppearanceControl(
         }
         if (liquidGlassEnabled) {
             item {
-                SettingsGroupSurface(index = themeIdx + 2, count = themeCount, id = "appearance_liquid_glass_blur", highlightId = highlightId) {
+                SettingsGroupSurface(isTop = false, isBottom = true, id = "appearance_liquid_glass_blur", highlightId = highlightId) {
                     CustomItemCell {
                         Column(modifier = Modifier.fillMaxWidth()) {
                             Row(
@@ -300,9 +299,8 @@ fun AppearanceControl(
 
         // 界面
         item { SettingsGroupHeader("界面") }
-        val interfaceCount = if (showBackground) 5 else 4
         item {
-            SettingsGroupSurface(index = 0, count = interfaceCount, id = "appearance_background", highlightId = highlightId) {
+            SettingsGroupSurface(isTop = true, isBottom = false, id = "appearance_background", highlightId = highlightId) {
                 SettingsSwitchItem(
                     icon = AppIcons.Image,
                     title = "显示会话背景",
@@ -316,7 +314,7 @@ fun AppearanceControl(
         }
         if (showBackground) {
             item {
-                SettingsGroupSurface(index = 1, count = interfaceCount, id = "appearance_background_opacity", highlightId = highlightId) {
+                SettingsGroupSurface(isTop = false, isBottom = false, id = "appearance_background_opacity", highlightId = highlightId) {
                     CustomItemCell {
                         Column(modifier = Modifier.fillMaxWidth()) {
                             Row(
@@ -377,9 +375,8 @@ fun AppearanceControl(
                 }
             }
         }
-        val interfaceStartIdx = if (showBackground) 2 else 1
         item {
-            SettingsGroupSurface(index = interfaceStartIdx, count = interfaceCount, id = "appearance_square_avatar", highlightId = highlightId) {
+            SettingsGroupSurface(isTop = false, isBottom = false, id = "appearance_square_avatar", highlightId = highlightId) {
                 SettingsSwitchItem(
                     icon = AppIcons.People,
                     title = "圆角矩形头像",
@@ -393,7 +390,7 @@ fun AppearanceControl(
             }
         }
         item {
-            SettingsGroupSurface(index = interfaceStartIdx + 1, count = interfaceCount, id = "appearance_float_bar", highlightId = highlightId) {
+            SettingsGroupSurface(isTop = false, isBottom = false, id = "appearance_float_bar", highlightId = highlightId) {
                 SettingsSwitchItem(
                     icon = AppIcons.BottomBar,
                     title = "主页悬浮底栏",
@@ -406,7 +403,20 @@ fun AppearanceControl(
             }
         }
         item {
-            SettingsGroupSurface(index = interfaceStartIdx + 2, count = interfaceCount, id = "appearance_merge_sticky", highlightId = highlightId) {
+            SettingsGroupSurface(isTop = false, isBottom = false, id = "appearance_float_top_bar", highlightId = highlightId) {
+                SettingsSwitchItem(
+                    icon = AppIcons.ArrowUpward,
+                    title = "悬浮顶栏",
+                    subtitle = "开启后部分页面顶栏可使用悬浮玻璃栏",
+                    checked = floatingTopBarEnabled,
+                    onCheckedChange = { checked ->
+                        scope.launch { settingsStorage.setFloatingTopBar(checked) }
+                    }
+                )
+            }
+        }
+        item {
+            SettingsGroupSurface(isTop = false, isBottom = true, id = "appearance_merge_sticky", highlightId = highlightId) {
                 SettingsSwitchItem(
                     icon = AppIcons.Keep,
                     title = "合并置顶会话",

@@ -33,6 +33,7 @@ val AllSettingsIndex: List<SettingsItemSpec> = listOf(
     SettingsItemSpec("appearance_background_opacity", 1, "外观", "背景不透明度", AppIcons.Image),
     SettingsItemSpec("appearance_square_avatar", 1, "外观", "圆角矩形头像", AppIcons.People),
     SettingsItemSpec("appearance_float_bar", 1, "外观", "主页悬浮底栏", AppIcons.BottomBar),
+    SettingsItemSpec("appearance_float_top_bar", 1, "外观", "悬浮顶栏", AppIcons.ArrowUpward),
     SettingsItemSpec("appearance_merge_sticky", 1, "外观", "合并置顶会话", AppIcons.Keep),
 
     SettingsItemSpec("bubble_corner", 2, "气泡", "气泡圆角", AppIcons.RoundedCorner),
@@ -44,6 +45,7 @@ val AllSettingsIndex: List<SettingsItemSpec> = listOf(
     SettingsItemSpec("action_cache", 3, "行为", "本地缓存", AppIcons.SaveAlt),
     SettingsItemSpec("action_storage", 3, "行为", "存储权限", AppIcons.FolderZip),
     SettingsItemSpec("action_big_screen", 3, "行为", "大屏模式", AppIcons.LaptopChromebook),
+    SettingsItemSpec("action_enter_send", 3, "行为", "按回车键发送", AppIcons.Keyboard),
     SettingsItemSpec("action_app_lock", 3, "行为", "应用锁", AppIcons.Lock),
     SettingsItemSpec("action_lock_background", 3, "行为", "切到后台后重新锁定", AppIcons.Lock),
     SettingsItemSpec("action_change_pin", 3, "行为", "修改应用锁密码", AppIcons.Edit),

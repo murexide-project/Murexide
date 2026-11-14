@@ -25,6 +25,7 @@ import com.juhao.murexide.datastore.UserAccount
 import com.juhao.murexide.network.WebSocketManager
 import com.juhao.murexide.ui.about.AboutActivity
 import com.juhao.murexide.ui.components.*
+import com.juhao.murexide.plugin.PluginManagerActivity
 import com.juhao.murexide.ui.settings.chatbackground.ChatBackgroundActivity
 import com.juhao.murexide.ui.settings.userbot.UserBotActivity
 import kotlinx.coroutines.launch
@@ -168,7 +169,7 @@ fun SettingsScreen(
                         SettingsGroupHeader(group)
                     }
                     itemsIndexed(items, key = { _, it -> it.id }) { index, item ->
-                        SettingsGroupSurface(index = index, count = items.size) {
+                        SettingsGroupSurface(isTop = index == 0, isBottom = index == items.size - 1) {
                             SettingsItem(
                                 icon = item.icon,
                                 title = item.title,
@@ -269,7 +270,7 @@ private fun SettingsHomeScreen(
 
             item { SettingsGroupHeader("个性化") }
             item {
-                SettingsGroupSurface(index = 0, count = 2) {
+                SettingsGroupSurface(isTop = true, isBottom = false) {
                     SettingsItem(
                         icon = AppIcons.Style,
                         title = "应用外观",
@@ -279,7 +280,7 @@ private fun SettingsHomeScreen(
                 }
             }
             item {
-                SettingsGroupSurface(index = 1, count = 2) {
+                SettingsGroupSurface(isTop = false, isBottom = true) {
                     SettingsItem(
                         icon = AppIcons.ChatBubble,
                         title = "消息气泡",
@@ -291,7 +292,7 @@ private fun SettingsHomeScreen(
 
             item { SettingsGroupHeader("功能") }
             item {
-                SettingsGroupSurface(index = 0, count = 4) {
+                SettingsGroupSurface(isTop = true, isBottom = false) {
                     SettingsItem(
                         icon = AppIcons.DragClick,
                         title = "行为",
@@ -301,7 +302,7 @@ private fun SettingsHomeScreen(
                 }
             }
             item {
-                SettingsGroupSurface(index = 1, count = 4) {
+                SettingsGroupSurface(isTop = false, isBottom = false) {
                     SettingsItem(
                         icon = AppIcons.Link,
                         title = "WebSocket",
@@ -322,7 +323,7 @@ private fun SettingsHomeScreen(
                 }
             }
             item {
-                SettingsGroupSurface(index = 2, count = 4) {
+                SettingsGroupSurface(isTop = false, isBottom = false) {
                     SettingsItem(
                         icon = AppIcons.SmartToy,
                         title = "用户 Bot",
@@ -332,7 +333,7 @@ private fun SettingsHomeScreen(
                 }
             }
             item {
-                SettingsGroupSurface(index = 3, count = 4) {
+                SettingsGroupSurface(isTop = false, isBottom = true) {
                     SettingsItem(
                         icon = AppIcons.Image,
                         title = "聊天背景",
@@ -346,7 +347,17 @@ private fun SettingsHomeScreen(
 
             item { SettingsGroupHeader("应用") }
             item {
-                SettingsGroupSurface(index = 0, count = 2) {
+                SettingsGroupSurface(isTop = true, isBottom = false) {
+                    SettingsItem(
+                        icon = AppIcons.Build,
+                        title = "插件",
+                        subtitle = "导入 zip 扩展应用功能",
+                        onClick = { PluginManagerActivity.start(context) }
+                    )
+                }
+            }
+            item {
+                SettingsGroupSurface(isTop = false, isBottom = false) {
                     SettingsItem(
                         icon = AppIcons.Update,
                         title = "更新",
@@ -356,7 +367,7 @@ private fun SettingsHomeScreen(
                 }
             }
             item {
-                SettingsGroupSurface(index = 1, count = 2) {
+                SettingsGroupSurface(isTop = false, isBottom = true) {
                     SettingsItem(
                         icon = AppIcons.Person,
                         title = "账号",

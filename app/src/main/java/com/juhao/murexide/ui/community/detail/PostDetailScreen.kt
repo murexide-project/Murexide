@@ -38,6 +38,7 @@ import com.juhao.murexide.datastore.AccountStorage
 import com.juhao.murexide.repository.ConversationRepository
 import com.juhao.murexide.ui.chat.ChatActivity
 import com.juhao.murexide.ui.conversationdetail.ConversationDetailActivity
+import com.juhao.murexide.ui.community.ba.BaDetailActivity
 import com.juhao.murexide.ui.community.ba.CreatePostActivity
 import com.juhao.murexide.ui.components.*
 import com.juhao.murexide.ui.theme.LocalLiquidGlassBlur
@@ -364,7 +365,7 @@ fun PostDetailScreen(
                         modifier = Modifier.fillMaxSize()
                     ) {
                         item(key = "post_header_${post.id}") {
-                            PostHeader(post = post, viewModel = viewModel)
+                            PostHeader(post = post, ba = uiState.ba, viewModel = viewModel)
                         }
 
                         item {
@@ -645,7 +646,7 @@ private fun CommentInputSheet(
 }
 
 @Composable
-private fun PostHeader(post: PostDetail, viewModel: PostDetailViewModel) {
+private fun PostHeader(post: PostDetail, ba: BaDetail?, viewModel: PostDetailViewModel) {
     Column(modifier = Modifier
         .fillMaxWidth()
         .padding(16.dp)) {
@@ -661,9 +662,48 @@ private fun PostHeader(post: PostDetail, viewModel: PostDetailViewModel) {
             }
         }
 
+        ba?.let {
+            Spacer(Modifier.height(12.dp))
+            BaCard(ba = it)
+        }
+
         post.group?.takeIf { it.groupId.isNotEmpty() }?.let { group ->
             Spacer(Modifier.height(12.dp))
             GroupCard(group)
+        }
+    }
+}
+
+@Composable
+private fun BaCard(ba: BaDetail) {
+    val context = LocalContext.current
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        onClick = {
+            BaDetailActivity.start(context, ba.id)
+        },
+        color = MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Avatar(url = ba.avatar, size = 36.dp)
+            Spacer(Modifier.width(10.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(ba.name, fontWeight = FontWeight.Medium, fontSize = 14.sp)
+                Text(
+                    "${ba.memberNum} 关注 · ${ba.postNum} 文章",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Icon(
+                AppIcons.ChevronRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }

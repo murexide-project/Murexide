@@ -54,7 +54,7 @@ fun ScreenshotControl(
     ) {
         item { SettingsGroupHeader("隐私") }
         item {
-            SettingsGroupSurface(index = 0, count = 4, id = "screenshot_sender", highlightId = highlightId) {
+            SettingsGroupSurface(isTop = true, isBottom = false, id = "screenshot_sender", highlightId = highlightId) {
                 SettingsSwitchItem(
                     icon = AppIcons.Person,
                     title = "隐藏发送者信息",
@@ -68,7 +68,7 @@ fun ScreenshotControl(
             }
         }
         item {
-            SettingsGroupSurface(index = 1, count = 4, id = "screenshot_my_info", highlightId = highlightId) {
+            SettingsGroupSurface(isTop = false, isBottom = false, id = "screenshot_my_info", highlightId = highlightId) {
                 SettingsSwitchItem(
                     icon = AppIcons.PersonOutline,
                     title = "信息发送方匿名化",
@@ -82,7 +82,7 @@ fun ScreenshotControl(
             }
         }
         item {
-            SettingsGroupSurface(index = 2, count = 4, id = "screenshot_session", highlightId = highlightId) {
+            SettingsGroupSurface(isTop = false, isBottom = false, id = "screenshot_session", highlightId = highlightId) {
                 SettingsSwitchItem(
                     icon = AppIcons.ChatBubble,
                     title = "隐藏会话信息",
@@ -96,7 +96,7 @@ fun ScreenshotControl(
             }
         }
         item {
-            SettingsGroupSurface(index = 3, count = 4, id = "screenshot_images", highlightId = highlightId) {
+            SettingsGroupSurface(isTop = false, isBottom = true, id = "screenshot_images", highlightId = highlightId) {
                 SettingsSwitchItem(
                     icon = AppIcons.Image,
                     title = "隐藏图片及表情包",

@@ -51,6 +51,8 @@ class SettingsStorage(private val context: Context) {
         private val APP_LOCK_ENABLED_KEY = booleanPreferencesKey("app_lock_enabled")
         private val APP_LOCK_PIN_HASH_KEY = stringPreferencesKey("app_lock_pin_hash")
         private val APP_LOCK_LOCK_ON_BACKGROUND_KEY = booleanPreferencesKey("app_lock_lock_on_background")
+        private val ENTER_KEY_TO_SEND_KEY = booleanPreferencesKey("enter_key_to_send")
+        private val FLOATING_TOP_BAR_KEY = booleanPreferencesKey("floating_top_bar_key")
     }
 
     private fun <T> preferenceFlow(key: Preferences.Key<T>, default: T): Flow<T> =
@@ -100,6 +102,10 @@ class SettingsStorage(private val context: Context) {
     suspend fun getFloatBottomBar() = getPreference(FLOAT_BOTTOM_BAR_KEY, true)
     suspend fun setFloatBottomBar(value: Boolean) = setPreference(FLOAT_BOTTOM_BAR_KEY, value)
 
+    val floatingTopBarFlow = preferenceFlow(FLOATING_TOP_BAR_KEY, true)
+    suspend fun getFloatingTopBar() = getPreference(FLOATING_TOP_BAR_KEY, true)
+    suspend fun setFloatingTopBar(value: Boolean) = setPreference(FLOATING_TOP_BAR_KEY, value)
+
     val showMsgTagsFlow = preferenceFlow(MSG_SHOW_TAGS_KEY, true)
     suspend fun getShowMsgTags() = getPreference(MSG_SHOW_TAGS_KEY, true)
     suspend fun setShowMsgTags(enabled: Boolean) = setPreference(MSG_SHOW_TAGS_KEY, enabled)
@@ -127,7 +133,7 @@ class SettingsStorage(private val context: Context) {
     suspend fun setShowMyBubbleAvatar(show: Boolean) =
         setPreference(SHOW_MY_BUBBLE_AVATAR_KEY, show)
 
-    val liquidGlassEnabledFlow = preferenceFlow(LIQUID_GLASS_ENABLED_KEY, false)
+    val liquidGlassEnabledFlow = preferenceFlow(LIQUID_GLASS_ENABLED_KEY, Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
     suspend fun getLiquidGlassEnabled() = liquidGlassEnabledFlow.first()
     suspend fun setLiquidGlassEnabled(enabled: Boolean) =
         setPreference(LIQUID_GLASS_ENABLED_KEY, enabled)
@@ -197,6 +203,10 @@ class SettingsStorage(private val context: Context) {
         getPreference(APP_LOCK_LOCK_ON_BACKGROUND_KEY, true)
     suspend fun setAppLockLockOnBackground(enabled: Boolean) =
         setPreference(APP_LOCK_LOCK_ON_BACKGROUND_KEY, enabled)
+
+    val enterKeyToSendFlow = preferenceFlow(ENTER_KEY_TO_SEND_KEY, false)
+    suspend fun getEnterKeyToSend() = getPreference(ENTER_KEY_TO_SEND_KEY, false)
+    suspend fun setEnterKeyToSend(enabled: Boolean) = setPreference(ENTER_KEY_TO_SEND_KEY, enabled)
 
     suspend fun getAppLockPinHash(): String? =
         dataStore.data.first()[APP_LOCK_PIN_HASH_KEY]

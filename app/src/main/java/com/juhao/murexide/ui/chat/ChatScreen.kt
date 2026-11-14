@@ -5,6 +5,7 @@ import com.juhao.murexide.ui.icons.AutoMirroredIcon
 
 import android.Manifest
 import android.content.ClipData
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.CancellationSignal
@@ -16,6 +17,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import android.widget.Toast
+import androidx.core.content.ContextCompat
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.Alignment
 import androidx.activity.compose.BackHandler
@@ -75,6 +77,7 @@ import com.juhao.murexide.ui.chat.components.EditHistoryDialog
 import com.juhao.murexide.ui.chat.components.InstructionPanel
 import com.juhao.murexide.ui.chat.components.InstructionFormDialog
 import com.juhao.murexide.ui.chat.components.UploadProgressBar
+import com.juhao.murexide.ui.chat.components.VoiceRecordingBar
 import com.juhao.murexide.ui.chat.components.ScreenshotBottomSheet
 import com.juhao.murexide.ui.chat.components.GroupMemberSheet
 import com.juhao.murexide.datastore.SettingsStorage
@@ -177,6 +180,12 @@ private fun ChatComposer(
     onInstructionClick: () -> Unit,
     onAddAlbumClick: () -> Unit,
     onAddFileClick: () -> Unit,
+    isRecordingVoice: Boolean,
+    voiceRecordingSeconds: Int,
+    onVoiceClick: () -> Unit,
+    onCancelRecording: () -> Unit,
+    onSendRecording: () -> Unit,
+    onPickVoiceFile: () -> Unit = {},
     focusRequester: FocusRequester,
     onInputFocused: () -> Unit,
     limitedMsgType: List<Int> = emptyList(),
@@ -185,38 +194,48 @@ private fun ChatComposer(
     onSwitchAccount: (UserAccount) -> Unit
 ) {
     val composerState by viewModel.composerState.collectAsState()
-    MessageInput(
-        inputText = composerState.text,
-        inputSelectionStart = composerState.selectionStart,
-        inputSelectionEnd = composerState.selectionEnd,
-        isSending = isSending,
-        onTextChange = { text, mentions, selectionStart, selectionEnd ->
-            viewModel.updateInputText(
-                text = text,
-                mentions = mentions,
-                selectionStart = selectionStart,
-                selectionEnd = selectionEnd
-            )
-        },
-        onSendClick = { viewModel.sendMessage() },
-        onSendWithType = { type -> viewModel.sendMessage(type) },
-        onAddAlbumClick = onAddAlbumClick,
-        onAddFileClick = onAddFileClick,
-        isEmojiPanelVisible = isEmojiPanelVisible,
-        onEmojiClick = onEmojiClick,
-        isInstructionPanelVisible = isInstructionPanelVisible,
-        onInstructionClick = onInstructionClick,
-        mentions = composerState.mentions,
-        onMentionTriggered = { position ->
-            if (chatType == 2) viewModel.showMentionPicker(position)
-        },
-        focusRequester = focusRequester,
-        onInputFocused = onInputFocused,
-        limitedMsgType = limitedMsgType,
-        accounts = accounts,
-        activeAccountId = activeAccountId,
-        onSwitchAccount = onSwitchAccount
-    )
+    if (isRecordingVoice) {
+        VoiceRecordingBar(
+            seconds = voiceRecordingSeconds,
+            onCancel = onCancelRecording,
+            onSend = onSendRecording,
+            onPickVoiceFile = onPickVoiceFile
+        )
+    } else {
+        MessageInput(
+            inputText = composerState.text,
+            inputSelectionStart = composerState.selectionStart,
+            inputSelectionEnd = composerState.selectionEnd,
+            isSending = isSending,
+            onTextChange = { text, mentions, selectionStart, selectionEnd ->
+                viewModel.updateInputText(
+                    text = text,
+                    mentions = mentions,
+                    selectionStart = selectionStart,
+                    selectionEnd = selectionEnd
+                )
+            },
+            onSendClick = { viewModel.sendMessage() },
+            onSendWithType = { type -> viewModel.sendMessage(type) },
+            onAddAlbumClick = onAddAlbumClick,
+            onAddFileClick = onAddFileClick,
+            isEmojiPanelVisible = isEmojiPanelVisible,
+            onEmojiClick = onEmojiClick,
+            isInstructionPanelVisible = isInstructionPanelVisible,
+            onInstructionClick = onInstructionClick,
+            onVoiceClick = onVoiceClick,
+            mentions = composerState.mentions,
+            onMentionTriggered = { position ->
+                if (chatType == 2) viewModel.showMentionPicker(position)
+            },
+            focusRequester = focusRequester,
+            onInputFocused = onInputFocused,
+            limitedMsgType = limitedMsgType,
+            accounts = accounts,
+            activeAccountId = activeAccountId,
+            onSwitchAccount = onSwitchAccount
+        )
+    }
 }
 
 @OptIn(
@@ -510,6 +529,12 @@ fun ChatScreen(
         uri?.let { viewModel.uploadAndSendFile(it, context) }
     }
 
+    val voiceFilePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        if (uri != null) viewModel.sendFileAsVoice(uri, context)
+    }
+
     var pendingDownloadMessage by remember { mutableStateOf<MessageItem?>(null) }
     val storagePermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
@@ -523,6 +548,40 @@ fun ChatScreen(
         }
     }
 
+    val micPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            viewModel.startVoiceRecording(context)
+        } else {
+            Toast.makeText(context, "需要录音权限才能发送语音", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    fun startVoiceRecording() {
+        val state = uiState
+        if (state.editingMessage != null) {
+            Toast.makeText(context, "编辑消息时暂不支持发送语音", Toast.LENGTH_SHORT).show()
+            return
+        }
+        if (state.isSending || state.isUploading) return
+        isMeasuringIme = false
+        pendingInputPanel = null
+        focusManager.clearFocus(force = true)
+        keyboardController?.hide()
+        viewModel.hideStickerPanel()
+        viewModel.hideInstructionPanel()
+        if (ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.RECORD_AUDIO
+            ) == PackageManager.PERMISSION_GRANTED
+        ) {
+            viewModel.startVoiceRecording(context)
+        } else {
+            micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+        }
+    }
+
     fun openAlbumPicker() {
         albumPickerLauncher.launch(
             PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)
@@ -531,6 +590,13 @@ fun ChatScreen(
 
     fun openFilePicker() {
         filePickerLauncher.launch("*/*")
+    }
+
+    // 录音中点击「选文件」：先取消当前录音（不发送），再选择设备内音频以语音模式发送
+    fun pickVoiceFile() {
+        if (!uiState.isRecordingVoice) return
+        viewModel.cancelVoiceRecording()
+        voiceFilePickerLauncher.launch("audio/*")
     }
 
     val selectionMode = uiState.selectionMode
@@ -1548,6 +1614,12 @@ fun ChatScreen(
                                 onInstructionClick = {
                                     requestInputPanel(ChatInputPanel.Instruction)
                                 },
+                                isRecordingVoice = uiState.isRecordingVoice,
+                                voiceRecordingSeconds = uiState.voiceRecordingSeconds,
+                                onVoiceClick = { startVoiceRecording() },
+                                onCancelRecording = { viewModel.cancelVoiceRecording() },
+                                onSendRecording = { viewModel.stopVoiceRecording() },
+                                onPickVoiceFile = { pickVoiceFile() },
                                 focusRequester = inputFocusRequester,
                                 onInputFocused = {
                                     if (pendingInputPanel != null) return@ChatComposer
@@ -1566,6 +1638,12 @@ fun ChatScreen(
                                     viewModel.switchSendToken(account.token)
                                 }
                             )
+
+                            BackHandler(
+                                enabled = uiState.isRecordingVoice
+                            ) {
+                                viewModel.cancelVoiceRecording()
+                            }
 
                             BackHandler(
                                 enabled = pendingInputPanel != null ||

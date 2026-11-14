@@ -73,7 +73,7 @@ fun WebSocketControl(
     ) {
         item { SettingsGroupHeader("状态") }
         item {
-            SettingsGroupSurface(index = 0, count = 1, id = "ws_status", highlightId = highlightId) {
+            SettingsGroupSurface(isTop = true, isBottom = true, id = "ws_status", highlightId = highlightId) {
                 Surface(color = cardBgColor, contentColor = cardTextColor) {
                     Column(
                         modifier = Modifier
@@ -105,7 +105,7 @@ fun WebSocketControl(
 
         item { SettingsGroupHeader("WebSocket") }
         item {
-            SettingsGroupSurface(index = 0, count = 3, id = "ws_enable", highlightId = highlightId) {
+            SettingsGroupSurface(isTop = true, isBottom = false, id = "ws_enable", highlightId = highlightId) {
                 SettingsSwitchItem(
                     icon = AppIcons.Link,
                     title = "启用 WebSocket",
@@ -119,7 +119,7 @@ fun WebSocketControl(
             }
         }
         item {
-            SettingsGroupSurface(index = 1, count = 3, id = "ws_battery", highlightId = highlightId) {
+            SettingsGroupSurface(isTop = false, isBottom = false, id = "ws_battery", highlightId = highlightId) {
                 SettingsSwitchItem(
                     icon = AppIcons.BatteryPlus,
                     title = "忽略电池优化",
@@ -133,7 +133,7 @@ fun WebSocketControl(
             }
         }
         item {
-            SettingsGroupSurface(index = 2, count = 3, id = "ws_reconnect", highlightId = highlightId) {
+            SettingsGroupSurface(isTop = false, isBottom = true, id = "ws_reconnect", highlightId = highlightId) {
                 SettingsItem(
                     icon = AppIcons.Refresh,
                     title = "重启连接",

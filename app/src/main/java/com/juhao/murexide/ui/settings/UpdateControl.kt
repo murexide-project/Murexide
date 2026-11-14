@@ -91,7 +91,7 @@ fun UpdateControl(
     ) {
         item { SettingsGroupHeader("更新") }
         item {
-            SettingsGroupSurface(index = 0, count = 1, id = "update_status", highlightId = highlightId) {
+            SettingsGroupSurface(isTop = true, isBottom = true, id = "update_status", highlightId = highlightId) {
                 if (updateEnabled) {
                     Surface(
                         color = cardBgColor,
@@ -168,7 +168,7 @@ fun UpdateControl(
 
         item { SettingsGroupHeader("更新操作") }
         item {
-            SettingsGroupSurface(index = 0, count = 2, id = "update_channel", highlightId = highlightId) {
+            SettingsGroupSurface(isTop = true, isBottom = false, id = "update_channel", highlightId = highlightId) {
                 SettingsDropdownItem(
                     icon = AppIcons.List,
                     title = "更新频道",
@@ -186,7 +186,7 @@ fun UpdateControl(
             }
         }
         item {
-            SettingsGroupSurface(index = 1, count = 2, id = "update_qq", highlightId = highlightId) {
+            SettingsGroupSurface(isTop = false, isBottom = true, id = "update_qq", highlightId = highlightId) {
                 SettingsItem(
                     icon = AppIcons.Download,
                     title = "前往交流群更新",

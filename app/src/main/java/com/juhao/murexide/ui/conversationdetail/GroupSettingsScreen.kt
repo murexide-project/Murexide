@@ -155,7 +155,7 @@ fun GroupSettingsScreen(
             }
 
             SettingsGroupHeader("基本信息")
-            SettingsGroupSurface(index = 0, count = 2) {
+            SettingsGroupSurface(isTop = true, isBottom = false) {
                 CustomItemCell {
                     OutlinedTextField(
                         value = uiState.name,
@@ -166,7 +166,7 @@ fun GroupSettingsScreen(
                     )
                 }
             }
-            SettingsGroupSurface(index = 1, count = 2) {
+            SettingsGroupSurface(isTop = false, isBottom = true) {
                 CustomItemCell {
                     OutlinedTextField(
                         value = uiState.introduction,
@@ -180,7 +180,7 @@ fun GroupSettingsScreen(
             }
 
             SettingsGroupHeader("群聊设置")
-            SettingsGroupSurface(index = 0, count = 4) {
+            SettingsGroupSurface(isTop = true, isBottom = false) {
                 SettingsSwitchItem(
                     icon = AppIcons.HowToReg,
                     title = "进群免审核",
@@ -189,7 +189,7 @@ fun GroupSettingsScreen(
                     onCheckedChange = viewModel::toggleDirectJoin
                 )
             }
-            SettingsGroupSurface(index = 1, count = 4) {
+            SettingsGroupSurface(isTop = false, isBottom = false) {
                 SettingsSwitchItem(
                     icon = AppIcons.History,
                     title = "新成员可见历史消息",
@@ -197,7 +197,7 @@ fun GroupSettingsScreen(
                     onCheckedChange = viewModel::toggleHistoryMsg
                 )
             }
-            SettingsGroupSurface(index = 2, count = 4) {
+            SettingsGroupSurface(isTop = false, isBottom = false) {
                 SettingsSwitchItem(
                     icon = AppIcons.Lock,
                     title = "群聊私有",
@@ -206,7 +206,7 @@ fun GroupSettingsScreen(
                     onCheckedChange = viewModel::togglePrivate
                 )
             }
-            SettingsGroupSurface(index = 3, count = 4) {
+            SettingsGroupSurface(isTop = false, isBottom = true) {
                 SettingsSwitchItem(
                     icon = AppIcons.VisibilityOff,
                     title = "隐藏群成员",
@@ -217,7 +217,7 @@ fun GroupSettingsScreen(
 
             if (uiState.isOwner) {
                 SettingsGroupHeader("群云盘")
-                SettingsGroupSurface(index = 0, count = 1) {
+                SettingsGroupSurface(isTop = true, isBottom = true) {
                     SettingsSwitchItem(
                         icon = AppIcons.Folder,
                         title = "禁止成员上传到群云盘",
@@ -231,7 +231,7 @@ fun GroupSettingsScreen(
 
             if (uiState.canManage) {
                 SettingsGroupHeader("高级设置")
-                SettingsGroupSurface(index = 0, count = if (uiState.isOwner) 2 else 1) {
+                SettingsGroupSurface(isTop = true, isBottom = !uiState.isOwner) {
                     SettingsItem(
                         icon = AppIcons.TextFields,
                         title = "消息类型限制",
@@ -244,7 +244,7 @@ fun GroupSettingsScreen(
                     )
                 }
                 if (uiState.isOwner) {
-                    SettingsGroupSurface(index = 1, count = 2) {
+                    SettingsGroupSurface(isTop = false, isBottom = true) {
                         SettingsItem(
                             icon = AppIcons.Key,
                             title = "群口令",

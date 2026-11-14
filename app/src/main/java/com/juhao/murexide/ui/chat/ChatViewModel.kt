@@ -2,6 +2,7 @@ package com.juhao.murexide.ui.chat
 
 import android.net.Uri
 import android.content.Context
+import android.media.MediaMetadataRetriever
 import android.util.Log
 import androidx.compose.runtime.Immutable
 import androidx.core.net.toUri
@@ -27,6 +28,7 @@ import com.juhao.murexide.datastore.AccountStorage
 import com.juhao.murexide.utils.*
 import com.juhao.murexide.network.WebSocketManager
 import com.juhao.murexide.network.RecallActor
+import com.juhao.murexide.ui.chat.components.AudioPlaybackManager
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -50,6 +52,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -101,11 +104,16 @@ class ChatViewModel(
         private const val RECALL_CONFIRMATION_GRACE_MS = 1_500L
         private const val HISTORY_PAGE_SIZE = 20
         const val UNREAD_JUMP_CONFIRM_THRESHOLD = 200
+        private const val MAX_VOICE_RECORD_SECONDS = 60
     }
 
     private var uploadJob: Job? = null
     private var streamPersistJob: Job? = null
     private var mentionSearchJob: Job? = null
+    private var voiceRecorder: com.juhao.murexide.utils.VoiceRecorder? = null
+    private var voiceTimerJob: Job? = null
+    private var voiceAppContext: Context? = null
+    private var voiceStopping = false
 
     private val msgIdCache = mutableSetOf<String>()
 
@@ -644,6 +652,9 @@ class ChatViewModel(
     override fun onCleared() {
         draftSaveJob?.cancel()
         mentionSearchJob?.cancel()
+        voiceTimerJob?.cancel()
+        voiceRecorder?.release()
+        voiceRecorder = null
         val text = _uiState.value.inputText
         val sending = _uiState.value.isSending
         kotlinx.coroutines.GlobalScope.launch(Dispatchers.IO) {
@@ -1179,6 +1190,233 @@ class ChatViewModel(
                         msgId = msgId,
                         content = content,
                         contentType = MessageItem.CONTENT_TYPE_IMAGE,
+                        quoteMsgId = state.replyTo?.msgId
+                    )
+                }
+                _uiState.update { it.copy(replyTo = null, isSending = false) }
+            }.onFailure { error ->
+                _uiState.update { it.copy(isSending = false) }
+                _toastMessage.emit("发送失败: ${error.message}")
+            }
+        }
+    }
+
+    // ===================== 语音消息 =====================
+
+    /** 开始录音（调用前需已取得 RECORD_AUDIO 权限）。 */
+    fun startVoiceRecording(context: Context) {
+        val state = _uiState.value
+        if (state.isRecordingVoice || state.isUploading || state.isSending || voiceStopping) return
+        voiceAppContext = context.applicationContext
+        // 录音时停止正在播放的语音，避免串音
+        AudioPlaybackManager.stop()
+        viewModelScope.launch {
+            val recorder = VoiceRecorder(context.applicationContext)
+            val started = withContext(Dispatchers.IO) { recorder.start() }
+            if (!started) {
+                recorder.release()
+                _toastMessage.emit("录音启动失败，请检查麦克风权限")
+                return@launch
+            }
+            voiceRecorder?.release()
+            voiceRecorder = recorder
+            _uiState.update {
+                it.copy(isRecordingVoice = true, voiceRecordingSeconds = 0)
+            }
+            voiceTimerJob?.cancel()
+            voiceTimerJob = viewModelScope.launch {
+                while (_uiState.value.isRecordingVoice) {
+                    delay(200L)
+                    val seconds = recorder.elapsedSeconds()
+                    _uiState.update { it.copy(voiceRecordingSeconds = seconds) }
+                    if (seconds >= MAX_VOICE_RECORD_SECONDS) {
+                        _toastMessage.emit("已达最长录音时长（${MAX_VOICE_RECORD_SECONDS}秒），自动发送")
+                        stopVoiceRecording()
+                        return@launch
+                    }
+                }
+            }
+        }
+    }
+
+    /** 停止录音并作为语音消息发送。 */
+    fun stopVoiceRecording() {
+        if (voiceStopping) return
+        val recorder = voiceRecorder ?: return
+        val appContext = voiceAppContext ?: return
+        voiceStopping = true
+        voiceRecorder = null
+        voiceTimerJob?.cancel()
+        uploadJob?.cancel()
+        _uiState.update {
+            it.copy(
+                isRecordingVoice = false,
+                voiceRecordingSeconds = 0,
+                isUploading = true,
+                uploadProgress = 0f,
+                uploadImagePath = null
+            )
+        }
+        uploadJob = viewModelScope.launch {
+            try {
+                val result = withContext(Dispatchers.IO) { recorder.stop() }
+                if (result == null) {
+                    _uiState.update {
+                        it.copy(isUploading = false, uploadProgress = 0f, uploadImagePath = null)
+                    }
+                    _toastMessage.emit("录音失败，请重试")
+                    return@launch
+                }
+                val (file, seconds) = result
+                _uiState.update { it.copy(uploadImagePath = file.absolutePath) }
+                val uploader = QiniuUploader(
+                    context = appContext,
+                    userToken = activeSendToken,
+                    uploadType = 4
+                )
+                val uploadResult = uploader.upload(
+                    input = file.absolutePath,
+                    onProgress = { progress ->
+                        _uiState.update { it.copy(uploadProgress = progress) }
+                    }
+                )
+                _uiState.update {
+                    it.copy(isUploading = false, uploadProgress = 0f, uploadImagePath = null)
+                }
+                uploadResult.onSuccess { response ->
+                    sendAudioMessage(response, seconds)
+                }.onFailure { error ->
+                    _toastMessage.emit("语音上传失败: ${error.message}")
+                }
+            } finally {
+                recorder.release()
+                voiceStopping = false
+            }
+        }
+    }
+
+    /** 取消录音并删除录音文件。 */
+    fun cancelVoiceRecording() {
+        if (voiceStopping) return
+        val recorder = voiceRecorder ?: return
+        voiceStopping = true
+        voiceRecorder = null
+        voiceTimerJob?.cancel()
+        _uiState.update {
+            it.copy(isRecordingVoice = false, voiceRecordingSeconds = 0)
+        }
+        viewModelScope.launch {
+            try {
+                withContext(Dispatchers.IO) { recorder.cancel() }
+            } finally {
+                recorder.release()
+                voiceStopping = false
+            }
+        }
+    }
+
+    /** 选择设备内的音频文件，以语音消息模式上传并发送（content_type = 11）。 */
+    fun sendFileAsVoice(uri: Uri, context: Context) {
+        val state = _uiState.value
+        if (state.isUploading || state.isSending) return
+        uploadJob?.cancel()
+        uploadJob = viewModelScope.launch {
+            _uiState.update {
+                it.copy(
+                    isUploading = true,
+                    uploadProgress = 0f,
+                    uploadImagePath = uri.toString(),
+                    isSending = false
+                )
+            }
+            try {
+                val uploader = QiniuUploader(
+                    context = context,
+                    userToken = activeSendToken,
+                    uploadType = 4
+                )
+                val result = uploader.uploadFromUri(
+                    context = context,
+                    uri = uri,
+                    onProgress = { progress ->
+                        _uiState.update { it.copy(uploadProgress = progress) }
+                    }
+                )
+                if (!isActive) {
+                    _uiState.update {
+                        it.copy(isUploading = false, uploadProgress = 0f, uploadImagePath = null)
+                    }
+                    return@launch
+                }
+                result.onSuccess { response ->
+                    val seconds = audioDurationSeconds(context, uri)
+                    _uiState.update {
+                        it.copy(isUploading = false, uploadProgress = 1f, uploadImagePath = null)
+                    }
+                    sendAudioMessage(response, seconds)
+                }.onFailure { error ->
+                    _uiState.update {
+                        it.copy(isUploading = false, uploadProgress = 0f, uploadImagePath = null)
+                    }
+                    _toastMessage.emit("语音文件上传失败: ${error.message}")
+                }
+            } catch (_: CancellationException) {
+                _uiState.update {
+                    it.copy(isUploading = false, uploadProgress = 0f, uploadImagePath = null)
+                }
+                _toastMessage.emit("已取消上传")
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(isUploading = false, uploadProgress = 0f, uploadImagePath = null)
+                }
+                _toastMessage.emit("语音文件上传失败: ${e.message}")
+            }
+        }
+    }
+
+    /** 读取音频时长（毫秒转秒），失败时兜底 1 秒。 */
+    private suspend fun audioDurationSeconds(context: Context, uri: Uri): Int =
+        withContext(Dispatchers.IO) {
+            runCatching {
+                val retriever = MediaMetadataRetriever()
+                try {
+                    retriever.setDataSource(context, uri)
+                    val ms = retriever
+                        .extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
+                        ?.toLongOrNull()
+                        ?: 0L
+                    (ms / 1000).toInt().coerceAtLeast(1)
+                } finally {
+                    runCatching { retriever.release() }
+                }
+            }.getOrDefault(1)
+        }
+
+    private fun sendAudioMessage(upload: QiniuUploadResponse, audioSeconds: Int) {
+        val state = _uiState.value
+        viewModelScope.launch {
+            val content = MessageContent(
+                audio = upload.key,
+                audioTime = audioSeconds,
+                text = "",
+                quoteMsgText = state.replyTo?.let { "${it.senderName}: ${it.content}" },
+                quoteImageUrl = state.replyTo?.imageUrl,
+                quoteImageName = state.replyTo?.imageUrl?.toUri()?.lastPathSegment,
+                media = upload.toMessageMedia()
+            )
+            repository.sendMessage(
+                token = activeSendToken,
+                chatId = chatId,
+                chatType = chatType,
+                content = content,
+                contentType = MessageItem.CONTENT_TYPE_AUDIO,
+                quoteMsgId = state.replyTo?.msgId
+            ).onSuccess { msgId ->
+                if (isActiveAccount()) {
+                    addSentMessage(
+                        msgId = msgId,
+                        content = content,
+                        contentType = MessageItem.CONTENT_TYPE_AUDIO,
                         quoteMsgId = state.replyTo?.msgId
                     )
                 }

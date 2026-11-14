@@ -1,5 +1,6 @@
 package com.juhao.murexide.repository
 
+import com.juhao.murexide.data.BotUserSettingsItem
 import com.juhao.murexide.data.GroupBotPermission
 import com.juhao.murexide.data.GroupBotPermissionItem
 import com.juhao.murexide.network.NetworkClient
@@ -202,6 +203,35 @@ class BotRepository(
             put("groupId", groupId)
         }).map { }
 
+    /** 获取群聊内机器人设置表单（/v1/bot/get-user-settings-json）。chatId 为会话（群聊）ID。 */
+    suspend fun getUserSettingsJson(
+        token: String,
+        botId: String,
+        chatId: String
+    ): Result<List<BotUserSettingsItem>> =
+        postJson(token, "/v1/bot/get-user-settings-json", buildJsonObject {
+            put("botId", botId)
+            put("chatId", chatId)
+        }).mapCatching { root ->
+            val arr = (root["data"] as? JsonObject)?.get("settingsJson") as? JsonArray
+                ?: JsonArray(emptyList())
+            arr.mapIndexedNotNull { index, el ->
+                (el as? JsonObject)?.toUserSettingsItem(index)
+            }
+        }
+
+    /** 保存群聊内机器人设置（/v1/bot/send-setting-json）。settingJson 为表单 JSON 数组字符串（需转义）。 */
+    suspend fun sendGroupSettingJson(
+        token: String,
+        botId: String,
+        groupId: String,
+        settingJson: String
+    ): Result<Unit> = postJson(token, "/v1/bot/send-setting-json", buildJsonObject {
+        put("id", botId)
+        put("groupId", groupId)
+        put("settingJson", settingJson)
+    }).map { }
+
     private fun JsonObject.botsArray(): JsonArray =
         (this["data"] as? JsonObject)
             ?.let { it["list"] as? JsonObject }
@@ -246,3 +276,50 @@ private fun JsonObject.toPermissionItem() = GroupBotPermissionItem(
     description = this["description"].asString(),
     enabled = this["enabled"].asBoolean()
 )
+
+/** 解析 /v1/bot/get-user-settings-json 返回的单个表单项。 */
+private fun JsonObject.toUserSettingsItem(index: Int): BotUserSettingsItem {
+    val type = this["type"].asString().ifBlank { "input" }
+    val props = ((this["props"] as? JsonArray) ?: JsonArray(emptyList()))
+        .mapNotNull { it as? JsonObject }
+    val propsValue = this["propsValue"] as? JsonObject
+
+    // prop 蓝图里的 value：若等于 prop 名称或占位符提示文本，视为未设置
+    fun actualPropValue(t: String): String {
+        val p = props.firstOrNull { it["type"].asString() == t } ?: return ""
+        val v = p["value"].asString()
+        if (v.isBlank() || v == p["name"].asString().ifBlank { t } || v.startsWith("用#")) return ""
+        return v
+    }
+
+    // propsValue 成品：占位符提示文本视为未设置
+    fun actualPropsValue(key: String): String {
+        val v = propsValue?.get(key).asString()
+        if (v.isBlank() || v.startsWith("用#") || v in setOf("默认内容", "占位文本", "1：默认打开，0：默认关闭")) {
+            return ""
+        }
+        return v
+    }
+
+    val title = actualPropValue("label")
+        .ifBlank { actualPropsValue("label") }
+        .ifBlank { this["title"].asString() }
+        .ifBlank { "字段${index + 1}" }
+
+    val rawOptions = actualPropValue("options").ifBlank { actualPropsValue("options") }
+    val options = rawOptions.split("#").map { it.trim() }.filter { it.isNotEmpty() }
+
+    val defaultValue = actualPropValue("defaultValue")
+        .ifBlank { actualPropValue("value") }
+        .ifBlank { actualPropsValue("defaultValue") }
+        .ifBlank { actualPropsValue("value") }
+
+    return BotUserSettingsItem(
+        id = this["id"].asString().ifBlank { index.toString() },
+        type = type,
+        title = title,
+        options = options,
+        defaultValue = defaultValue,
+        raw = this
+    )
+}

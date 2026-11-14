@@ -212,7 +212,7 @@ private fun MineContent(
         )
 
         SettingsGroupHeader("账号信息")
-        SettingsGroupSurface(index = 0, count = 3) {
+        SettingsGroupSurface(isTop = true, isBottom = false) {
             InfoItem(
                 icon = AppIcons.Phone,
                 title = "手机号",
@@ -221,7 +221,7 @@ private fun MineContent(
                 onClick = { isPhoneVisible = !isPhoneVisible }
             )
         }
-        SettingsGroupSurface(index = 1, count = 3) {
+        SettingsGroupSurface(isTop = false, isBottom = false) {
             InfoItem(
                 icon = AppIcons.Email,
                 title = "邮箱",
@@ -230,7 +230,7 @@ private fun MineContent(
                 onClick = { isEmailVisible = !isEmailVisible }
             )
         }
-        SettingsGroupSurface(index = 2, count = 3) {
+        SettingsGroupSurface(isTop = false, isBottom = true) {
             InfoItem(
                 icon = AppIcons.CardGiftcard,
                 title = "邀请码",

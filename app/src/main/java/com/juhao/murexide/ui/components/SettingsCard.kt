@@ -22,18 +22,18 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 
-fun settingsItemShape(index: Int, count: Int): Shape {
+fun settingsItemShape(isTop: Boolean, isBottom: Boolean): Shape {
     val cornerRadius = 24.dp
     val smallRadius = 4.dp
     return when {
-        count <= 1 -> RoundedCornerShape(cornerRadius)
-        index == 0 -> RoundedCornerShape(
+        isTop && isBottom -> RoundedCornerShape(cornerRadius)
+        isTop -> RoundedCornerShape(
             topStart = cornerRadius,
             topEnd = cornerRadius,
             bottomStart = smallRadius,
             bottomEnd = smallRadius
         )
-        index == count - 1 -> RoundedCornerShape(
+        isBottom -> RoundedCornerShape(
             topStart = smallRadius,
             topEnd = smallRadius,
             bottomStart = cornerRadius,
@@ -58,13 +58,13 @@ fun SettingsGroupHeader(
 
 @Composable
 fun SettingsGroupSurface(
-    index: Int,
-    count: Int,
+    isTop: Boolean,
+    isBottom: Boolean,
     id: String? = null,
     highlightId: String? = null,
     content: @Composable () -> Unit
 ) {
-    val shape = settingsItemShape(index, count)
+    val shape = settingsItemShape(isTop, isBottom)
     val isTarget = id != null && id == highlightId
     var visible by remember(isTarget) { mutableStateOf(isTarget) }
 

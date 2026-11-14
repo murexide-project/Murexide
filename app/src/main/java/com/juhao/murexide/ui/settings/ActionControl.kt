@@ -70,6 +70,7 @@ fun ActionControl(
     val cacheEnabled by settingsStorage.cacheEnabledFlow.collectAsState(initial = true)
     val appLockEnabled by settingsStorage.appLockEnabledFlow.collectAsState(initial = false)
     val lockOnBackground by settingsStorage.appLockLockOnBackgroundFlow.collectAsState(initial = true)
+    val enterKeyToSend by settingsStorage.enterKeyToSendFlow.collectAsState(initial = false)
 
     var showSetPinDialog by remember { mutableStateOf(false) }
     var showDisableLockConfirm by remember { mutableStateOf(false) }
@@ -122,6 +123,7 @@ fun ActionControl(
             add("action_cache")
             if (legacyStoragePermission) add("action_storage")
             add("action_big_screen")
+            add("action_enter_send")
             add("action_app_lock")
             if (appLockEnabled) {
                 add("action_lock_background")
@@ -150,8 +152,10 @@ fun ActionControl(
         item { SettingsGroupHeader("行为") }
 
         var index = 0
+        val actionItemCount = allIds.count { !it.startsWith("header_") }
         item {
-            SettingsGroupSurface(index = index++, count = allIds.count { !it.startsWith("header_") }, id = "action_notification", highlightId = highlightId) {
+            val actionItemIndex = index++
+            SettingsGroupSurface(isTop = actionItemIndex == 0, isBottom = actionItemIndex == actionItemCount - 1, id = "action_notification", highlightId = highlightId) {
                 SettingsSwitchItem(
                     icon = AppIcons.Notifications,
                     title = "消息通知",
@@ -166,7 +170,8 @@ fun ActionControl(
             }
         }
         item {
-            SettingsGroupSurface(index = index++, count = allIds.count { !it.startsWith("header_") }, id = "action_cache", highlightId = highlightId) {
+            val actionItemIndex = index++
+            SettingsGroupSurface(isTop = actionItemIndex == 0, isBottom = actionItemIndex == actionItemCount - 1, id = "action_cache", highlightId = highlightId) {
                 SettingsSwitchItem(
                     icon = AppIcons.SaveAlt,
                     title = "本地缓存",
@@ -185,7 +190,8 @@ fun ActionControl(
         }
         if (legacyStoragePermission) {
             item {
-                SettingsGroupSurface(index = index++, count = allIds.count { !it.startsWith("header_") }, id = "action_storage", highlightId = highlightId) {
+                val actionItemIndex = index++
+                SettingsGroupSurface(isTop = actionItemIndex == 0, isBottom = actionItemIndex == actionItemCount - 1, id = "action_storage", highlightId = highlightId) {
                     SettingsItem(
                         icon = AppIcons.FolderZip,
                         title = "存储权限",
@@ -197,7 +203,8 @@ fun ActionControl(
             }
         }
         item {
-            SettingsGroupSurface(index = index++, count = allIds.count { !it.startsWith("header_") }, id = "action_big_screen", highlightId = highlightId) {
+            val actionItemIndex = index++
+            SettingsGroupSurface(isTop = actionItemIndex == 0, isBottom = actionItemIndex == actionItemCount - 1, id = "action_big_screen", highlightId = highlightId) {
                 SettingsSwitchItem(
                     icon = AppIcons.LaptopChromebook,
                     title = "大屏模式",
@@ -211,7 +218,22 @@ fun ActionControl(
             }
         }
         item {
-            SettingsGroupSurface(index = index++, count = allIds.count { !it.startsWith("header_") }, id = "action_app_lock", highlightId = highlightId) {
+            val actionItemIndex = index++
+            SettingsGroupSurface(isTop = actionItemIndex == 0, isBottom = actionItemIndex == actionItemCount - 1, id = "action_enter_send", highlightId = highlightId) {
+                SettingsSwitchItem(
+                    icon = AppIcons.Keyboard,
+                    title = "按回车键发送",
+                    subtitle = "开启后按回车键直接发送，Shift+回车换行",
+                    checked = enterKeyToSend,
+                    onCheckedChange = { checked ->
+                        scope.launch { settingsStorage.setEnterKeyToSend(checked) }
+                    }
+                )
+            }
+        }
+        item {
+            val actionItemIndex = index++
+            SettingsGroupSurface(isTop = actionItemIndex == 0, isBottom = actionItemIndex == actionItemCount - 1, id = "action_app_lock", highlightId = highlightId) {
                 SettingsSwitchItem(
                     icon = AppIcons.Lock,
                     title = "应用锁",
@@ -225,7 +247,8 @@ fun ActionControl(
         }
         if (appLockEnabled) {
             item {
-                SettingsGroupSurface(index = index++, count = allIds.count { !it.startsWith("header_") }, id = "action_lock_background", highlightId = highlightId) {
+                val actionItemIndex = index++
+                SettingsGroupSurface(isTop = actionItemIndex == 0, isBottom = actionItemIndex == actionItemCount - 1, id = "action_lock_background", highlightId = highlightId) {
                     SettingsSwitchItem(
                         icon = AppIcons.Lock,
                         title = "切到后台后重新锁定",
@@ -241,7 +264,8 @@ fun ActionControl(
                 }
             }
             item {
-                SettingsGroupSurface(index = index++, count = allIds.count { !it.startsWith("header_") }, id = "action_change_pin", highlightId = highlightId) {
+                val actionItemIndex = index++
+                SettingsGroupSurface(isTop = actionItemIndex == 0, isBottom = actionItemIndex == actionItemCount - 1, id = "action_change_pin", highlightId = highlightId) {
                     SettingsItem(
                         icon = AppIcons.Edit,
                         title = "修改应用锁密码",
@@ -251,7 +275,8 @@ fun ActionControl(
             }
         }
         item {
-            SettingsGroupSurface(index = index++, count = allIds.count { !it.startsWith("header_") }, id = "action_screenshot", highlightId = highlightId) {
+            val actionItemIndex = index++
+            SettingsGroupSurface(isTop = actionItemIndex == 0, isBottom = actionItemIndex == actionItemCount - 1, id = "action_screenshot", highlightId = highlightId) {
                 SettingsItem(
                     icon = AppIcons.Screenshot,
                     title = "截图设置",

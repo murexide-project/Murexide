@@ -4,6 +4,7 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
@@ -132,6 +133,10 @@
             android:theme="@style/Theme.Murexide" />
         <activity
             android:name=".ui.settings.SettingsActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Murexide" />
+        <activity
+            android:name=".plugin.PluginManagerActivity"
             android:exported="false"
             android:theme="@style/Theme.Murexide" />
         <activity

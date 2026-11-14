@@ -1,5 +1,7 @@
 # Murexide
 
+![图片](https://github.com/user-attachments/assets/71bcceba-5960-4ec1-957e-09b799ead637)
+
 一个云湖第三方客户端，采用 Material 3 Expressive 设计 
 
 # 构建

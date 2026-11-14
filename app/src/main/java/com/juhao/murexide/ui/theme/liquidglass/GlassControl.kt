@@ -58,26 +58,25 @@ fun Modifier.glassControl(
             layerBlock = {
                 val width = size.width
                 val height = size.height
-    
+            
                 val progress = interactiveHighlight.pressProgress
-                val scale = lerp(1f, 1f + 4f.dp.toPx() / size.height, progress)
-    
+                val pressScale = lerp(1f, 1f + 3f.dp.toPx() / size.height, progress)
+            
                 val maxOffset = size.minDimension
-                val initialDerivative = 0.05f
+                val initialDerivative = 0.035f
                 val offset = interactiveHighlight.offset
                 translationX = maxOffset * tanh(initialDerivative * offset.x / maxOffset)
                 translationY = maxOffset * tanh(initialDerivative * offset.y / maxOffset)
-    
-                val maxDragScale = 4f.dp.toPx() / size.height
+            
+                val maxDragScale = 3f.dp.toPx() / size.height
                 val offsetAngle = atan2(offset.y, offset.x)
-                scaleX =
-                    scale +
-                            maxDragScale * abs(cos(offsetAngle) * offset.x / size.maxDimension) *
-                            (width / height).fastCoerceAtMost(1f)
-                scaleY =
-                    scale +
-                            maxDragScale * abs(sin(offsetAngle) * offset.y / size.maxDimension) *
-                            (height / width).fastCoerceAtMost(1f)
+                val dragScaleX = maxDragScale * abs(cos(offsetAngle) * offset.x / size.maxDimension) *
+                    (width / height).fastCoerceAtMost(1f)
+                val dragScaleY = maxDragScale * abs(sin(offsetAngle) * offset.y / size.maxDimension) *
+                    (height / width).fastCoerceAtMost(1f)
+            
+                scaleX = (pressScale + dragScaleX).coerceAtMost(1.06f)
+                scaleY = (pressScale + dragScaleY).coerceAtMost(1.06f)
             },
             onDrawSurface = {
                 drawRect(color)

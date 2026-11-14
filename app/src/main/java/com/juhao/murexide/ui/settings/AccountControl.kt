@@ -119,7 +119,7 @@ fun AccountControl(
         currentAccount?.let { account ->
             item { SettingsGroupHeader("当前账号") }
             item {
-                SettingsGroupSurface(index = 0, count = 1) {
+                SettingsGroupSurface(isTop = true, isBottom = true) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -144,7 +144,7 @@ fun AccountControl(
 
         item { SettingsGroupHeader("账号") }
         item {
-            SettingsGroupSurface(index = 0, count = 3, id = "account_switch", highlightId = highlightId) {
+            SettingsGroupSurface(isTop = true, isBottom = false, id = "account_switch", highlightId = highlightId) {
                 SettingsItem(
                     icon = AppIcons.People,
                     title = "切换账号",
@@ -155,7 +155,7 @@ fun AccountControl(
             }
         }
         item {
-            SettingsGroupSurface(index = 1, count = 3, id = "account_token", highlightId = highlightId) {
+            SettingsGroupSurface(isTop = false, isBottom = false, id = "account_token", highlightId = highlightId) {
                 SettingsItem(
                     icon = AppIcons.Key,
                     title = "提取账号 Token",
@@ -166,7 +166,7 @@ fun AccountControl(
             }
         }
         item {
-            SettingsGroupSurface(index = 2, count = 3, id = "account_logout", highlightId = highlightId) {
+            SettingsGroupSurface(isTop = false, isBottom = true, id = "account_logout", highlightId = highlightId) {
                 SettingsItem(
                     icon = AppIcons.Logout,
                     title = "退出登录",

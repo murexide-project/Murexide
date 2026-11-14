@@ -85,6 +85,12 @@ data class ConversationDetailUiState(
     val botPermission: GroupBotPermission = GroupBotPermission(),
     val isLoadingBotPermission: Boolean = false,
     val isSavingBotPermission: Boolean = false,
+    // 群机器人设置（表单）
+    val botSettingsTarget: BotItem? = null,
+    val showBotSettingsDialog: Boolean = false,
+    val botSettingsItems: List<BotUserSettingsItem> = emptyList(),
+    val isLoadingBotSettings: Boolean = false,
+    val isSavingBotSettings: Boolean = false,
     val mediaMessages: List<MessageItem> = emptyList(),
     val createdBoards: List<BaItem> = emptyList(),
     val isLoadingCreatedBoards: Boolean = false,

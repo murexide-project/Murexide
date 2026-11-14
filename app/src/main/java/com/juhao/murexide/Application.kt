@@ -29,6 +29,8 @@ import com.juhao.murexide.data.local.LocalCache
 import com.juhao.murexide.data.local.CacheSyncCoordinator
 import com.juhao.murexide.network.NetworkClient
 import com.juhao.murexide.network.WebSocketManager
+import com.juhao.murexide.plugin.PluginActivityCallbacks
+import com.juhao.murexide.plugin.PluginManager
 import com.juhao.murexide.repository.ConversationRepository
 import com.juhao.murexide.ui.lock.AppLockState
 import com.juhao.murexide.ui.lock.GateActivity
@@ -136,6 +138,8 @@ class MyApplication : Application(), ImageLoaderFactory {
         observeAvatarSetting()
         initWebSocket()
         registerActivityLifecycleCallbacks(activityLifecycleCallbacks)
+        PluginManager.init(this)
+        registerActivityLifecycleCallbacks(PluginActivityCallbacks())
         CacheSyncCoordinator(
             dismissConversationNotification = { chatId ->
                 val account = accountStorage.getCurrentUserInfo()

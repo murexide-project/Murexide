@@ -397,7 +397,7 @@ private fun AutoReplyTab(
         }
         when {
             loading -> item {
-                SettingsGroupSurface(index = 0, count = 1) {
+                SettingsGroupSurface(isTop = true, isBottom = true) {
                     SettingsItemCell(
                         icon = AppIcons.Info,
                         title = "加载中…"
@@ -405,7 +405,7 @@ private fun AutoReplyTab(
                 }
             }
             rules.isEmpty() -> item {
-                SettingsGroupSurface(index = 0, count = 1) {
+                SettingsGroupSurface(isTop = true, isBottom = true) {
                     SettingsItemCell(
                         icon = AppIcons.Info,
                         title = "暂无规则",
@@ -419,7 +419,7 @@ private fun AutoReplyTab(
                     UserBotMatchType.REGEX -> "正则匹配"
                     UserBotMatchType.CONTAINS -> "包含匹配"
                 }
-                SettingsGroupSurface(index = index, count = rules.size) {
+                SettingsGroupSurface(isTop = index == 0, isBottom = index == rules.size - 1) {
                     SettingsItemCell(
                         icon = AppIcons.ChatBubble,
                         title = rule.keyword,
@@ -437,7 +437,7 @@ private fun AutoReplyTab(
             SettingsGroupHeader("操作")
         }
         item {
-            SettingsGroupSurface(index = 0, count = 1) {
+            SettingsGroupSurface(isTop = true, isBottom = true) {
                 SettingsItemCell(
                     icon = AppIcons.Add,
                     title = "添加规则",
@@ -464,7 +464,7 @@ private fun AutoRecallTab(
         }
         if (senderIds.isEmpty()) {
             item {
-                SettingsGroupSurface(index = 0, count = 1) {
+                SettingsGroupSurface(isTop = true, isBottom = true) {
                     SettingsItemCell(
                         icon = AppIcons.Info,
                         title = "暂无撤回目标",
@@ -474,7 +474,7 @@ private fun AutoRecallTab(
             }
         } else {
             itemsIndexed(senderIds) { index, id ->
-                SettingsGroupSurface(index = index, count = senderIds.size) {
+                SettingsGroupSurface(isTop = index == 0, isBottom = index == senderIds.size - 1) {
                     SettingsItemCell(
                         icon = AppIcons.Person,
                         title = id,
@@ -492,7 +492,7 @@ private fun AutoRecallTab(
             SettingsGroupHeader("操作")
         }
         item {
-            SettingsGroupSurface(index = 0, count = 1) {
+            SettingsGroupSurface(isTop = true, isBottom = true) {
                 SettingsItemCell(
                     icon = AppIcons.Add,
                     title = "添加撤回目标",

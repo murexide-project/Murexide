@@ -22,6 +22,15 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.isAltPressed
+import androidx.compose.ui.input.key.isCtrlPressed
+import androidx.compose.ui.input.key.isMetaPressed
+import androidx.compose.ui.input.key.isShiftPressed
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
@@ -48,21 +57,24 @@ internal fun MessageTextField(
         insertPosition: Int
     ) -> Unit,
     onFocused: () -> Unit,
+    sendOnEnter: Boolean = false,
+    onSendKey: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val cursorColor = MaterialTheme.colorScheme.primary
-    val selectionColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)
+    val selectionColor = MaterialTheme.colorScheme.primary
 
     var displayValue by remember { mutableStateOf(value) }
     var committedValue by remember { mutableStateOf(value) }
     var committedMentions by remember { mutableStateOf(mentions) }
 
     LaunchedEffect(value) {
-        if (committedValue.text != value.text ||
-            committedValue.selection != value.selection ||
-            committedMentions != mentions
-        ) {
+        if (displayValue != value) {
             displayValue = value
+        }
+        if (value.composition == null &&
+            (committedValue != value || committedMentions != mentions)
+        ) {
             committedValue = value
             committedMentions = mentions
         }
@@ -79,37 +91,69 @@ internal fun MessageTextField(
         BasicTextField(
             value = displayValue,
             onValueChange = { newValue ->
-                val textEdit = computeTextEdit(committedValue, newValue)
-                val result = if (textEdit != null) {
-                    MentionUtils.processEdit(
-                        old = committedValue,
-                        new = newValue,
-                        mentions = committedMentions,
-                        textEdit = textEdit
-                    )
+                val composing = newValue.composition != null
+                if (composing) {
+                    displayValue = newValue
+                    onValueChange(newValue, committedMentions, "", newValue.selection.start)
                 } else {
-                    MentionUtils.processEdit(
-                        old = committedValue,
-                        new = newValue,
-                        mentions = committedMentions
-                    )
+                    val textEdit = computeTextEdit(committedValue, newValue)
+                    val newlineSend = sendOnEnter &&
+                        textEdit != null &&
+                        textEdit.beforeCount == 0 &&
+                        textEdit.afterCount == 1 &&
+                        newValue.text.substring(textEdit.start, textEdit.start + 1) == "\n"
+                    if (newlineSend) {
+                        displayValue = committedValue
+                        onSendKey()
+                    } else {
+                        val result = if (textEdit != null) {
+                            MentionUtils.processEdit(
+                                old = committedValue,
+                                new = newValue,
+                                mentions = committedMentions,
+                                textEdit = textEdit
+                            )
+                        } else {
+                            MentionUtils.processEdit(
+                                old = committedValue,
+                                new = newValue,
+                                mentions = committedMentions
+                            )
+                        }
+
+                        displayValue = result.value
+                        committedValue = result.value
+                        committedMentions = result.mentions
+                        onValueChange(
+                            result.value,
+                            result.mentions,
+                            result.insertedText,
+                            result.insertPos
+                        )
+                    }
                 }
-            
-                displayValue = result.value
-                committedValue = result.value
-                committedMentions = result.mentions
-                onValueChange(
-                    result.value,
-                    result.mentions,
-                    result.insertedText,
-                    result.insertPos
-                )
             },
             modifier = modifier
                 .fillMaxWidth()
                 .focusRequester(focusRequester)
                 .onFocusChanged { state ->
                     if (state.isFocused) onFocused()
+                }
+                .onPreviewKeyEvent { event ->
+                    if (
+                        sendOnEnter &&
+                        event.type == KeyEventType.KeyDown &&
+                        event.key == Key.Enter &&
+                        !event.isShiftPressed &&
+                        !event.isCtrlPressed &&
+                        !event.isMetaPressed &&
+                        !event.isAltPressed
+                    ) {
+                        onSendKey()
+                        true
+                    } else {
+                        false
+                    }
                 },
             enabled = enabled,
             textStyle = TextStyle(

@@ -82,6 +82,10 @@ class QiniuUploader(
         private const val FILE_DEFAULT_UPLOAD_HOST = "upload-z2.qiniup.com"
         private const val FILE_BUCKET = "chat68-file"
         
+        // 音频配置
+        private const val AUDIO_DEFAULT_UPLOAD_HOST = "upload-z2.qiniup.com"
+        private const val AUDIO_BUCKET = "chat68-audio"
+        
         private val ALLOWED_IMAGE_EXTENSIONS = setOf("jpg", "jpeg", "png", "gif", "webp", "bmp")
         private val ALLOWED_VIDEO_EXTENSIONS = setOf("mp4", "avi", "mov", "mkv", "flv", "wmv", "3gp")
         
@@ -97,21 +101,24 @@ class QiniuUploader(
     private val tokenUrl = when (uploadType) {
         1 -> "https://chat-go.jwzhd.com/v1/misc/qiniu-token"
         2 -> "https://chat-go.jwzhd.com/v1/misc/qiniu-token-video"
-        else -> "https://chat-go.jwzhd.com/v1/misc/qiniu-token2"
+        3 -> "https://chat-go.jwzhd.com/v1/misc/qiniu-token2"
+        else -> "https://chat-go.jwzhd.com/v1/misc/qiniu-token-audio"
     }
     
     private val defaultUploadHost: String
         get() = when (uploadType) {
             1 -> IMAGE_DEFAULT_UPLOAD_HOST
             2 -> VIDEO_DEFAULT_UPLOAD_HOST
-            else -> FILE_DEFAULT_UPLOAD_HOST
+            3 -> FILE_DEFAULT_UPLOAD_HOST
+            else -> AUDIO_DEFAULT_UPLOAD_HOST
         }
     
     private val bucket: String
         get() = when (uploadType) {
             1 -> IMAGE_BUCKET
             2 -> VIDEO_BUCKET
-            else -> FILE_BUCKET
+            3 -> FILE_BUCKET
+            else -> AUDIO_BUCKET
         }
     
     private val allowedExtensions: Set<String>?

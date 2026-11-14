@@ -84,6 +84,7 @@ class PostDetailViewModel(
                     _uiState.update {
                         it.copy(
                             post = data.post,
+                            ba = data.ba,
                             isLoadingDetail = false,
                             isManageEnabled = data.post.senderId == accountStorage.getCurrentUserId()
                         )
@@ -218,6 +219,7 @@ class PostDetailViewModel(
 
 data class PostDetailUiState(
     val post: PostDetail? = null,
+    val ba: BaDetail? = null,
     val comments: List<CommentItem> = emptyList(),
     val commentTotal: Int = 0,
     val commentPage: Int = 0,

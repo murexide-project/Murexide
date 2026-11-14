@@ -103,7 +103,7 @@ fun BubbleControl(
     ) {
         item { SettingsGroupHeader("预览") }
         item {
-            SettingsGroupSurface(index = 0, count = 1, id = "bubble_preview", highlightId = highlightId) {
+            SettingsGroupSurface(isTop = true, isBottom = true, id = "bubble_preview", highlightId = highlightId) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -145,7 +145,7 @@ fun BubbleControl(
 
         item { SettingsGroupHeader("气泡样式") }
         item {
-            SettingsGroupSurface(index = 0, count = 4, id = "bubble_corner", highlightId = highlightId) {
+            SettingsGroupSurface(isTop = true, isBottom = false, id = "bubble_corner", highlightId = highlightId) {
                 CustomItemCell {
                     Column(modifier = Modifier.fillMaxWidth()) {
                         Row(
@@ -207,7 +207,7 @@ fun BubbleControl(
             }
         }
         item {
-            SettingsGroupSurface(index = 1, count = 4, id = "bubble_opacity", highlightId = highlightId) {
+            SettingsGroupSurface(isTop = false, isBottom = false, id = "bubble_opacity", highlightId = highlightId) {
                 CustomItemCell {
                     Column(modifier = Modifier.fillMaxWidth()) {
                         Row(
@@ -268,7 +268,7 @@ fun BubbleControl(
             }
         }
         item {
-            SettingsGroupSurface(index = 2, count = 4, id = "bubble_my_avatar", highlightId = highlightId) {
+            SettingsGroupSurface(isTop = false, isBottom = false, id = "bubble_my_avatar", highlightId = highlightId) {
                 SettingsSwitchItem(
                     icon = AppIcons.Face,
                     title = "显示我的头像",
@@ -281,7 +281,7 @@ fun BubbleControl(
             }
         }
         item {
-            SettingsGroupSurface(index = 3, count = 4, id = "bubble_tags", highlightId = highlightId) {
+            SettingsGroupSurface(isTop = false, isBottom = true, id = "bubble_tags", highlightId = highlightId) {
                 SettingsSwitchItem(
                     icon = AppIcons.Tag,
                     title = "显示用户标签",

@@ -283,7 +283,7 @@ fun AboutScreen(
             }
 
             SettingsGroupHeader("贡献者")
-            SettingsGroupSurface(index = 0, count = 2) {
+            SettingsGroupSurface(isTop = true, isBottom = false) {
                 SettingsItem(
                     icon = AppIcons.Person,
                     title = "贡献者",
@@ -298,7 +298,7 @@ fun AboutScreen(
                     }
                 )
             }
-            SettingsGroupSurface(index = 1, count = 2) {
+            SettingsGroupSurface(isTop = false, isBottom = true) {
                 SettingsItemCell(
                     icon = AppIcons.Code,
                     title = "编程语言",
@@ -308,7 +308,7 @@ fun AboutScreen(
             }
 
             SettingsGroupHeader("许可证")
-            SettingsGroupSurface(index = 0, count = 1) {
+            SettingsGroupSurface(isTop = true, isBottom = true) {
                 SettingsItemCell(
                     icon = AppIcons.Book,
                     title = "许可证",
@@ -318,7 +318,7 @@ fun AboutScreen(
             }
 
             SettingsGroupHeader("相关链接")
-            SettingsGroupSurface(index = 0, count = 3) {
+            SettingsGroupSurface(isTop = true, isBottom = false) {
                 SettingsItem(
                     icon = AppIcons.Code,
                     title = "GitHub",
@@ -333,7 +333,7 @@ fun AboutScreen(
                     }
                 )
             }
-            SettingsGroupSurface(index = 1, count = 3) {
+            SettingsGroupSurface(isTop = false, isBottom = false) {
                 SettingsItem(
                     icon = AppIcons.BugReport,
                     title = "问题反馈",
@@ -348,7 +348,7 @@ fun AboutScreen(
                     }
                 )
             }
-            SettingsGroupSurface(index = 2, count = 3) {
+            SettingsGroupSurface(isTop = false, isBottom = true) {
                 SettingsItem(
                     icon = AppIcons.People,
                     title = "交流群",
