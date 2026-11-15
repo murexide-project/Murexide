@@ -30,7 +30,10 @@ import com.juhao.murexide.data.local.CacheSyncCoordinator
 import com.juhao.murexide.network.NetworkClient
 import com.juhao.murexide.network.WebSocketManager
 import com.juhao.murexide.plugin.PluginActivityCallbacks
+import com.juhao.murexide.plugin.PluginEventBus
 import com.juhao.murexide.plugin.PluginManager
+import com.juhao.murexide.plugin.PluginNotification
+import com.juhao.murexide.plugin.PluginSystem
 import com.juhao.murexide.repository.ConversationRepository
 import com.juhao.murexide.ui.lock.AppLockState
 import com.juhao.murexide.ui.lock.GateActivity
@@ -40,6 +43,7 @@ import com.juhao.murexide.ui.theme.UiState
 import com.juhao.murexide.utils.AppForegroundState
 import com.juhao.murexide.utils.NotificationHelper
 import com.juhao.murexide.utils.isYunhuImageUrl
+import com.juhao.murexide.plugin.PluginActivityTracker
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -91,9 +95,12 @@ class MyApplication : Application(), ImageLoaderFactory {
             if (wasInBackground && !AppLockState.unlocked && !AppLockState.gateVisible) {
                 wasInBackground = false
                 AppLockState.gateVisible = true
-                activity.startActivity(GateActivity.intentFor(activity, null))
+                activity.startActivity(GateIntentFor(activity))
             }
         }
+
+        private fun GateIntentFor(activity: Activity): Intent =
+            GateActivity.intentFor(activity, null)
 
         override fun onActivityResumed(activity: Activity) { }
 
@@ -125,21 +132,24 @@ class MyApplication : Application(), ImageLoaderFactory {
 
     override fun onCreate() {
         super.onCreate()
-
+    
         runBlocking {
             appLockEnabled = settingsStorage.getAppLockEnabled()
             appLockLockOnBackground = settingsStorage.getAppLockLockOnBackground()
         }
-
+    
         LocalCache.initialize(this)
         NotificationHelper.createNotificationChannel(this)
+        PluginNotification.ensureChannel(this)
+        PluginManager.init(this)
+        registerActivityLifecycleCallbacks(PluginActivityTracker)
+        registerActivityLifecycleCallbacks(PluginActivityCallbacks())
         AppForegroundState.init(this)
         UserBotManager.start(this)
         observeAvatarSetting()
         initWebSocket()
         registerActivityLifecycleCallbacks(activityLifecycleCallbacks)
-        PluginManager.init(this)
-        registerActivityLifecycleCallbacks(PluginActivityCallbacks())
+        observePluginEvents()
         CacheSyncCoordinator(
             dismissConversationNotification = { chatId ->
                 val account = accountStorage.getCurrentUserInfo()
@@ -159,6 +169,95 @@ class MyApplication : Application(), ImageLoaderFactory {
         applicationScope.launch {
             appLockEnabled = settingsStorage.getAppLockEnabled()
             appLockLockOnBackground = settingsStorage.getAppLockLockOnBackground()
+        }
+    }
+
+    private fun observePluginEvents() {
+        val app = this
+        applicationScope.launch {
+            AppForegroundState.returnedToForeground.collect {
+                PluginEventBus.emit(PluginEventBus.PluginEvent("app.foreground", app))
+            }
+        }
+        applicationScope.launch {
+            WebSocketManager.getInstance().connectionState.collect { connected ->
+                PluginSystem.wsConnected = connected
+                PluginEventBus.emit(
+                    PluginEventBus.PluginEvent(
+                        if (connected) "ws.connected" else "ws.disconnected",
+                        app
+                    )
+                )
+            }
+        }
+        applicationScope.launch {
+            WebSocketManager.getInstance().messageFlow.collect { event ->
+                when (event) {
+                    is WebSocketManager.WsEvent.NewMessage -> {
+                        val m = event.message
+                        PluginEventBus.emit(
+                            PluginEventBus.PluginEvent(
+                                "ws.message", app,
+                                extras = mapOf(
+                                    "msg" to m,
+                                    "msgId" to m.msgId,
+                                    "chatId" to m.chatId,
+                                    "chatType" to m.chatType,
+                                    "senderId" to m.senderId,
+                                    "senderName" to m.senderName,
+                                    "content" to m.content,
+                                    "contentType" to m.contentType,
+                                    "timestamp" to m.timestamp
+                                )
+                            )
+                        )
+                    }
+                    is WebSocketManager.WsEvent.MessageDeleted -> {
+                        val m = event.message
+                        PluginEventBus.emit(
+                            PluginEventBus.PluginEvent(
+                                "ws.messageRecall", app,
+                                extras = mapOf(
+                                    "msg" to m,
+                                    "msgId" to event.msgId,
+                                    "chatId" to m.chatId,
+                                    "senderId" to m.senderId,
+                                    "senderName" to m.senderName
+                                )
+                            )
+                        )
+                    }
+                    is WebSocketManager.WsEvent.EditMessage -> {
+                        val m = event.message
+                        PluginEventBus.emit(
+                            PluginEventBus.PluginEvent(
+                                "ws.messageEdit", app,
+                                extras = mapOf(
+                                    "msg" to m,
+                                    "msgId" to m.msgId,
+                                    "chatId" to m.chatId,
+                                    "content" to m.content
+                                )
+                            )
+                        )
+                    }
+                    else -> { }
+                }
+            }
+        }
+        applicationScope.launch {
+            accountStorage.currentAccountFlow.collect { acc ->
+                PluginEventBus.emit(
+                    PluginEventBus.PluginEvent(
+                        "account.changed", app,
+                        extras = mapOf(
+                            "accountId" to acc?.id,
+                            "username" to acc?.username,
+                            "avatar" to acc?.avatar
+                        )
+                    )
+                )
+            }
         }
     }
 
@@ -265,19 +364,18 @@ class MyApplication : Application(), ImageLoaderFactory {
 
         connectivityManager.registerNetworkCallback(networkRequest, object : ConnectivityManager.NetworkCallback() {
             override fun onAvailable(network: Network) {
-                Log.d("MyApplication", "Network onAvailable, checking WS toggle")
+                PluginSystem.setNetworkOnline(true)
+                PluginEventBus.emit(PluginEventBus.PluginEvent("network.online", this@MyApplication))
                 applicationScope.launch {
                     if (settingsStorage.getWsEnabled()) {
-                        Log.d("MyApplication", "WebSocket enabled, triggering reconnect")
                         WebSocketManager.getInstance().manualReconnect()
-                    } else {
-                        Log.d("MyApplication", "WebSocket disabled, skip reconnect")
                     }
                 }
             }
-
+            
             override fun onLost(network: Network) {
-                Log.d("MyApplication", "Network onLost")
+                PluginSystem.setNetworkOnline(false)
+                PluginEventBus.emit(PluginEventBus.PluginEvent("network.offline", this@MyApplication))
                 WebSocketManager.getInstance().notifyNetworkLost()
             }
         })
@@ -289,18 +387,15 @@ class MyApplication : Application(), ImageLoaderFactory {
                 LocalCache.setActiveAccount(account?.id)
                 if (account != null && account.token.isNotEmpty()) {
                     if (settingsStorage.getWsEnabled()) {
-                        Log.d("MyApplication", "Account found, connecting WS")
                         WebSocketManager.getInstance().connect(
                             userId = account.id,
                             token = account.token,
                             deviceId = wsDeviceId
                         )
                     } else {
-                        Log.d("MyApplication", "WebSocket disabled by user, skip connect")
                         WebSocketManager.getInstance().disconnect()
                     }
                 } else {
-                    Log.d("MyApplication", "No account, disconnecting WS")
                     WebSocketManager.getInstance().disconnect()
                 }
             }

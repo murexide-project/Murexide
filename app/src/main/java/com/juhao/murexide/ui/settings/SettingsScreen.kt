@@ -18,6 +18,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.juhao.murexide.datastore.AccountStorage
@@ -25,10 +26,24 @@ import com.juhao.murexide.datastore.UserAccount
 import com.juhao.murexide.network.WebSocketManager
 import com.juhao.murexide.ui.about.AboutActivity
 import com.juhao.murexide.ui.components.*
+import com.juhao.murexide.plugin.PluginFunctionActivity
+import com.juhao.murexide.plugin.PluginManager
 import com.juhao.murexide.plugin.PluginManagerActivity
 import com.juhao.murexide.ui.settings.chatbackground.ChatBackgroundActivity
 import com.juhao.murexide.ui.settings.userbot.UserBotActivity
 import kotlinx.coroutines.launch
+
+private fun resolvePluginIcon(name: String?): ImageVector = when (name) {
+    "Info" -> AppIcons.Info
+    "SmartToy" -> AppIcons.SmartToy
+    "Person" -> AppIcons.Person
+    "Link" -> AppIcons.Link
+    "Image" -> AppIcons.Image
+    "Settings" -> AppIcons.Settings
+    "Code" -> AppIcons.Code
+    "Warning" -> AppIcons.Warning
+    else -> AppIcons.Build
+}
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -209,6 +224,8 @@ private fun SettingsHomeScreen(
     val connected by wsManager.connectionState.collectAsState()
     var currentAccount by remember { mutableStateOf<UserAccount?>(null) }
 
+    val pluginFunctions by PluginManager.functions.collectAsState()
+
     LaunchedEffect(Unit) { currentAccount = accountStorage.getCurrentAccount() }
 
     StyledScaffold(
@@ -374,6 +391,25 @@ private fun SettingsHomeScreen(
                         subtitle = "切换账号、提取 Token、退出登录",
                         onClick = { onOpenPage(7) }
                     )
+                }
+            }
+            if (pluginFunctions.isNotEmpty()) {
+                item { SettingsGroupHeader("额外功能") }
+                itemsIndexed(
+                    pluginFunctions,
+                    key = { _, it -> "plugin_fn_${it.id}" }
+                ) { index, entry ->
+                    SettingsGroupSurface(
+                        isTop = index == 0,
+                        isBottom = index == pluginFunctions.lastIndex
+                    ) {
+                        SettingsItem(
+                            icon = resolvePluginIcon(entry.icon),
+                            title = entry.title,
+                            subtitle = entry.subtitle,
+                            onClick = { PluginFunctionActivity.start(context, entry.id) }
+                        )
+                    }
                 }
             }
         }

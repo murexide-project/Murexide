@@ -148,9 +148,7 @@ fun SettingsItem(
                 Icon(
                     imageVector = icon,
                     contentDescription = title,
-                    modifier = Modifier.size(24.dp),
-                    tint = if (isDestructive) MaterialTheme.colorScheme.error
-                    else MaterialTheme.colorScheme.primary
+                    modifier = Modifier.size(24.dp)
                 )
                 Spacer(Modifier.width(16.dp))
             }
@@ -206,9 +204,7 @@ fun SettingsItemCell(
                 Icon(
                     imageVector = icon,
                     contentDescription = title,
-                    modifier = Modifier.size(24.dp),
-                    tint = if (isDestructive) MaterialTheme.colorScheme.error
-                    else MaterialTheme.colorScheme.primary
+                    modifier = Modifier.size(24.dp)
                 )
                 Spacer(Modifier.width(16.dp))
             }
@@ -262,9 +258,7 @@ fun SettingsSwitchItem(
                 Icon(
                     imageVector = icon,
                     contentDescription = title,
-                    modifier = Modifier.size(24.dp),
-                    tint = if (isDestructive) MaterialTheme.colorScheme.error
-                    else MaterialTheme.colorScheme.primary
+                    modifier = Modifier.size(24.dp)
                 )
                 Spacer(Modifier.width(16.dp))
             }
@@ -319,8 +313,7 @@ fun SettingsDropdownItem(
                 Icon(
                     imageVector = icon,
                     contentDescription = title,
-                    modifier = Modifier.size(24.dp),
-                    tint = MaterialTheme.colorScheme.primary
+                    modifier = Modifier.size(24.dp)
                 )
                 Spacer(Modifier.width(16.dp))
             }
