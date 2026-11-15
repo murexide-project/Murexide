@@ -89,7 +89,6 @@ fun UpdateControl(
             bottom = contentPadding.calculateBottomPadding() + 16.dp
         )
     ) {
-        item { SettingsGroupHeader("更新") }
         item {
             SettingsGroupSurface(isTop = true, isBottom = true, id = "update_status", highlightId = highlightId) {
                 if (updateEnabled) {

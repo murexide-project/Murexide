@@ -1,5 +1,6 @@
 package com.juhao.murexide.ui.chat.components
 
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -160,12 +161,14 @@ private fun Item(
         shape = RoundedCornerShape(12.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
-        Column(
-            modifier = Modifier.padding(6.dp),
-            verticalArrangement = Arrangement.spacedBy(2.dp)
-        ) {
-            Text(data.getOldText())
-            Text("编辑时间：$timestampDisplay")
+        SelectionContainer {
+            Column(
+                modifier = Modifier.padding(6.dp),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                Text(data.getOldText())
+                Text("编辑时间：$timestampDisplay")
+            }
         }
     }
 }

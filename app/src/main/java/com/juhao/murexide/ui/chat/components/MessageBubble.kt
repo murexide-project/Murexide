@@ -1264,10 +1264,11 @@ private fun PostCard(
 
     Column(
         modifier = Modifier
+            .clip(RoundedCornerShape(12.dp))
             .clickable {
                 PostDetailActivity.start(context, postId)
             }
-            .padding(12.dp)
+            .padding(8.dp)
     ) {
         Text(
             postTitle,

@@ -24,6 +24,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.rememberTransformableState
@@ -37,6 +38,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -47,6 +49,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.FileProvider
+import androidx.core.graphics.drawable.toBitmap
 import androidx.lifecycle.lifecycleScope
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
@@ -78,6 +81,7 @@ import com.juhao.murexide.utils.requiresLegacyWritePermission
 import com.juhao.murexide.utils.saveMediaFileToDownloads
 import com.juhao.murexide.utils.LegacyStoragePermissionRequester
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.parcelize.Parcelize
@@ -360,14 +364,19 @@ private fun ZoomableImagePage(
     var containerSize by remember(item.url) { mutableStateOf(Size.Zero) }
     var fittedSize by remember(item.url) { mutableStateOf(Size.Zero) }
 
-    val qualityTier = remember(scale) {
-        when {
+    var stableTier by remember(item.url) { mutableIntStateOf(1) }
+    LaunchedEffect(scale) {
+        val targetTier = when {
             scale <= 1.3f -> 1
             scale <= 2.8f -> 2
             else -> 3
         }
+        if (targetTier == stableTier) return@LaunchedEffect
+        delay(300)
+        stableTier = targetTier
     }
-    val tierMultiplier = when (qualityTier) {
+
+    val tierMultiplier = when (stableTier) {
         1 -> 1
         2 -> 3
         else -> 5
@@ -381,6 +390,24 @@ private fun ZoomableImagePage(
     }
 
     val painter = rememberAsyncImagePainter(model = imageRequest)
+
+    var lastBitmap by remember(item.url) {
+        mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null)
+    }
+    LaunchedEffect(painter.state) {
+        val state = painter.state
+        if (state is AsyncImagePainter.State.Success) {
+            val drawable = state.result.drawable
+            val bitmap = when (drawable) {
+                is android.graphics.drawable.BitmapDrawable -> drawable.bitmap
+                else -> runCatching { drawable.toBitmap() }.getOrNull()
+            }
+            if (bitmap != null) {
+                lastBitmap = bitmap.asImageBitmap()
+            }
+        }
+    }
+
     val intrinsicSize = painter.intrinsicSize
     val hasIntrinsic = intrinsicSize.width > 0f && intrinsicSize.height > 0f
 
@@ -423,7 +450,7 @@ private fun ZoomableImagePage(
             .fillMaxSize()
             .onSizeChanged { containerSize = Size(it.width.toFloat(), it.height.toFloat()) }
             .transformable(state = transformState, canPan = { scale > 1.02f })
-            .pointerInput(item.url, qualityTier) {
+            .pointerInput(item.url) {
                 detectTapGestures(
                     onTap = { onTap() },
                     onLongPress = { onLongPress() },
@@ -453,9 +480,26 @@ private fun ZoomableImagePage(
             },
         contentAlignment = Alignment.Center
     ) {
-        when (painter.state) {
+        when (val state = painter.state) {
             is AsyncImagePainter.State.Loading -> {
-                CircularProgressIndicator(color = Color.White)
+                val fallback = lastBitmap
+                if (fallback != null) {
+                    Image(
+                        bitmap = fallback,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .graphicsLayer(
+                                scaleX = scale,
+                                scaleY = scale,
+                                translationX = offsetX,
+                                translationY = offsetY
+                            ),
+                        contentScale = ContentScale.Fit
+                    )
+                } else {
+                    CircularProgressIndicator(color = Color.White)
+                }
             }
             is AsyncImagePainter.State.Error -> {
                 Column(
@@ -476,8 +520,8 @@ private fun ZoomableImagePage(
                 }
             }
             else -> {
-                AsyncImage(
-                    model = imageRequest,
+                Image(
+                    painter = painter,
                     contentDescription = null,
                     modifier = Modifier
                         .fillMaxSize()
