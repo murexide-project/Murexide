@@ -30,6 +30,11 @@ class PluginActivityCallbacks : Application.ActivityLifecycleCallbacks {
                 ) ?: return@forEach
                 val duration = if (rule.content.duration == "long") Toast.LENGTH_LONG else Toast.LENGTH_SHORT
                 Toast.makeText(activity, text, duration).show()
+            } else if (rule.content.type == "action") {
+                val ctx = PluginContext(activity, manifest.id, pageId, "created")
+                if (WhenEvaluator.evaluate(rule.whenExpr, ctx)) {
+                    PluginActions.executeList(activity, ctx, rule.content.execute)
+                }
             }
         }
 
