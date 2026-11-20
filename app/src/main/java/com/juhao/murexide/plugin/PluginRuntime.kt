@@ -9,12 +9,6 @@ import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.os.Build
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
-import android.view.View
-import android.view.ViewGroup
-import androidx.activity.ComponentActivity
-import androidx.compose.ui.platform.ComposeView
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.juhao.murexide.R
@@ -146,83 +140,13 @@ object PluginActivityTracker : Application.ActivityLifecycleCallbacks {
         current = WeakReference(activity)
     }
 
-    override fun onActivityPaused(activity: Activity) {}
+    override fun onActivityPaused(activity: Activity) { }
 
-    override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {}
-    override fun onActivityStarted(activity: Activity) {}
-    override fun onActivityStopped(activity: Activity) {}
+    override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) { }
+    override fun onActivityStarted(activity: Activity) { }
+    override fun onActivityStopped(activity: Activity) { }
     override fun onActivityDestroyed(activity: Activity) {
         if (current?.get() === activity) current = null
     }
-    override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) {}
-}
-
-object PluginOverlayInjector {
-    private val mainHandler = Handler(Looper.getMainLooper())
-    private const val TAG_PREFIX = "plugin_overlay_event_"
-
-    fun add(activity: Activity, pluginId: String, rule: PluginRule) {
-        if (activity !is ComponentActivity) return
-        val decorView = activity.window?.decorView as? ViewGroup ?: return
-        val tag = TAG_PREFIX + pluginId
-        if (decorView.findViewWithTag<View>(tag) != null) return
-
-        waitForAttached(activity, {
-            val decorView2 = activity.window?.decorView as? ViewGroup ?: return@waitForAttached
-            if (decorView2.findViewWithTag<View>(tag) != null) return@waitForAttached
-            runCatching {
-                val composeView = ComposeView(activity).apply {
-                    this.tag = tag
-                    isClickable = false
-                    isFocusable = false
-                    setContent {
-                        PluginSingleOverlay(
-                            rule = rule,
-                            pluginId = pluginId,
-                            pageId = activity.javaClass.name
-                        )
-                    }
-                }
-                decorView2.addView(
-                    composeView,
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.MATCH_PARENT
-                )
-            }.onFailure {
-                PluginLogger.error(activity, pluginId, "overlay event inject failed: ${it.message}")
-            }
-        }, 0)
-    }
-
-    fun remove(activity: Activity, pluginId: String) {
-        val decorView = activity.window?.decorView as? ViewGroup ?: return
-        val tag = TAG_PREFIX + pluginId
-        val view = decorView.findViewWithTag<View>(tag) ?: return
-        runCatching { decorView.removeView(view) }
-    }
-
-    fun removeAll(activity: Activity) {
-        val decorView = activity.window?.decorView as? ViewGroup ?: return
-        val toRemove = mutableListOf<View>()
-        for (i in 0 until decorView.childCount) {
-            val child = decorView.getChildAt(i)
-            val tag = child.tag as? String ?: continue
-            if (tag.startsWith(TAG_PREFIX)) toRemove += child
-        }
-        toRemove.forEach { runCatching { decorView.removeView(it) } }
-    }
-
-    private fun waitForAttached(activity: Activity, block: () -> Unit, attempt: Int) {
-        if (attempt >= 20) return
-        if (activity.isFinishing || activity.isDestroyed) return
-        val decor = activity.window?.decorView
-        if (decor == null || !decor.isAttachedToWindow) {
-            mainHandler.postDelayed({ waitForAttached(activity, block, attempt + 1) }, 50L)
-            return
-        }
-        mainHandler.postDelayed({
-            if (activity.isFinishing || activity.isDestroyed) return@postDelayed
-            block()
-        }, 50L)
-    }
+    override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) { }
 }

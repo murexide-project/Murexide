@@ -29,11 +29,7 @@ import com.juhao.murexide.data.local.LocalCache
 import com.juhao.murexide.data.local.CacheSyncCoordinator
 import com.juhao.murexide.network.NetworkClient
 import com.juhao.murexide.network.WebSocketManager
-import com.juhao.murexide.plugin.PluginActivityCallbacks
-import com.juhao.murexide.plugin.PluginEventBus
-import com.juhao.murexide.plugin.PluginManager
-import com.juhao.murexide.plugin.PluginNotification
-import com.juhao.murexide.plugin.PluginSystem
+import com.juhao.murexide.plugin.*
 import com.juhao.murexide.repository.ConversationRepository
 import com.juhao.murexide.ui.lock.AppLockState
 import com.juhao.murexide.ui.lock.GateActivity
@@ -149,6 +145,7 @@ class MyApplication : Application(), ImageLoaderFactory {
         observeAvatarSetting()
         initWebSocket()
         registerActivityLifecycleCallbacks(activityLifecycleCallbacks)
+        registerActivityLifecycleCallbacks(PluginOverlayCallbacks())
         observePluginEvents()
         CacheSyncCoordinator(
             dismissConversationNotification = { chatId ->
@@ -176,18 +173,13 @@ class MyApplication : Application(), ImageLoaderFactory {
         val app = this
         applicationScope.launch {
             AppForegroundState.returnedToForeground.collect {
-                PluginEventBus.emit(PluginEventBus.PluginEvent("app.foreground", app))
+                PluginDispatcher.dispatchAppEvent(app, "app.foreground")
             }
         }
         applicationScope.launch {
             WebSocketManager.getInstance().connectionState.collect { connected ->
                 PluginSystem.wsConnected = connected
-                PluginEventBus.emit(
-                    PluginEventBus.PluginEvent(
-                        if (connected) "ws.connected" else "ws.disconnected",
-                        app
-                    )
-                )
+                PluginDispatcher.dispatchAppEvent(app, if (connected) "ws.connected" else "ws.disconnected")
             }
         }
         applicationScope.launch {
@@ -195,49 +187,40 @@ class MyApplication : Application(), ImageLoaderFactory {
                 when (event) {
                     is WebSocketManager.WsEvent.NewMessage -> {
                         val m = event.message
-                        PluginEventBus.emit(
-                            PluginEventBus.PluginEvent(
-                                "ws.message", app,
-                                extras = mapOf(
-                                    "msg" to m,
-                                    "msgId" to m.msgId,
-                                    "chatId" to m.chatId,
-                                    "chatType" to m.chatType,
-                                    "senderId" to m.senderId,
-                                    "senderName" to m.senderName,
-                                    "content" to m.content,
-                                    "contentType" to m.contentType,
-                                    "timestamp" to m.timestamp
-                                )
+                        PluginDispatcher.dispatchAppEvent(
+                            app, "ws.message",
+                            extras = mapOf(
+                                "msgId" to m.msgId,
+                                "chatId" to m.chatId,
+                                "chatType" to m.chatType,
+                                "senderId" to m.senderId,
+                                "senderName" to m.senderName,
+                                "content" to m.content,
+                                "contentType" to m.contentType,
+                                "timestamp" to m.timestamp
                             )
                         )
                     }
                     is WebSocketManager.WsEvent.MessageDeleted -> {
                         val m = event.message
-                        PluginEventBus.emit(
-                            PluginEventBus.PluginEvent(
-                                "ws.messageRecall", app,
-                                extras = mapOf(
-                                    "msg" to m,
-                                    "msgId" to event.msgId,
-                                    "chatId" to m.chatId,
-                                    "senderId" to m.senderId,
-                                    "senderName" to m.senderName
-                                )
+                        PluginDispatcher.dispatchAppEvent(
+                            app, "ws.messageRecall",
+                            extras = mapOf(
+                                "msgId" to event.msgId,
+                                "chatId" to m.chatId,
+                                "senderId" to m.senderId,
+                                "senderName" to m.senderName
                             )
                         )
                     }
                     is WebSocketManager.WsEvent.EditMessage -> {
                         val m = event.message
-                        PluginEventBus.emit(
-                            PluginEventBus.PluginEvent(
-                                "ws.messageEdit", app,
-                                extras = mapOf(
-                                    "msg" to m,
-                                    "msgId" to m.msgId,
-                                    "chatId" to m.chatId,
-                                    "content" to m.content
-                                )
+                        PluginDispatcher.dispatchAppEvent(
+                            app, "ws.messageEdit",
+                            extras = mapOf(
+                                "msgId" to m.msgId,
+                                "chatId" to m.chatId,
+                                "content" to m.content
                             )
                         )
                     }
@@ -247,14 +230,12 @@ class MyApplication : Application(), ImageLoaderFactory {
         }
         applicationScope.launch {
             accountStorage.currentAccountFlow.collect { acc ->
-                PluginEventBus.emit(
-                    PluginEventBus.PluginEvent(
-                        "account.changed", app,
-                        extras = mapOf(
-                            "accountId" to acc?.id,
-                            "username" to acc?.username,
-                            "avatar" to acc?.avatar
-                        )
+                PluginDispatcher.dispatchAppEvent(
+                    app, "account.changed",
+                    extras = mapOf(
+                        "accountId" to acc?.id,
+                        "username" to acc?.username,
+                        "avatar" to acc?.avatar
                     )
                 )
             }
@@ -365,7 +346,7 @@ class MyApplication : Application(), ImageLoaderFactory {
         connectivityManager.registerNetworkCallback(networkRequest, object : ConnectivityManager.NetworkCallback() {
             override fun onAvailable(network: Network) {
                 PluginSystem.setNetworkOnline(true)
-                PluginEventBus.emit(PluginEventBus.PluginEvent("network.online", this@MyApplication))
+                PluginDispatcher.dispatchAppEvent(this@MyApplication, "network.online")
                 applicationScope.launch {
                     if (settingsStorage.getWsEnabled()) {
                         WebSocketManager.getInstance().manualReconnect()
@@ -375,7 +356,7 @@ class MyApplication : Application(), ImageLoaderFactory {
             
             override fun onLost(network: Network) {
                 PluginSystem.setNetworkOnline(false)
-                PluginEventBus.emit(PluginEventBus.PluginEvent("network.offline", this@MyApplication))
+                PluginDispatcher.dispatchAppEvent(this@MyApplication, "network.offline")
                 WebSocketManager.getInstance().notifyNetworkLost()
             }
         })

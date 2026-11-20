@@ -4,21 +4,21 @@ coreKtx = "1.19.0"
 lifecycleRuntimeKtx = "2.11.0"
 lifecycleViewmodelCompose = "2.11.0"
 activityCompose = "1.13.0"
-kotlin = "2.4.10"
+kotlin = "2.5.0-RC"
 composeBom = "2026.09.00"
-okhttp = "5.4.0"
-kotlinxSerialization = "1.11.0"
+okhttp = "5.5.1"
+kotlinxSerialization = "1.13.0"
 coil = "2.7.0"
 media3 = "1.11.0"
-wire = "6.4.5"
+wire = "7.2.2"
 datastore = "1.2.1"
 room = "2.8.4"
-ksp = "2.3.11"
-multiplatformMarkdownRenderer = "0.43.0"
-multiplatformMarkdownRendererM3 = "0.43.0"
-multiplatformMarkdownRendererCoil2 = "0.43.0"
+ksp = "2.3.14"
+multiplatformMarkdownRenderer = "0.46.0"
+multiplatformMarkdownRendererM3 = "0.46.0"
+multiplatformMarkdownRendererCoil2 = "0.46.0"
 navigation = "2.9.8"
-haze = "2.0.1"
+haze = "2.1.0"
 backdrop = "2.0.1"
 kyantShapes = "1.2.1"
 junit = "4.13.2"
@@ -27,6 +27,7 @@ testRunner = "1.7.0"
 uiautomator = "2.4.0"
 material3 = "1.5.0-alpha29"
 materialSymbols = "2.2.1"
+luaKmp = "0.1.2"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -88,6 +89,7 @@ haze-blur-materials = { module = "dev.chrisbanes.haze:haze-blur-materials", vers
 # Liquid glass rendering
 backdrop = { module = "io.github.kyant0:backdrop", version.ref = "backdrop" }
 kyant-shapes = { module = "io.github.kyant0:shapes", version.ref = "kyantShapes" }
+lua-kmp = { group = "com.seanproctor", name = "lua-kmp", version.ref = "luaKmp" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

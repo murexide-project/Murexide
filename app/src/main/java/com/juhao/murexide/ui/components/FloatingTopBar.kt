@@ -1,5 +1,6 @@
 package com.juhao.murexide.ui.components
 
+import android.os.Build
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -25,8 +26,10 @@ import com.kyant.backdrop.Backdrop
 import com.juhao.murexide.ui.theme.liquidglass.glassControl
 import dev.chrisbanes.haze.HazeInput
 import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.HazeProgressive
 import dev.chrisbanes.haze.blur.hazeBlur
-import dev.chrisbanes.haze.blur.materials.HazeMaterials
+import dev.chrisbanes.haze.blur.HazeColorEffect
+import dev.chrisbanes.haze.blur.HazeBlurStyle
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -42,7 +45,6 @@ internal fun FloatingTopBar(
     onExtraButtonClick: () -> Unit = {},
     showOverlay: Boolean = true
 ) {
-    // 悬浮顶栏开关在组件内部读取设置（默认开）
     val context = LocalContext.current
     val floatingEnabled by remember { SettingsStorage(context.applicationContext) }
         .floatingTopBarFlow
@@ -52,10 +54,6 @@ internal fun FloatingTopBar(
     val controlSize = 48.dp
     val buttonShape = CircleShape
     val topBarColor = MaterialTheme.colorScheme.surface
-    val topBarStyle = HazeMaterials.thin().then {
-        blurRadius(32.dp)
-        noiseFactor(0f)
-    }
     val useGlassBar = liquidGlassEnabled && liquidBackdrop != null
 
     @Composable
@@ -65,7 +63,39 @@ internal fun FloatingTopBar(
     ): Modifier = glassControl(shape, liquidBackdrop, hazeState, useGlassBar, isInteractive)
 
     if (!floatingEnabled) {
-        // 关闭悬浮顶栏：普通 TopAppBar，不做悬浮/玻璃，背景用 haze 毛玻璃
+        val surfaceColor = MaterialTheme.colorScheme.surface
+        val supportsBlur = Build.VERSION.SDK_INT > Build.VERSION_CODES.S_V2
+    
+        val blurStyle = remember(surfaceColor) {
+            HazeBlurStyle {
+                blurRadius(16.dp)
+                backgroundColor(surfaceColor)
+                colorEffects(
+                    listOf(
+                        HazeColorEffect.tint(surfaceColor)
+                    )
+                )
+                noiseFactor(0.02f)
+                progressive(
+                    HazeProgressive.verticalGradient(
+                        startIntensity = 1f,
+                        endIntensity = 0f
+                    )
+                )
+            }
+        }
+    
+        val fallbackBrush = remember(surfaceColor) {
+            Brush.verticalGradient(
+                colors = listOf(
+                    surfaceColor,
+                    surfaceColor.copy(alpha = 0.8f),
+                    surfaceColor.copy(alpha = 0.6f),
+                    Color.Transparent
+                )
+            )
+        }
+        
         TopAppBar(
             title = {
                 Row(
@@ -118,10 +148,14 @@ internal fun FloatingTopBar(
                     }
                 }
             },
-            modifier = Modifier.hazeBlur(
-                input = HazeInput.Sources(hazeState),
-                style = topBarStyle
-            ),
+            modifier = if (supportsBlur) {
+                Modifier.hazeBlur(
+                    input = HazeInput.Sources(hazeState),
+                    style = blurStyle
+                )
+            } else {
+                Modifier.background(fallbackBrush)
+            },
             colors = TopAppBarDefaults.topAppBarColors(
                 containerColor = Color.Transparent,
                 scrolledContainerColor = Color.Transparent,

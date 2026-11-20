@@ -1,13 +1,9 @@
 package com.juhao.murexide.plugin
 
 import android.content.Context
-import android.os.Build
 import com.juhao.murexide.datastore.AccountStorage
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
+import com.seanproctor.lua.LuaValue
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -17,52 +13,28 @@ import java.util.concurrent.ConcurrentHashMap
 class PluginContext(
     val context: Context,
     val pluginId: String,
-    val pageId: String? = null,
+    val uri: String? = null,
     val event: String? = null,
     extras: Map<String, Any?> = emptyMap()
 ) {
     private val vars = ConcurrentHashMap<String, Any?>()
     private val extraMap = ConcurrentHashMap<String, Any?>(extras)
-    private val storage = PluginStorage(context, pluginId)
 
-    private data class AccountSnapshot(
-        val id: String? = null,
-        val username: String? = null,
-        val avatar: String? = null,
-        val loggedIn: Boolean = false
-    )
+    private val storage by lazy { LuaPluginDataStorage.getInstance(context) }
 
-    @Volatile
-    private var accountSnapshot: AccountSnapshot = AccountSnapshot()
-
-    @Volatile
-    private var accountLoaded: Boolean = false
-
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-
-    init {
-        scope.launch {
-            runCatching {
-                val acc = AccountStorage.getInstance(context).currentAccountFlow.first()
-                if (acc != null) {
-                    accountSnapshot = AccountSnapshot(acc.id, acc.username, acc.avatar, true)
-                }
-                accountLoaded = true
-            }
+    fun putLua(table: LuaValue.Table) {
+        for ((k, v) in table.toMap()) {
+            val key = (k as? LuaValue.Str)?.value ?: k.toString()
+            vars[key] = luaToKotlin(v)
         }
     }
 
-    private fun ensureAccountLoaded() {
-        if (accountLoaded) return
-        runCatching {
-            val acc = runBlocking {
-                AccountStorage.getInstance(context).currentAccountFlow.first()
-            }
-            if (acc != null) {
-                accountSnapshot = AccountSnapshot(acc.id, acc.username, acc.avatar, true)
-            }
-            accountLoaded = true
-        }
+    fun luaToKotlin(v: LuaValue?): Any? = when (v) {
+        null -> null
+        is LuaValue.Str -> v.value
+        is LuaValue.Integer -> v.value
+        is LuaValue.Number -> v.value
+        else -> v.toString()
     }
 
     fun setVar(key: String, value: Any?) {
@@ -71,54 +43,32 @@ class PluginContext(
 
     fun getVar(key: String): Any? = vars[key] ?: extraMap[key]
 
-    fun setKv(key: String, value: Any?, persist: Boolean) {
-        if (persist) storage.put(key, value) else vars["kv.$key"] = value
+    fun setKv(key: String, value: String) {
+        runBlocking {
+            storage.set(pluginId, key, value)
+        }
     }
 
-    fun getKv(key: String): Any? = storage.get(key) ?: vars["kv.$key"]
+    fun getKv(key: String): String? = runBlocking {
+        storage.get(pluginId, key).first()
+    }
 
     fun resolve(path: String): Any? {
-        if (path.startsWith("account.")) {
-            ensureAccountLoaded()
-        }
         return when {
             path.startsWith("page.") -> when (path.removePrefix("page.")) {
-                "id" -> pageId
-                "name" -> pageId?.substringAfterLast('.')
+                "id" -> uri
                 else -> null
             }
             path == "event" -> event
             path.startsWith("plugin.") -> when (path.removePrefix("plugin.")) {
                 "id" -> pluginId
-                "dir" -> context.filesDir.resolve("plugins/$pluginId").absolutePath
-                "version" -> PluginManager.manifestById(pluginId)?.version
                 "name" -> PluginManager.manifestById(pluginId)?.name
-                "author" -> PluginManager.manifestById(pluginId)?.author
-                "description" -> PluginManager.manifestById(pluginId)?.description
+                "version" -> PluginManager.manifestById(pluginId)?.version
                 else -> null
             }
-            path.startsWith("account.") -> when (path.removePrefix("account.")) {
-                "id" -> accountSnapshot.id
-                "username" -> accountSnapshot.username
-                "avatar" -> accountSnapshot.avatar
-                "loggedIn" -> accountSnapshot.loggedIn
-                "token" -> null
-                else -> null
-            }
-            path.startsWith("time.") -> when (path.removePrefix("time.")) {
-                "now" -> System.currentTimeMillis()
-                "date" -> SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
-                "time" -> SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())
-                "datetime" -> SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
-                else -> null
-            }
-            path.startsWith("app.") -> when (path.removePrefix("app.")) {
-                "version" -> appVersionName()
-                "versionCode" -> appVersionCode()
-                "sdk" -> Build.VERSION.SDK_INT
-                "package" -> context.packageName
-                else -> null
-            }
+            path.startsWith("account.") -> accountValue(path.removePrefix("account."))
+            path.startsWith("time.") -> timeValue(path.removePrefix("time."))
+            path.startsWith("app.") -> appValue(path.removePrefix("app."))
             path.startsWith("network.") -> when (path.removePrefix("network.")) {
                 "online" -> PluginSystem.isNetworkOnline(context)
                 else -> null
@@ -128,35 +78,83 @@ class PluginContext(
                 else -> null
             }
             path.startsWith("var.") -> vars[path.removePrefix("var.")]
-            path.startsWith("kv.") -> storage.get(path.removePrefix("kv.")) ?: vars["kv.${path.removePrefix("kv.")}"]
+            path.startsWith("kv.") -> getKv(path.removePrefix("kv."))
             path.startsWith("extra.") -> extraMap[path.removePrefix("extra.")]
             else -> vars[path] ?: extraMap[path]
         }
     }
 
-    private fun appVersionName(): String? = runCatching {
-        context.packageManager.getPackageInfo(context.packageName, 0).versionName
-    }.getOrNull()
-
-    private fun appVersionCode(): Int? = runCatching {
-        val info = context.packageManager.getPackageInfo(context.packageName, 0)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            info.longVersionCode.toInt()
-        } else {
-            @Suppress("DEPRECATION")
-            info.versionCode
-        }
-    }.getOrNull()
-
-    fun interpolate(text: String?): String? {
-        if (text == null) return null
-        return INTERPOLATE_REGEX.replace(text) { m ->
-            val key = m.groupValues[1]
-            (resolve(key) ?: m.value).toString()
+    private fun accountValue(key: String): Any? {
+        val acc = account()
+        return when (key) {
+            "id" -> acc?.id
+            "username" -> acc?.username
+            "avatar" -> acc?.avatar
+            "loggedIn" -> acc != null
+            else -> null
         }
     }
 
-    companion object {
-        private val INTERPOLATE_REGEX = Regex("\\{\\{\\s*([\\w.]+)\\s*\\}\\}")
+    private fun account() = runCatching {
+        runBlocking { AccountStorage.getInstance(context).currentAccountFlow.first() }
+    }.getOrNull()
+
+    private fun timeValue(key: String): Any? {
+        val now = Date()
+        return when (key) {
+            "now" -> System.currentTimeMillis()
+            "date" -> SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(now)
+            "time" -> SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(now)
+            "datetime" -> SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(now)
+            else -> null
+        }
+    }
+
+    private fun appValue(key: String): Any? = when (key) {
+        "version" -> runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull()
+        "versionCode" -> runCatching { context.packageManager.getPackageInfo(context.packageName, 0).longVersionCode }.getOrNull()
+        "package" -> context.packageName
+        else -> null
+    }
+
+    fun toEnv(extra: Map<String, Any?> = emptyMap()): LinkedHashMap<String, Any?> {
+        val env = LinkedHashMap<String, Any?>()
+        env["event"] = event
+        env["page"] = uri
+        env["plugin.id"] = pluginId
+        PluginManager.manifestById(pluginId)?.let {
+            env["plugin.name"] = it.name
+            env["plugin.author"] = it.author
+            env["plugin.version"] = it.version
+        }
+        env["network.online"] = PluginSystem.isNetworkOnline(context)
+        env["ws.connected"] = PluginSystem.isWsConnected()
+
+        val acc = account()
+        if (acc != null) {
+            env["account.id"] = acc.id
+            env["account.username"] = acc.username
+            env["account.avatar"] = acc.avatar
+            env["account.loggedIn"] = true
+        } else {
+            env["account.loggedIn"] = false
+        }
+
+        val now = Date()
+        env["time.now"] = System.currentTimeMillis()
+        env["time.date"] = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(now)
+        env["time.time"] = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(now)
+        env["time.datetime"] = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(now)
+
+        runCatching {
+            val pkg = context.packageManager.getPackageInfo(context.packageName, 0)
+            env["app.version"] = pkg.versionName
+            env["app.versionCode"] = pkg.longVersionCode
+            env["app.package"] = context.packageName
+        }
+
+        extra.forEach { (k, v) -> env[k] = v }
+        vars.forEach { (k, v) -> env["var.$k"] = v }
+        return env
     }
 }
