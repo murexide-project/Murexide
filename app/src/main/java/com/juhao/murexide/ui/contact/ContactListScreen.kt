@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -28,7 +29,6 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.contentDescription
@@ -322,22 +322,17 @@ private fun ContactTabContent(
                     stickyHeader(key = "section_${tab.chatType}_${section.initial}") {
                         ContactSectionHeader(section.initial)
                     }
-                    items(
+                    itemsIndexed(
                         items = section.contacts,
-                        key = { "${it.chatType}:${it.chatId}" },
-                        contentType = { "contact" }
-                    ) { contact ->
-                        Column {
-                            ContactItemRow(
-                                contact = contact,
-                                onClick = { onContactClick(contact) }
-                            )
-                            HorizontalDivider(
-                                modifier = Modifier.padding(start = 78.dp, end = 32.dp),
-                                thickness = 0.5.dp,
-                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f)
-                            )
-                        }
+                        key = { _, contact -> "${contact.chatType}:${contact.chatId}" },
+                        contentType = { _, _ -> "contact" }
+                    ) { index, contact ->
+                        ContactItemRow(
+                            contact = contact,
+                            isTop = index == 0,
+                            isBottom = index == section.contacts.size - 1,
+                            onClick = { onContactClick(contact) }
+                        )
                     }
                 }
             }
@@ -433,23 +428,15 @@ private fun NewMessageShortcut(
 
 @Composable
 private fun ContactSectionHeader(initial: Char) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.surfaceContainerLow
-    ) {
-        Text(
-            text = initial.toString(),
-            modifier = Modifier.padding(start = 18.dp, end = 36.dp, top = 6.dp, bottom = 6.dp),
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontWeight = FontWeight.SemiBold
-        )
-    }
+    SettingsGroupHeader(title = initial.toString())
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun ContactItemRow(
     contact: ContactItem,
+    isTop: Boolean,
+    isBottom: Boolean,
     onClick: () -> Unit
 ) {
     val themeColor by UiState.themeColor
@@ -462,28 +449,34 @@ private fun ContactItemRow(
         else -> "ID: ${contact.chatId}"
     }
 
-    ListItem(
+    val shape = settingsItemShape(isTop = isTop, isBottom = isBottom)
+
+    SegmentedListItem(
         onClick = onClick,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 1.dp),
+        shapes = ListItemShapes(
+            shape = shape,
+            pressedShape = shape,
+            focusedShape = shape,
+            hoveredShape = shape,
+            draggedShape = shape,
+            selectedShape = shape
+        ),
+        colors = ListItemDefaults.colors(
+            containerColor = if (themeColor == "WHITE") MaterialTheme.colorScheme.surfaceContainerHighest
+                else MaterialTheme.colorScheme.surfaceContainerHigh
+        ),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
         leadingContent = {
             Avatar(
                 url = contact.avatarUrl,
                 size = 48.dp
             )
+            Spacer(Modifier.width(16.dp))
         },
-        colors = ListItemDefaults.colors(
-            containerColor = if (themeColor == "WHITE") MaterialTheme.colorScheme.surfaceContainerHighest
-                else Color.Transparent
-        )
-    ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
-            Text(
-                text = displayName,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Spacer(Modifier.height(2.dp))
+        supportingContent = {
             Text(
                 text = supportingText,
                 style = MaterialTheme.typography.bodySmall,
@@ -492,6 +485,14 @@ private fun ContactItemRow(
                 overflow = TextOverflow.Ellipsis
             )
         }
+    ) {
+        Text(
+            text = displayName,
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 }
 
