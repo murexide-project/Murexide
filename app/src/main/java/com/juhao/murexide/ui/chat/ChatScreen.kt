@@ -191,7 +191,8 @@ private fun ChatComposer(
     limitedMsgType: List<Int> = emptyList(),
     accounts: List<UserAccount>,
     activeAccountId: String,
-    onSwitchAccount: (UserAccount) -> Unit
+    onSwitchAccount: (UserAccount) -> Unit,
+    placeholder: String = ""
 ) {
     val composerState by viewModel.composerState.collectAsState()
     if (isRecordingVoice) {
@@ -233,7 +234,8 @@ private fun ChatComposer(
             limitedMsgType = limitedMsgType,
             accounts = accounts,
             activeAccountId = activeAccountId,
-            onSwitchAccount = onSwitchAccount
+            onSwitchAccount = onSwitchAccount,
+            placeholder = placeholder
         )
     }
 }
@@ -1636,7 +1638,8 @@ fun ChatScreen(
                                 onSwitchAccount = { account ->
                                     activeSendAccountId = account.id
                                     viewModel.switchSendToken(account.token)
-                                }
+                                },
+                                placeholder = uiState.pendingCommandHint ?: ""
                             )
 
                             BackHandler(

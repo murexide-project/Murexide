@@ -1313,7 +1313,7 @@ private fun MessageFooter(
             fontSize = 10.sp,
             lineHeight = 16.sp,
             maxLines = 1,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
         )
         if (isEdited && !isRecalled) {
             Text(
@@ -1321,7 +1321,7 @@ private fun MessageFooter(
                 fontSize = 10.sp,
                 lineHeight = 16.sp,
                 maxLines = 1,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                 modifier = Modifier.padding(start = 4.dp)
             )
         }

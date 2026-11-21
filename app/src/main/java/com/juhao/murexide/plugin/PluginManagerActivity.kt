@@ -12,17 +12,21 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.juhao.murexide.ui.components.*
 import com.juhao.murexide.ui.icons.AppIcons
 import com.juhao.murexide.ui.theme.MurexideTheme
+import com.juhao.murexide.utils.getAppVersionInfo
 import org.json.JSONObject
 import java.io.File
 import java.util.zip.ZipFile
@@ -46,7 +50,13 @@ class PluginManagerActivity : ComponentActivity() {
     }
 }
 
-private data class PendingInstall(val zip: File, val id: String, val name: String, val permissions: Set<String>)
+private data class PendingInstall(
+    val zip: File,
+    val id: String,
+    val name: String,
+    val minVersion: Int,
+    val permissions: Set<String>
+)
 
 @Composable
 fun PluginManagerScreen(onBack: () -> Unit) {
@@ -56,13 +66,18 @@ fun PluginManagerScreen(onBack: () -> Unit) {
     var logsPluginId by remember { mutableStateOf<String?>(null) }
     var logsText by remember { mutableStateOf("") }
     var pendingInstall by remember { mutableStateOf<PendingInstall?>(null) }
+    var installError by remember { mutableStateOf<String?>(null) }
+
+    val appVersionCode = remember {
+        context.getAppVersionInfo().versionCode
+    }
 
     fun doInstall(zip: File) {
         runCatching {
             PluginManager.install(context, zip).getOrThrow()
             Toast.makeText(context, "导入成功", Toast.LENGTH_SHORT).show()
         }.onFailure {
-            Toast.makeText(context, "导入失败: ${it.message}", Toast.LENGTH_LONG).show()
+            installError = it.message ?: "导入失败"
         }
         zip.delete()
     }
@@ -73,10 +88,11 @@ fun PluginManagerScreen(onBack: () -> Unit) {
             val meta = z.getInputStream(entry).bufferedReader().use { JSONObject(it.readText()) }
             val id = meta.optString("id")
             val name = meta.optString("name", id)
+            val minVersion = meta.optInt("minVersion", 0)
             val permsArr = meta.optJSONArray("permissions")
             val perms = if (permsArr == null) emptySet() else
                 (0 until permsArr.length()).mapNotNull { permsArr.optString(it).ifBlank { null } }.toSet()
-            PendingInstall(zip, id, name, perms)
+            PendingInstall(zip, id, name, minVersion, perms)
         }
     }.getOrNull()
 
@@ -90,17 +106,33 @@ fun PluginManagerScreen(onBack: () -> Unit) {
                 tmp.outputStream().use { output -> input.copyTo(output) }
             }
         }.onFailure {
-            Toast.makeText(context, "读取文件失败: ${it.message}", Toast.LENGTH_LONG).show()
+            installError = "读取文件失败: ${it.message}"
             tmp.delete()
             return@rememberLauncherForActivityResult
         }
         val meta = parseInstallMeta(tmp)
         if (meta == null) {
-            Toast.makeText(context, "无效插件包", Toast.LENGTH_LONG).show()
+            installError = "无效插件包，zip 内缺少根目录 manifest.json"
+            tmp.delete()
+        } else if (meta.minVersion > 0 && appVersionCode < meta.minVersion.toLong()) {
+            installError = "需要应用版本 ${meta.minVersion}，当前 $appVersionCode，无法安装"
             tmp.delete()
         } else {
             pendingInstall = meta
         }
+    }
+
+
+    installError?.let { message ->
+        AlertDialog(
+            onDismissRequest = { installError = null },
+            icon = { Icon(AppIcons.Warning, contentDescription = null) },
+            title = { Text("安装失败") },
+            text = { Text(message) },
+            confirmButton = {
+                TextButton(onClick = { installError = null }) { Text("知道了") }
+            }
+        )
     }
 
     pendingInstall?.let { pi ->
@@ -109,23 +141,94 @@ fun PluginManagerScreen(onBack: () -> Unit) {
                 pi.zip.delete()
                 pendingInstall = null
             },
+            icon = { Icon(AppIcons.Shield, contentDescription = null) },
             title = { Text("安装 ${pi.name}") },
             text = {
-                Column(Modifier.fillMaxWidth()) {
-                    Text("该插件将请求以下权限：", style = MaterialTheme.typography.bodyMedium)
-                    Spacer(Modifier.height(8.dp))
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState())
+                ) {
+                    if (pi.minVersion > 0) {
+                        Surface(
+                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                Modifier.padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    AppIcons.Info,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Text(
+                                    "要求应用版本 ≥ ${pi.minVersion}（当前 $appVersionCode）",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                        Spacer(Modifier.height(12.dp))
+                    }
+                    Text(
+                        "该插件由第三方提供，安装后将获得以下权限：",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Spacer(Modifier.height(12.dp))
                     if (pi.permissions.isEmpty()) {
-                        Text(
-                            "未请求任何权限",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    } else {
-                        pi.permissions.sorted().forEach { p ->
-                            Text(
-                                "· ${PluginPermissions.label(p)}",
-                                style = MaterialTheme.typography.bodySmall
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                AppIcons.Info,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(18.dp)
                             )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                "未请求任何权限",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    } else {
+                        val ordered = pi.permissions
+                            .sortedWith(
+                                compareByDescending<String> { PluginPermissions.risk(it) }
+                                    .thenBy { PluginPermissions.label(it) }
+                            )
+                        ordered.forEach { p ->
+                            PermissionRow(permission = p)
+                        }
+                    }
+                    if (pi.permissions.any { it == PluginPermissions.ALL }) {
+                        Spacer(Modifier.height(12.dp))
+                        Surface(
+                            color = MaterialTheme.colorScheme.errorContainer,
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                Modifier.padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    AppIcons.Warning,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onErrorContainer,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Text(
+                                    "该插件申请了全部权限，请确认来源可信后再安装。",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onErrorContainer
+                                )
+                            }
                         }
                     }
                 }
@@ -145,29 +248,11 @@ fun PluginManagerScreen(onBack: () -> Unit) {
         )
     }
 
-    if (showTutorial) {
-        AlertDialog(
-            onDismissRequest = { showTutorial = false },
-            title = { Text("插件开发教程") },
-            text = {
-                Column(Modifier.fillMaxWidth()) {
-                    Text(
-                        text = "插件是一个 zip，含 manifest.json 与 Lua 脚本：\n\n" +
-                            "· PageRegister.lua —— registerPage(icon,title,page={...})\n" +
-                            "· OnActivityEvent.lua —— onEvent(event=...,pages={...},onEvent={...})\n" +
-                            "· onEvent.lua / Global.lua —— 应用级 onEvent\n\n" +
-                            "宿主函数：Toast / Alert / Notify / Copy / OpenUrl / Http / writeData / readData / If\n\n" +
-                            "页面组件：Button / Text / Column / Row / Spacer / Image / Card\n\n" +
-                            "事件：onCreate/onResume/onPause/onDestroy、ws.connected/disconnected、ws.message 等。\n\n" +
-                            "Lua 里可直接读取 Kt 注入的事件字段，例如 ws.message 的 type、chatId、content。",
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { showTutorial = false }) { Text("关闭") }
-            }
-        )
+    LaunchedEffect(showTutorial) {
+        if (showTutorial) {
+            PluginDocsActivity.start(context)
+            showTutorial = false
+        }
     }
 
     logsPluginId?.let { pid ->
@@ -230,6 +315,7 @@ fun PluginManagerScreen(onBack: () -> Unit) {
                         manifest = m,
                         context = context,
                         rulesCount = PluginManager.rulesForPage("*", "*").count { it.first == m },
+                        sizeBytes = PluginManager.pluginDirSize(context, m.id),
                         onShowLogs = {
                             logsPluginId = m.id
                             logsText = PluginLogger.read(context, m.id)
@@ -246,6 +332,7 @@ private fun PluginCard(
     manifest: PluginManifest,
     context: Context,
     rulesCount: Int,
+    sizeBytes: Long,
     onShowLogs: () -> Unit
 ) {
     Surface(
@@ -273,7 +360,7 @@ private fun PluginCard(
                 Text(manifest.name, style = MaterialTheme.typography.titleMedium)
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    "v${manifest.version}${manifest.author?.let { " · $it" } ?: ""}",
+                    "v${manifest.version}${manifest.author?.let { " · $it" } ?: ""} · ${formatSize(sizeBytes)}",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -323,6 +410,56 @@ private fun PluginCard(
                     onCheckedChange = null
                 )
             }
+        }
+    }
+}
+private fun formatSize(bytes: Long): String = when {
+    bytes >= 1024L * 1024L -> "%.1f MB".format(bytes / 1024.0 / 1024.0)
+    bytes >= 1024L -> "%.1f KB".format(bytes / 1024.0)
+    else -> "$bytes B"
+}
+
+@Composable
+private fun PermissionRow(permission: String) {
+    val riskLevel = PluginPermissions.risk(permission)
+    val accent = when (riskLevel) {
+        3 -> MaterialTheme.colorScheme.error
+        2 -> MaterialTheme.colorScheme.tertiary
+        else -> MaterialTheme.colorScheme.primary
+    }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp),
+        verticalAlignment = Alignment.Top
+    ) {
+        Surface(
+            color = accent.copy(alpha = 0.12f),
+            shape = RoundedCornerShape(10.dp),
+            modifier = Modifier.size(36.dp)
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    imageVector = PluginPermissions.icon(permission),
+                    contentDescription = null,
+                    tint = accent,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text(
+                text = PluginPermissions.label(permission),
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text = PluginPermissions.description(permission),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }

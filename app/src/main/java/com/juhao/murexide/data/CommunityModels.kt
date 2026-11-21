@@ -172,6 +172,18 @@ data class BaInfoData(
 )
 
 @Serializable
+data class CreateBaResponse(
+    val code: Int,
+    val data: CreateBaData? = null,
+    val msg: String
+)
+
+@Serializable
+data class CreateBaData(
+    val id: Int = 0
+)
+
+@Serializable
 data class CreatePostResponse(
     val code: Int,
     val data: CreatePostData? = null,
@@ -234,3 +246,30 @@ data class SearchPostItem(
         group = group
     )
 }
+
+@Serializable
+data class FollowerListResponse(
+    val code: Int,
+    val data: FollowerListData? = null,
+    val msg: String
+)
+
+@Serializable
+data class FollowerListData(
+    val followers: List<FollowerItem> = emptyList(),
+    val total: Int = 0
+)
+
+@Serializable
+data class FollowerItem(
+    val id: Int = 0,
+    val baId: Int = 0,
+    val userId: String = "",
+    val userLevel: Int = 0,
+    val nickname: String = "",
+    val avatarUrl: String = "",
+    val followSource: Int = 0,
+    val createTime: Long = 0,
+    val vipUserid: String = "",
+    val vipEndTime: Long = 0
+)

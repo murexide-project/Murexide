@@ -1,47 +1,71 @@
 package com.juhao.murexide.plugin
 
 import android.content.Context
-import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.datastore.preferences.preferencesDataStore
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
+import org.json.JSONObject
+import java.io.File
 
-class LuaPluginDataStorage private constructor(private val context: Context) {
+class LuaPluginDataStorage private constructor(private val root: File) {
 
-    private fun key(pluginId: String, name: String) =
-        stringPreferencesKey("${sanitize(pluginId)}:$name")
+    private fun dataFile(pluginId: String): File = File(root, "$pluginId/data.json")
 
-    suspend fun get(pluginId: String, name: String): Flow<String?> {
-        return context.dataStore.data.map { prefs ->
-            prefs[key(pluginId, name)]
+    @Synchronized
+    fun get(pluginId: String, name: String): String? {
+        val obj = read(dataFile(pluginId)) ?: return null
+        return when (val v = obj.opt(name)) {
+            null -> null
+            JSONObject.NULL -> null
+            else -> v.toString()
         }
     }
 
-    suspend fun set(pluginId: String, name: String, value: String) {
-        context.dataStore.edit { prefs ->
-            prefs[key(pluginId, name)] = value
+    @Synchronized
+    fun set(pluginId: String, name: String, value: String) {
+        val file = dataFile(pluginId)
+        file.parentFile?.mkdirs()
+        val obj = read(file) ?: JSONObject()
+        obj.put(name, value)
+        write(file, obj)
+    }
+
+    @Synchronized
+    fun clear(pluginId: String, name: String) {
+        val file = dataFile(pluginId)
+        val obj = read(file) ?: return
+        if (!obj.has(name)) return
+        obj.remove(name)
+        write(file, obj)
+    }
+
+    fun sizeOf(pluginId: String): Long {
+        val file = dataFile(pluginId)
+        return if (file.exists()) file.length() else 0L
+    }
+
+    private fun read(file: File): JSONObject? {
+        if (!file.exists()) return null
+        return try {
+            JSONObject(file.readText())
+        } catch (_: Exception) {
+            null
         }
     }
 
-    suspend fun clear(pluginId: String, name: String) {
-        context.dataStore.edit { prefs ->
-            prefs.remove(key(pluginId, name))
+    private fun write(file: File, obj: JSONObject) {
+        val tmp = File(file.parentFile, "data.json.tmp")
+        tmp.writeText(obj.toString(2))
+        if (!tmp.renameTo(file)) {
+            file.delete()
+            tmp.renameTo(file)
         }
     }
-
-    private fun sanitize(s: String): String =
-        s.replace(Regex("[^\\w.-]"), "_")
 
     companion object {
         @Volatile private var instance: LuaPluginDataStorage? = null
         fun getInstance(context: Context): LuaPluginDataStorage =
             instance ?: synchronized(this) {
                 instance ?: LuaPluginDataStorage(
-                    context.applicationContext
+                    File(context.filesDir, "lua_plugins")
                 ).also { instance = it }
             }
     }
 }
-
-private val Context.dataStore by preferencesDataStore(name = "lua_plugin_data")

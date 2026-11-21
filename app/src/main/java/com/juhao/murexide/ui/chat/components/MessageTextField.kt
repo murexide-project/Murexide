@@ -1,20 +1,11 @@
 package com.juhao.murexide.ui.chat.components
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.text.selection.LocalTextSelectionColors
-import androidx.compose.foundation.text.selection.TextSelectionColors
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -33,6 +24,7 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
@@ -50,6 +42,7 @@ internal fun MessageTextField(
     hintColor: Color,
     textSizeSp: Float,
     focusRequester: FocusRequester,
+    hintText: String = "输入消息...",
     onValueChange: (
         value: TextFieldValue,
         mentions: List<MentionToken>,
@@ -62,8 +55,7 @@ internal fun MessageTextField(
     modifier: Modifier = Modifier
 ) {
     val cursorColor = MaterialTheme.colorScheme.primary
-    val selectionColor = MaterialTheme.colorScheme.primary
-
+    
     var displayValue by remember { mutableStateOf(value) }
     var committedValue by remember { mutableStateOf(value) }
     var committedMentions by remember { mutableStateOf(mentions) }
@@ -80,114 +72,107 @@ internal fun MessageTextField(
         }
     }
 
-    val selectionColors = remember(selectionColor) {
-        TextSelectionColors(
-            handleColor = selectionColor,
-            backgroundColor = selectionColor
-        )
-    }
-
-    CompositionLocalProvider(LocalTextSelectionColors provides selectionColors) {
-        BasicTextField(
-            value = displayValue,
-            onValueChange = { newValue ->
-                val composing = newValue.composition != null
-                if (composing) {
-                    displayValue = newValue
-                    onValueChange(newValue, committedMentions, "", newValue.selection.start)
+    BasicTextField(
+        value = displayValue,
+        onValueChange = { newValue ->
+            val composing = newValue.composition != null
+            if (composing) {
+                displayValue = newValue
+                onValueChange(newValue, committedMentions, "", newValue.selection.start)
+            } else {
+                val textEdit = computeTextEdit(committedValue, newValue)
+                val newlineSend = sendOnEnter &&
+                    textEdit != null &&
+                    textEdit.beforeCount == 0 &&
+                    textEdit.afterCount == 1 &&
+                    newValue.text.substring(textEdit.start, textEdit.start + 1) == "\n"
+                if (newlineSend) {
+                    displayValue = committedValue
+                    onSendKey()
                 } else {
-                    val textEdit = computeTextEdit(committedValue, newValue)
-                    val newlineSend = sendOnEnter &&
-                        textEdit != null &&
-                        textEdit.beforeCount == 0 &&
-                        textEdit.afterCount == 1 &&
-                        newValue.text.substring(textEdit.start, textEdit.start + 1) == "\n"
-                    if (newlineSend) {
-                        displayValue = committedValue
-                        onSendKey()
+                    val result = if (textEdit != null) {
+                        MentionUtils.processEdit(
+                            old = committedValue,
+                            new = newValue,
+                            mentions = committedMentions,
+                            textEdit = textEdit
+                        )
                     } else {
-                        val result = if (textEdit != null) {
-                            MentionUtils.processEdit(
-                                old = committedValue,
-                                new = newValue,
-                                mentions = committedMentions,
-                                textEdit = textEdit
-                            )
-                        } else {
-                            MentionUtils.processEdit(
-                                old = committedValue,
-                                new = newValue,
-                                mentions = committedMentions
-                            )
-                        }
+                        MentionUtils.processEdit(
+                            old = committedValue,
+                            new = newValue,
+                            mentions = committedMentions
+                        )
+                    }
 
-                        displayValue = result.value
-                        committedValue = result.value
-                        committedMentions = result.mentions
-                        onValueChange(
-                            result.value,
-                            result.mentions,
-                            result.insertedText,
-                            result.insertPos
-                        )
-                    }
-                }
-            },
-            modifier = modifier
-                .fillMaxWidth()
-                .focusRequester(focusRequester)
-                .onFocusChanged { state ->
-                    if (state.isFocused) onFocused()
-                }
-                .onPreviewKeyEvent { event ->
-                    if (
-                        sendOnEnter &&
-                        event.type == KeyEventType.KeyDown &&
-                        event.key == Key.Enter &&
-                        !event.isShiftPressed &&
-                        !event.isCtrlPressed &&
-                        !event.isMetaPressed &&
-                        !event.isAltPressed
-                    ) {
-                        onSendKey()
-                        true
-                    } else {
-                        false
-                    }
-                },
-            enabled = enabled,
-            textStyle = TextStyle(
-                color = textColor,
-                fontSize = textSizeSp.sp,
-                lineHeight = (textSizeSp * 1.45).sp
-            ),
-            cursorBrush = SolidColor(cursorColor),
-            keyboardOptions = KeyboardOptions(
-                imeAction = ImeAction.None,
-                keyboardType = KeyboardType.Text,
-                capitalization = KeyboardCapitalization.Sentences
-            ),
-            keyboardActions = KeyboardActions.Default,
-            singleLine = false,
-            minLines = 1,
-            maxLines = 5,
-            decorationBox = { innerTextField ->
-                Box(
-                    modifier = Modifier.fillMaxWidth(),
-                    contentAlignment = Alignment.CenterStart
-                ) {
-                    if (displayValue.text.isEmpty()) {
-                        androidx.compose.material3.Text(
-                            text = "输入消息...",
-                            color = hintColor,
-                            fontSize = textSizeSp.sp
-                        )
-                    }
-                    innerTextField()
+                    displayValue = result.value
+                    committedValue = result.value
+                    committedMentions = result.mentions
+                    onValueChange(
+                        result.value,
+                        result.mentions,
+                        result.insertedText,
+                        result.insertPos
+                    )
                 }
             }
-        )
-    }
+        },
+        modifier = modifier
+            .fillMaxWidth()
+            .focusRequester(focusRequester)
+            .onFocusChanged { state ->
+                if (state.isFocused) onFocused()
+            }
+            .onPreviewKeyEvent { event ->
+                if (
+                    sendOnEnter &&
+                    event.type == KeyEventType.KeyDown &&
+                    event.key == Key.Enter &&
+                    !event.isShiftPressed &&
+                    !event.isCtrlPressed &&
+                    !event.isMetaPressed &&
+                    !event.isAltPressed
+                ) {
+                    onSendKey()
+                    true
+                } else {
+                    false
+                }
+            },
+        enabled = enabled,
+        textStyle = TextStyle(
+            color = textColor,
+            fontSize = textSizeSp.sp,
+            lineHeight = (textSizeSp * 1.45).sp
+        ),
+        cursorBrush = SolidColor(cursorColor),
+        keyboardOptions = KeyboardOptions(
+            imeAction = ImeAction.None,
+            keyboardType = KeyboardType.Text,
+            capitalization = KeyboardCapitalization.Sentences
+        ),
+        keyboardActions = KeyboardActions.Default,
+        singleLine = false,
+        minLines = 1,
+        maxLines = 5,
+        decorationBox = { innerTextField ->
+            Box(
+                modifier = Modifier.fillMaxWidth(),
+                contentAlignment = Alignment.CenterStart
+            ) {
+                if (displayValue.text.isEmpty()) {
+                    Text(
+                        text = hintText,
+                        color = hintColor,
+                        fontSize = textSizeSp.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                innerTextField()
+            }
+        }
+    )
 }
 
 private fun computeTextEdit(

@@ -707,16 +707,6 @@ private fun ConversationDetailContent(
                 hasMoreHistory = hasMoreHistory,
                 isTop = false
             )
-        } else {
-            item(key = "legacy") {
-                LegacyContent(
-                    detail = detail,
-                    isAdded = isAdded,
-                    isAdding = isAdding,
-                    onAdd = onAdd,
-                    onMessage = onMessage
-                )
-            }
         }
     }
 }
@@ -1162,44 +1152,6 @@ private fun DetailInfoCard(
                 fontWeight = FontWeight.SemiBold,
                 modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)
             )
-        }
-    }
-}
-
-@Composable
-private fun LegacyContent(
-    detail: ConversationDetail,
-    isAdded: Boolean?,
-    isAdding: Boolean,
-    onAdd: () -> Unit,
-    onMessage: () -> Unit
-) {
-    Column(
-        Modifier
-            .fillMaxWidth()
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Avatar(url = detail.avatarUrl, size = 88.dp, canView = true)
-        Spacer(Modifier.height(14.dp))
-        Text(
-            detail.name,
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold
-        )
-        if (detail.introduction.isNotBlank()) Text(
-            detail.introduction,
-            textAlign = TextAlign.Center,
-            color = resolvedLiquidGlassContentColor(MaterialTheme.colorScheme.onSurfaceVariant),
-            modifier = Modifier.padding(top = 8.dp)
-        )
-        Spacer(Modifier.height(20.dp))
-        Button(
-            onClick = if (isAdded == false) onAdd else onMessage,
-            enabled = !isAdding,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text(if (isAdded == false) "添加" else "进入聊天")
         }
     }
 }

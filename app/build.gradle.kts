@@ -25,6 +25,10 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
+        ndk {
+            abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64")
+        }
+
         externalNativeBuild {
             cmake {
                 cppFlags += listOf("-std=c++17")
@@ -42,23 +46,28 @@ android {
             )
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
+
     buildFeatures {
         compose = true
     }
+
     externalNativeBuild {
         cmake {
             path = file("src/main/cpp/CMakeLists.txt")
             version = "3.31.6"
         }
     }
+
     androidResources {
         localeFilters.clear()
         localeFilters.addAll(listOf("zh", "en"))
     }
+
     packaging {
         resources {
             excludes.addAll(
@@ -71,11 +80,15 @@ android {
                     "META-INF/NOTICE*",
                     "META-INF/AL2.0",
                     "META-INF/LGPL2.1"
-            ))
+                )
+            )
         }
+
         jniLibs {
             useLegacyPackaging = true
+            excludes += setOf("lib/x86/**")
         }
+
         dex {
             useLegacyPackaging = true
         }
@@ -93,6 +106,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.activity.compose)
+
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)
@@ -133,7 +147,7 @@ dependencies {
     implementation(libs.haze)
     implementation(libs.haze.blur)
     implementation(libs.haze.blur.materials)
-    
+
     implementation(libs.backdrop)
     implementation(libs.kyant.shapes)
 
@@ -142,7 +156,7 @@ dependencies {
     implementation(libs.multiplatform.markdown.renderer)
     implementation(libs.multiplatform.markdown.renderer.m3)
     implementation(libs.multiplatform.markdown.renderer.coil2)
-    
+
     debugImplementation(libs.androidx.compose.ui.tooling)
 }
 

@@ -110,10 +110,13 @@ private val buttonsJson = Json { ignoreUnknownKeys = true }
 
 fun parseMessageButtons(raw: String?): List<List<MessageButton>> {
     if (raw.isNullOrBlank()) return emptyList()
+    val text = raw.trim()
+    if (text.equals("null", ignoreCase = true)) return emptyList()
+    if (!text.startsWith("[")) return emptyList()
     return try {
-        buttonsJson.decodeFromString<List<List<MessageButton>>>(raw)
+        buttonsJson.decodeFromString<List<List<MessageButton>>>(text)
     } catch (e: Exception) {
-        Log.w("MessageButtons", "解析按钮失败: $raw", e)
+        Log.w("MessageButtons", "解析按钮失败: $text", e)
         emptyList()
     }
 }

@@ -5,7 +5,7 @@ import com.juhao.murexide.ui.icons.AutoMirroredIcon
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -98,9 +98,11 @@ fun MyPostsScreen(
 
                 else -> {
                     LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
-                        items(uiState.posts, key = { it.id }) { post ->
+                        itemsIndexed(uiState.posts, key = { _, item -> item.id }) { index, post ->
                             PostCard(
                                 post = post,
+                                isTop = index == 0,
+                                isBottom = index == uiState.posts.lastIndex,
                                 onLikeClick = { },
                                 onCollectClick = { },
                                 onPostClick = { PostDetailActivity.start(context, post.id) }

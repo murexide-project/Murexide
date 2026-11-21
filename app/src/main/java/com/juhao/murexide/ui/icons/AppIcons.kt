@@ -78,8 +78,7 @@ object AppIcons {
     val ExpandMore get() = MaterialSymbols.Rounded.Expand_more
     val Explore get() = MaterialSymbols.Rounded.Explore
     val Face get() = MaterialSymbols.Rounded.Face
-    val Favorite get() = MaterialSymbols.RoundedFilled.Favorite
-    val FavoriteBorder get() = MaterialSymbols.Rounded.Favorite
+    val Favorite get() = MaterialSymbols.Rounded.Favorite
     val FileDownload get() = MaterialSymbols.Rounded.File_download
     val FileUpload get() = MaterialSymbols.Rounded.File_upload
     val Fingerprint get() = MaterialSymbols.Rounded.Fingerprint
@@ -198,6 +197,7 @@ object AppFilledIcons {
     val Contacts get() = MaterialSymbols.RoundedFilled.Contacts
     val Group get() = MaterialSymbols.RoundedFilled.Group
     val Explore get() = MaterialSymbols.RoundedFilled.Explore
+    val Favorite get() = MaterialSymbols.RoundedFilled.Favorite
     val Person get() = MaterialSymbols.RoundedFilled.Person
     val BrightnessAuto get() = MaterialSymbols.RoundedFilled.Brightness_auto
     val LightMode get() = MaterialSymbols.RoundedFilled.Light_mode

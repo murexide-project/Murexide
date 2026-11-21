@@ -62,6 +62,7 @@ private enum class ScreenshotAction {
     SHARE
 }
 
+@Suppress("DEPRECATION")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScreenshotBottomSheet(

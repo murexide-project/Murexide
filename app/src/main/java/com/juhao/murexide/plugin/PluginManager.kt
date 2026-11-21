@@ -1,6 +1,7 @@
 package com.juhao.murexide.plugin
 
 import android.content.Context
+import com.juhao.murexide.utils.getAppVersionInfo
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -26,7 +27,7 @@ object PluginManager {
 
     fun reload(context: Context) {
         val plugins = PluginLoader.load(context)
-        PluginSession.update(plugins)
+        PluginSession.update(plugins.filter { it.manifest.enabled })
         _manifests.value = plugins.map { it.manifest }
         _functions.value = plugins.filter { it.manifest.enabled }.flatMap { it.pages }
     }
@@ -35,6 +36,7 @@ object PluginManager {
         validateZip(zipFile)
         val id = readIdFromZip(zipFile)
         require(id.isNotBlank()) { "插件缺 id" }
+        checkMinVersion(context, zipFile)
         val pluginDir = File(context.filesDir, "lua_plugins/$id")
         pluginDir.deleteRecursively()
         pluginDir.mkdirs()
@@ -56,11 +58,42 @@ object PluginManager {
             }
         }
         reload(context)
+        val loaded = PluginSession.findPlugin(id)
+        require(loaded != null) { "插件加载失败，脚本缺失或格式错误" }
+        require(
+            loaded.rules.isNotEmpty() || loaded.global.isNotEmpty() ||
+                loaded.pages.isNotEmpty() || loaded.decorates.isNotEmpty()
+        ) { "插件加载失败：脚本未注册任何功能（检查 Lua 语法，详见插件日志）" }
+        PluginLoader.executeInstalledScript(context, id, pluginDir)
+    }
+
+    private fun checkMinVersion(context: Context, zipFile: File) {
+        val minVersion = readMinVersionFromZip(zipFile)
+        if (minVersion <= 0) return
+        val appVersionCode = context.getAppVersionInfo().versionCode
+        require(appVersionCode >= minVersion.toLong()) {
+            "需要应用版本 $minVersion，当前 $appVersionCode"
+        }
+    }
+
+    private fun readMinVersionFromZip(zipFile: File): Int {
+        ZipFile(zipFile).use { zip ->
+            val entry = zip.getEntry("manifest.json") ?: return 0
+            return zip.getInputStream(entry).bufferedReader().use {
+                JSONObject(it.readText()).optInt("minVersion", 0)
+            }
+        }
     }
 
     fun uninstall(context: Context, id: String) {
         File(context.filesDir, "lua_plugins/$id").deleteRecursively()
         reload(context)
+    }
+
+    fun pluginDirSize(context: Context, id: String): Long {
+        val dir = File(context.filesDir, "lua_plugins/$id")
+        if (!dir.exists()) return 0L
+        return dir.walkTopDown().filter { it.isFile }.sumOf { it.length() }
     }
 
     fun setEnabled(context: Context, id: String, enabled: Boolean) {

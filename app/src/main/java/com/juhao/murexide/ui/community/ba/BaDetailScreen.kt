@@ -8,7 +8,7 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
@@ -47,6 +47,8 @@ fun BaDetailScreen(
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
+
+    var showManageSheet by remember { mutableStateOf(false) }
 
     val shouldLoadMore by remember {
         derivedStateOf {
@@ -208,9 +210,11 @@ fun BaDetailScreen(
                         item(key = "ba_header") {
                             BaHeader(
                                 ba = ba,
+                                isManageEnabled = uiState.isManageEnabled,
                                 onAvatarBoundsChanged = { headerAvatarBounds = it },
                                 onTitleBoundsChanged = { headerTitleBounds = it },
-                                onFollowClick = { viewModel.toggleFollow() }
+                                onFollowClick = { viewModel.toggleFollow() },
+                                onManageClick = { showManageSheet = true }
                             )
                             HorizontalDivider()
                         }
@@ -228,10 +232,14 @@ fun BaDetailScreen(
                                 }
                             }
                         }
+                        
+                        item { Spacer(Modifier.height(8.dp)) }
 
-                        items(uiState.posts, key = { it.id }) { post ->
+                        itemsIndexed(uiState.posts, key = { _, item -> item.id }) { index, post ->
                             PostCard(
                                 post = post,
+                                isTop = index == 0,
+                                isBottom = index == uiState.posts.lastIndex,
                                 onLikeClick = viewModel::toggleLike,
                                 onCollectClick = viewModel::toggleCollect,
                                 onPostClick = { PostDetailActivity.start(context, post.id) }
@@ -307,6 +315,18 @@ fun BaDetailScreen(
                     .width(with(density) { titleRect.width.toDp() })
             )
         }
+
+        if (showManageSheet) {
+            BaManageSheet(
+                isOwner = uiState.isOwner,
+                viewModel = viewModel,
+                onDeleted = {
+                    showManageSheet = false
+                    onBackClick()
+                },
+                onDismiss = { showManageSheet = false }
+            )
+        }
     }
 }
 
@@ -326,9 +346,11 @@ private fun lerpRectCenter(a: Rect, b: Rect, t: Float): Rect {
 @Composable
 private fun BaHeader(
     ba: BaDetail,
+    isManageEnabled: Boolean,
     onAvatarBoundsChanged: (Rect) -> Unit,
     onTitleBoundsChanged: (Rect) -> Unit,
-    onFollowClick: () -> Unit
+    onFollowClick: () -> Unit,
+    onManageClick: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -368,19 +390,38 @@ private fun BaHeader(
         Spacer(Modifier.height(14.dp))
 
         val isFollowed = ba.isFollowed == "1"
-        if (isFollowed) {
-            OutlinedButton(
-                onClick = onFollowClick,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("已关注")
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            if (isFollowed) {
+                OutlinedButton(
+                    onClick = onFollowClick,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("已关注")
+                }
+            } else {
+                Button(
+                    onClick = onFollowClick,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("关注")
+                }
             }
-        } else {
-            Button(
-                onClick = onFollowClick,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("关注")
+            if (isManageEnabled) {
+                OutlinedButton(
+                    onClick = onManageClick,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(
+                        AppIcons.Settings,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text("管理")
+                }
             }
         }
     }

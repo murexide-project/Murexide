@@ -5,12 +5,17 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
+import android.os.Handler
+import android.os.Looper
+import android.os.VibrationEffect
+import android.os.Vibrator
 import android.widget.Toast
 import com.juhao.murexide.network.NetworkClient
+import com.juhao.murexide.ui.chat.ChatActivity
 import com.seanproctor.lua.LuaValue
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
@@ -29,6 +34,12 @@ sealed class PluginAction {
         val onConfirm: List<PluginAction>
     ) : PluginAction()
     data class Notify(val title: String, val message: String) : PluginAction()
+    data class Vibrate(val duration: Long = 300) : PluginAction()
+    data class OpenChat(val chatId: String, val chatType: Int = 2, val name: String = "", val avatar: String = "") : PluginAction()
+    data class StartActivity(val activity: String, val extras: Map<String, Any?> = emptyMap()) : PluginAction()
+    class RestartApp : PluginAction()
+    data class Log(val level: String = "info", val message: String) : PluginAction()
+    data class Share(val content: String) : PluginAction()
     data class ReadData(val key: String, val target: String) : PluginAction()
     data class WriteData(val key: String, val value: String) : PluginAction()
     data class Copy(val text: String) : PluginAction()
@@ -43,6 +54,7 @@ sealed class PluginAction {
     data class If(
         val field: String,
         val isEquals: String,
+        val op: String = "eq",
         val thenActions: List<PluginAction>,
         val elseActions: List<PluginAction>
     ) : PluginAction()
@@ -91,6 +103,7 @@ class PluginManifest(
     val name: String,
     val author: String?,
     val version: Int,
+    val minVersion: Int = 0,
     val enabled: Boolean,
     val permissions: Set<String> = emptySet()
 )
@@ -120,6 +133,12 @@ object PluginExecutor {
 
     private fun requiredPermission(action: PluginAction): String? = when (action) {
         is PluginAction.Notify -> PluginPermissions.NOTIFICATION
+        is PluginAction.Vibrate -> PluginPermissions.VIBRATE
+        is PluginAction.OpenChat -> PluginPermissions.OPEN_CHAT
+        is PluginAction.StartActivity -> PluginPermissions.START_ACTIVITY
+        is PluginAction.RestartApp -> PluginPermissions.RESTART
+        is PluginAction.Log -> PluginPermissions.LOG
+        is PluginAction.Share -> PluginPermissions.SHARE
         is PluginAction.Copy -> PluginPermissions.CLIPBOARD
         is PluginAction.OpenUrl -> PluginPermissions.OPEN_URL
         is PluginAction.Http -> PluginPermissions.NETWORK
@@ -146,11 +165,11 @@ object PluginExecutor {
         return try {
             when (action) {
                 is PluginAction.Toast -> {
-                    Toast.makeText(
-                        context,
-                        interpolate(action.text, env, pluginId),
-                        if (action.type == "long") Toast.LENGTH_LONG else Toast.LENGTH_SHORT
-                    ).show()
+                    val text = interpolate(action.text, env, pluginId)
+                    val duration = if (action.type == "long") Toast.LENGTH_LONG else Toast.LENGTH_SHORT
+                    Handler(Looper.getMainLooper()).post {
+                        Toast.makeText(context, text, duration).show()
+                    }
                     true
                 }
                 is PluginAction.Alert -> {
@@ -165,14 +184,96 @@ object PluginExecutor {
                     )
                     true
                 }
+                is PluginAction.Vibrate -> {
+                    val vibrator = context.getSystemService(Vibrator::class.java)
+                    if (vibrator != null && vibrator.hasVibrator()) {
+                        val duration = (action.duration).coerceIn(50L, 5000L)
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            vibrator.vibrate(
+                                VibrationEffect.createOneShot(duration, VibrationEffect.DEFAULT_AMPLITUDE)
+                            )
+                        } else {
+                            @Suppress("DEPRECATION")
+                            vibrator.vibrate(duration)
+                        }
+                        true
+                    } else {
+                        false
+                    }
+                }
+                is PluginAction.OpenChat -> {
+                    val intent = Intent(context, ChatActivity::class.java).apply {
+                        putExtra("chat_id", action.chatId)
+                        putExtra("chat_type", action.chatType)
+                        putExtra("chat_name", action.name)
+                        putExtra("chat_avatar", action.avatar)
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    runCatching { context.startActivity(intent) }.isSuccess
+                }
+                is PluginAction.StartActivity -> {
+                    val ok = runCatching {
+                        val cls = Class.forName(action.activity)
+                        val intent = Intent(context, cls).apply {
+                            action.extras.forEach { (k, v) ->
+                                when (v) {
+                                    is Boolean -> putExtra(k, v)
+                                    is Int -> putExtra(k, v)
+                                    is Long -> putExtra(k, v)
+                                    is Float -> putExtra(k, v)
+                                    is Double -> putExtra(k, v)
+                                    else -> putExtra(k, interpolate(v?.toString().orEmpty(), env, pluginId))
+                                }
+                            }
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                        context.startActivity(intent)
+                    }.isSuccess
+                    ok
+                }
+                is PluginAction.RestartApp -> {
+                    val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)
+                    if (intent == null) {
+                        false
+                    } else {
+                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                        val started = runCatching { context.startActivity(intent) }.isSuccess
+                        if (started) Runtime.getRuntime().exit(0)
+                        started
+                    }
+                }
+                is PluginAction.Log -> {
+                    when (action.level.lowercase()) {
+                        "warn", "warning" -> PluginLogger.warn(context, pluginId, action.message)
+                        "error" -> PluginLogger.error(context, pluginId, action.message)
+                        else -> PluginLogger.info(context, pluginId, action.message)
+                    }
+                    true
+                }
+                is PluginAction.Share -> {
+                    val send = Intent(Intent.ACTION_SEND).apply {
+                        type = "text/plain"
+                        putExtra(Intent.EXTRA_TEXT, interpolate(action.content, env, pluginId))
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    runCatching {
+                        context.startActivity(
+                            Intent.createChooser(send, null).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        )
+                    }.isSuccess
+                }
                 is PluginAction.ReadData -> {
-                    val v = LuaPluginDataStorage.getInstance(context).get(pluginId, action.key).first()
+                    val v = LuaPluginDataStorage.getInstance(context).get(pluginId, action.key)
                     val target = action.target.removePrefix("var.")
                     PluginSession.setVar(pluginId, target, v)
+                    PluginSession.bumpPage()
                     true
                 }
                 is PluginAction.WriteData -> {
-                    LuaPluginDataStorage.getInstance(context).set(pluginId, action.key, interpolate(action.value, env, pluginId))
+                    val value = interpolate(action.value, env, pluginId)
+                    LuaPluginDataStorage.getInstance(context).set(pluginId, action.key, value)
+                    PluginSession.setVar(pluginId, action.key, value)
+                    PluginSession.bumpPage()
                     true
                 }
                 is PluginAction.Copy -> {
@@ -199,7 +300,7 @@ object PluginExecutor {
                     }
                     val f = fromEnv ?: fromVar ?: ""
                     val m = interpolate(action.isEquals, env, pluginId)
-                    val chosen = if (f == m) action.thenActions else action.elseActions
+                    val chosen = if (matchIf(f, action.op, m)) action.thenActions else action.elseActions
                     for (a in chosen) execSuspend(context, pluginId, a, env)
                     true
                 }
@@ -255,6 +356,22 @@ object PluginExecutor {
         }
 
     private val REGEX = Regex("\\{\\{\\s*([\\w.]+)\\s*\\}\\}")
+
+    private fun matchIf(value: String, op: String, expected: String): Boolean = when (op.lowercase()) {
+        "contains" -> when {
+            expected.isEmpty() -> value.isNotEmpty()
+            else -> expected.split("|", ",").any { token -> token.isNotBlank() && value.contains(token.trim()) }
+        }
+        "notcontains" -> expected.split("|", ",").none { token -> token.isNotBlank() && value.contains(token.trim()) }
+        "startswith" -> value.startsWith(expected)
+        "endswith" -> value.endsWith(expected)
+        "empty" -> value.isBlank()
+        "notempty" -> value.isNotBlank()
+        "gt" -> (value.toDoubleOrNull() ?: 0.0) > (expected.toDoubleOrNull() ?: 0.0)
+        "lt" -> (value.toDoubleOrNull() ?: 0.0) < (expected.toDoubleOrNull() ?: 0.0)
+        "ne" -> value != expected
+        else -> value == expected
+    }
 
     fun str(v: Any?, def: String = ""): String = (v as? LuaValue.Str)?.value ?: def
     fun text(t: LuaValue): String = (t as? LuaValue.Str)?.value ?: ""

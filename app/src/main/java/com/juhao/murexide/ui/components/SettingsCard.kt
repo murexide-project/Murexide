@@ -58,10 +58,11 @@ fun SettingsGroupHeader(
 
 @Composable
 fun SettingsGroupSurface(
-    isTop: Boolean,
-    isBottom: Boolean,
+    isTop: Boolean = false,
+    isBottom: Boolean = false,
     id: String? = null,
     highlightId: String? = null,
+    onClick: () -> Unit = {},
     content: @Composable () -> Unit
 ) {
     val shape = settingsItemShape(isTop, isBottom)
@@ -90,7 +91,8 @@ fun SettingsGroupSurface(
         Surface(
             shape = shape,
             color = MaterialTheme.colorScheme.surfaceContainerHigh,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            onClick = onClick
         ) {
             content()
         }

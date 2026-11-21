@@ -72,7 +72,15 @@ class PostDetailViewModel(
     fun loadDetail() {
         if (isDetailLoading) return
         if (_uiState.value.post != null) return
+        fetchDetail()
+    }
 
+    fun refreshDetail() {
+        if (isDetailLoading) return
+        fetchDetail()
+    }
+
+    private fun fetchDetail() {
         val repo = repository ?: return
 
         isDetailLoading = true

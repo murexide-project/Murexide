@@ -43,6 +43,17 @@ object PluginDispatcher {
         evaluateDecorates(context, pageClass, event, emptyMap())
     }
 
+    fun dispatchActivityEvent(activity: Activity, event: String, extras: Map<String, Any?> = emptyMap()) {
+        val pageClass = activity.javaClass.name
+        for ((pluginId, rule) in PluginSession.rulesFor(pageClass, event)) {
+            val pluginContext = PluginContext(activity, pluginId, uri = pageClass, event = event, extras = extras)
+            val env = pluginContext.toEnv(extras)
+            PluginExecutor.execute(activity, pluginId, rule.actions, env)
+        }
+        PluginSession.update(PluginSession.allPlugins())
+        evaluateDecorates(activity, pageClass, event, extras)
+    }
+
     private fun evaluateDecorates(
         context: Context,
         pageClass: String?,

@@ -118,7 +118,8 @@ fun MessageInput(
     limitedMsgType: List<Int> = emptyList(),
     accounts: List<UserAccount> = emptyList(),
     activeAccountId: String = "",
-    onSwitchAccount: (UserAccount) -> Unit = {}
+    onSwitchAccount: (UserAccount) -> Unit = {},
+    placeholder: String = ""
 ) {
     val localFieldValue = remember {
         mutableStateOf(
@@ -235,6 +236,7 @@ fun MessageInput(
             hintColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.65f),
             textSizeSp = MaterialTheme.typography.bodyLarge.fontSize.value,
             focusRequester = focusRequester,
+            hintText = placeholder.ifBlank { "输入消息..." },
             onValueChange = { new, updatedMentions, insertedText, insertPosition ->
                 localFieldValue.value = new
                 lastEmittedText = new.text

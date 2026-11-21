@@ -9,10 +9,12 @@ import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.os.Build
 import android.os.Bundle
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.juhao.murexide.R
 import com.juhao.murexide.network.WebSocketManager
+import com.juhao.murexide.ui.icons.AppIcons
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -27,7 +29,7 @@ object PluginPermissions {
     const val READ_SETTINGS = "readSettings"
     const val READ_ACCOUNT = "readAccount"
     const val OPEN_CHAT = "openChat"
-    const val NAVIGATE = "navigate"
+    const val START_ACTIVITY = "startActivity"
     const val RESTART = "restartApp"
     const val OPEN_URL = "openUrl"
     const val STORAGE = "storage"
@@ -37,7 +39,7 @@ object PluginPermissions {
 
     val KNOWN = setOf(
         NETWORK, CLIPBOARD, NOTIFICATION, VIBRATE, READ_SETTINGS,
-        READ_ACCOUNT, OPEN_CHAT, NAVIGATE, RESTART, OPEN_URL,
+        READ_ACCOUNT, OPEN_CHAT, START_ACTIVITY, RESTART, OPEN_URL,
         STORAGE, LOG, SHARE, ALL
     )
 
@@ -49,7 +51,7 @@ object PluginPermissions {
         READ_SETTINGS -> "读取应用设置"
         READ_ACCOUNT -> "读取当前账号"
         OPEN_CHAT -> "打开会话"
-        NAVIGATE -> "跳转页面"
+        START_ACTIVITY -> "启动 Activity"
         RESTART -> "重启应用"
         OPEN_URL -> "打开外部链接"
         STORAGE -> "插件存储"
@@ -57,6 +59,48 @@ object PluginPermissions {
         SHARE -> "系统分享"
         ALL -> "全部权限"
         else -> p
+    }
+
+    fun icon(p: String): ImageVector = when (p) {
+        NETWORK -> AppIcons.CloudUpload
+        CLIPBOARD -> AppIcons.ContentCopy
+        NOTIFICATION -> AppIcons.Notifications
+        VIBRATE -> AppIcons.PlayCircle
+        READ_SETTINGS -> AppIcons.Settings
+        READ_ACCOUNT -> AppIcons.Person
+        OPEN_CHAT -> AppIcons.ChatBubble
+        START_ACTIVITY -> AppIcons.NavigateNext
+        RESTART -> AppIcons.Refresh
+        OPEN_URL -> AppIcons.Link
+        STORAGE -> AppIcons.Storage
+        LOG -> AppIcons.Article
+        SHARE -> AppIcons.Share
+        ALL -> AppIcons.AdminPanelSettings
+        else -> AppIcons.Build
+    }
+
+    fun risk(p: String): Int = when (p) {
+        ALL -> 3
+        NETWORK, READ_ACCOUNT, READ_SETTINGS, OPEN_CHAT, START_ACTIVITY, RESTART, STORAGE -> 2
+        else -> 1
+    }
+
+    fun description(p: String): String = when (p) {
+        NETWORK -> "可向外部服务器收发数据，你的消息内容可能被插件读取"
+        CLIPBOARD -> "可读取或覆盖系统剪贴板内容"
+        NOTIFICATION -> "可向通知栏推送消息"
+        VIBRATE -> "可触发设备震动反馈"
+        READ_SETTINGS -> "可读取主题、开关等应用设置"
+        READ_ACCOUNT -> "可读取当前登录账号的用户名与头像"
+        OPEN_CHAT -> "可直接跳转到指定会话"
+        START_ACTIVITY -> "可通过完整类名启动应用内任意页面"
+        RESTART -> "可触发应用重启"
+        OPEN_URL -> "可调用浏览器打开任意链接"
+        STORAGE -> "可在插件自己的空间内持久化数据"
+        LOG -> "可写入插件日志文件"
+        SHARE -> "可调用系统分享面板"
+        ALL -> "等同于授予以上全部能力，请仅信任可信来源"
+        else -> "未知权限"
     }
 }
 

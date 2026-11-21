@@ -1,12 +1,15 @@
 package com.juhao.murexide.ui.community.detail
 
-import com.juhao.murexide.ui.icons.AppIcons
-import com.juhao.murexide.ui.icons.AutoMirroredIcon
+import com.juhao.murexide.ui.icons.*
 
+import android.app.Activity
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.Intent
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -79,6 +82,14 @@ fun PostDetailScreen(
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showInputSheet by remember { mutableStateOf(false) }
     var replyToComment by remember { mutableStateOf<CommentItem?>(null) }
+
+    val editLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            viewModel.refreshDetail()
+        }
+    }
 
     val shouldLoadMore by remember {
         derivedStateOf {
@@ -261,12 +272,14 @@ fun PostDetailScreen(
                                     text = { Text("编辑文章") },
                                     onClick = {
                                         showMenu = false
-                                        CreatePostActivity.startEdit(
-                                            context = context,
-                                            content = uiState.post?.content ?: "",
-                                            contentType = uiState.post?.contentType ?: 1,
-                                            postId = uiState.post?.id ?: return@DropdownMenuItem,
-                                            title = uiState.post?.title ?: ""
+                                        val post = uiState.post ?: return@DropdownMenuItem
+                                        editLauncher.launch(
+                                            Intent(context, CreatePostActivity::class.java).apply {
+                                                putExtra(CreatePostActivity.EXTRA_POST_ID, post.id)
+                                                putExtra(CreatePostActivity.EXTRA_TITLE, post.title)
+                                                putExtra(CreatePostActivity.EXTRA_CONTENT, post.content)
+                                                putExtra(CreatePostActivity.EXTRA_CONTENT_TYPE, post.contentType)
+                                            }
                                         )
                                     },
                                     leadingIcon = {
@@ -510,7 +523,7 @@ private fun CommentBottomBar(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 BottomBarAction(
-                    icon = if (isLiked) AppIcons.Favorite else AppIcons.FavoriteBorder,
+                    icon = if (isLiked) AppFilledIcons.Favorite else AppIcons.Favorite,
                     count = likeCount,
                     tint = if (isLiked) MaterialTheme.colorScheme.error
                     else MaterialTheme.colorScheme.onSurfaceVariant,
@@ -801,7 +814,7 @@ private fun CommentRow(
             if (comment.likeNum > 0) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
-                        if (comment.isLiked == "1") AppIcons.Favorite else AppIcons.FavoriteBorder,
+                        if (comment.isLiked == "1") AppFilledIcons.Favorite else AppIcons.Favorite,
                         contentDescription = null,
                         modifier = Modifier.size(14.dp),
                         tint = if (comment.isLiked == "1") MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
@@ -905,14 +918,14 @@ private fun PostShareSheet(
                 isLoading -> Box(
                     Modifier
                         .fillMaxWidth()
-                        .height(200.dp),
+                        .weight(1f, fill = false),
                     contentAlignment = Alignment.Center
                 ) { CircularProgressIndicator() }
 
                 filtered.isEmpty() -> Box(
                     Modifier
                         .fillMaxWidth()
-                        .height(200.dp),
+                        .weight(1f, fill = false),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
@@ -924,7 +937,7 @@ private fun PostShareSheet(
                 else -> LazyColumn(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(max = 400.dp),
+                        .weight(1f, fill = false),
                     contentPadding = PaddingValues(vertical = 4.dp)
                 ) {
                     items(filtered, key = { "${it.chatType}:${it.chatId}" }) { target ->

@@ -44,14 +44,10 @@ class PluginContext(
     fun getVar(key: String): Any? = vars[key] ?: extraMap[key]
 
     fun setKv(key: String, value: String) {
-        runBlocking {
-            storage.set(pluginId, key, value)
-        }
+        storage.set(pluginId, key, value)
     }
 
-    fun getKv(key: String): String? = runBlocking {
-        storage.get(pluginId, key).first()
-    }
+    fun getKv(key: String): String? = storage.get(pluginId, key)
 
     fun resolve(path: String): Any? {
         return when {
@@ -78,9 +74,10 @@ class PluginContext(
                 else -> null
             }
             path.startsWith("var.") -> vars[path.removePrefix("var.")]
+                    ?: PluginSession.getVar(pluginId, path.removePrefix("var."))
             path.startsWith("kv.") -> getKv(path.removePrefix("kv."))
             path.startsWith("extra.") -> extraMap[path.removePrefix("extra.")]
-            else -> vars[path] ?: extraMap[path]
+            else -> extraMap[path] ?: vars[path]
         }
     }
 
@@ -153,8 +150,10 @@ class PluginContext(
             env["app.package"] = context.packageName
         }
 
-        extra.forEach { (k, v) -> env[k] = v }
+        extra.forEach { (k, v) -> env["$k"] = v }
+        extra.forEach { (k, v) -> env["extra.$k"] = v }
         vars.forEach { (k, v) -> env["var.$k"] = v }
+        PluginSession.varsFor(pluginId).forEach { (k, v) -> env["var.$k"] = v }
         return env
     }
 }

@@ -11,7 +11,7 @@ import java.io.File
 object PluginLoader {
 
     private val SCRIPT_NAMES = listOf(
-        "OnActivityEvent.lua", "onEvent.lua", "Global.lua", "PageRegister.lua", "onInstalled.lua"
+        "OnActivityEvent.lua", "onEvent.lua", "Global.lua", "PageRegister.lua"
     )
 
     fun load(context: Context): List<Plugin> {
@@ -30,6 +30,7 @@ object PluginLoader {
                     name = meta.optString("name", manifestId),
                     author = meta.optString("author").ifBlank { null },
                     version = meta.optInt("version", 1),
+                    minVersion = meta.optInt("minVersion", 0),
                     enabled = meta.optBoolean("enabled", true),
                     permissions = permissions
                 )
@@ -50,6 +51,46 @@ object PluginLoader {
             PluginLogger.warn(context, pluginId, "unknown permissions: $unknown")
         }
         return all.intersect(PluginPermissions.KNOWN)
+    }
+
+    fun executeInstalledScript(context: Context, pluginId: String, pluginDir: File) {
+        val scriptFile = File(pluginDir, "onInstalled.lua")
+        if (!scriptFile.exists()) return
+        try {
+            val env = PluginContext(context, pluginId).toEnv()
+            LuaState(
+                LuaConfig(
+                    stdlibs = setOf(
+                        StdLib.BASE, StdLib.TABLE, StdLib.STRING,
+                        StdLib.MATH, StdLib.COROUTINE, StdLib.UTF8
+                    )
+                )
+            ).use { lua ->
+                val run = { tag: String, args: List<LuaValue> ->
+                    parseAction(actionTable(lua, tag, args))
+                        ?.let { PluginExecutor.execute(context, pluginId, listOf(it), env) }
+                    emptyList<LuaValue>()
+                }
+                lua.register("Toast") { args -> run("toast", args) }
+                lua.register("Alert") { args -> run("alert", args) }
+                lua.register("Notify") { args -> run("notify", args) }
+                lua.register("Vibrate") { args -> run("vibrate", args) }
+                lua.register("OpenChat") { args -> run("openChat", args) }
+                lua.register("StartActivity") { args -> run("startActivity", args) }
+                lua.register("RestartApp") { args -> run("restartApp", args) }
+                lua.register("Log") { args -> run("log", args) }
+                lua.register("Share") { args -> run("share", args) }
+                lua.register("Copy") { args -> run("copy", args) }
+                lua.register("OpenUrl") { args -> run("openUrl", args) }
+                lua.register("writeData") { args -> run("writeData", args) }
+                lua.register("readData") { args -> run("readData", args) }
+                lua.register("Http") { args -> run("http", args) }
+                lua.register("If") { args -> run("if", args) }
+                lua.eval(scriptFile.readText())
+            }
+        } catch (t: Throwable) {
+            PluginLogger.error(context, pluginId, "onInstalled.lua: ${t.message}")
+        }
     }
 
     private fun parsePlugin(context: Context, manifest: PluginManifest, pluginDir: File): Plugin? {
@@ -119,6 +160,12 @@ object PluginLoader {
         lua.register("Toast") { args -> listOf(actionTable(lua, "toast", args)) }
         lua.register("Alert") { args -> listOf(actionTable(lua, "alert", args)) }
         lua.register("Notify") { args -> listOf(actionTable(lua, "notify", args)) }
+        lua.register("Vibrate") { args -> listOf(actionTable(lua, "vibrate", args)) }
+        lua.register("OpenChat") { args -> listOf(actionTable(lua, "openChat", args)) }
+        lua.register("StartActivity") { args -> listOf(actionTable(lua, "startActivity", args)) }
+        lua.register("RestartApp") { args -> listOf(actionTable(lua, "restartApp", args)) }
+        lua.register("Log") { args -> listOf(actionTable(lua, "log", args)) }
+        lua.register("Share") { args -> listOf(actionTable(lua, "share", args)) }
         lua.register("Copy") { args -> listOf(actionTable(lua, "copy", args)) }
         lua.register("OpenUrl") { args -> listOf(actionTable(lua, "openUrl", args)) }
         lua.register("writeData") { args -> listOf(actionTable(lua, "writeData", args)) }
@@ -158,6 +205,39 @@ object PluginLoader {
                 )
             }
             "notify" -> PluginAction.Notify(lit(t, "title"), lit(t, "content"))
+            "vibrate" -> PluginAction.Vibrate(
+                duration = lit(t, "duration", "300").toLongOrNull() ?: 300L
+            )
+            "openChat" -> PluginAction.OpenChat(
+                chatId = lit(t, "chatId").ifBlank { lit(t, "id") },
+                chatType = lit(t, "chatType", "2").toIntOrNull() ?: 2,
+                name = lit(t, "name"),
+                avatar = lit(t, "avatar")
+            )
+            "startActivity" -> {
+                val extraTbl = t[LuaValue.Str("extras")] as? LuaValue.Table
+                val extras = mutableMapOf<String, Any?>()
+                extraTbl?.toMap()?.forEach { (k, v) ->
+                    val key = (k as? LuaValue.Str)?.value ?: return@forEach
+                    val value: Any? = when (v) {
+                        is LuaValue.Str -> v.value
+                        is LuaValue.Integer -> v.value
+                        is LuaValue.Number -> v.value
+                        else -> return@forEach
+                    }
+                    extras[key] = value
+                }
+                PluginAction.StartActivity(
+                    activity = lit(t, "activity").ifBlank { lit(t, "class") },
+                    extras = extras
+                )
+            }
+            "restartApp" -> PluginAction.RestartApp()
+            "log" -> PluginAction.Log(
+                level = lit(t, "level", "info").ifBlank { "info" },
+                message = lit(t, "content").ifBlank { lit(t, "message") }
+            )
+            "share" -> PluginAction.Share(lit(t, "content"))
             "copy" -> PluginAction.Copy(lit(t, "content"))
             "openUrl" -> PluginAction.OpenUrl(lit(t, "url").ifBlank { lit(t, "content") })
             "writeData" -> PluginAction.WriteData(lit(t, "name"), lit(t, "value"))
@@ -182,7 +262,8 @@ object PluginLoader {
             }
             "if" -> PluginAction.If(
                 field = lit(t, "field").ifBlank { lit(t, "key") },
-                isEquals = lit(t, "equals", ""),
+                isEquals = lit(t, "equals").ifBlank { lit(t, "value") },
+                op = lit(t, "op", "eq").ifBlank { "eq" },
                 thenActions = collectActions(t[LuaValue.Str("then")] as? LuaValue.Table),
                 elseActions = collectActions(t[LuaValue.Str("else")] as? LuaValue.Table)
             )

@@ -29,6 +29,13 @@ object PluginSession {
     private val _decorateRules = MutableStateFlow<List<Pair<String, PluginAction.Decorate>>>(emptyList())
     val decorateRules = _decorateRules.asStateFlow()
 
+    private val _pageTick = MutableStateFlow(0)
+    val pageTick: StateFlow<Int> = _pageTick.asStateFlow()
+
+    fun bumpPage() {
+        _pageTick.value = _pageTick.value + 1
+    }
+
     private val _activeDecorates = MutableStateFlow<List<ActiveDecorate>>(emptyList())
     val activeDecorates = _activeDecorates.asStateFlow()
 
@@ -78,6 +85,11 @@ object PluginSession {
     }
 
     fun getVar(pluginId: String, key: String): Any? = globalVars["$pluginId.$key"]
+
+    fun varsFor(pluginId: String): Map<String, Any?> =
+        globalVars.entries
+            .filter { it.key.startsWith("$pluginId.") }
+            .associate { it.key.removePrefix("$pluginId.") to it.value }
 
     fun anyVar(key: String): Any? = globalVars[key]
 

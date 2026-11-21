@@ -52,7 +52,12 @@ class CreatePostActivity : ComponentActivity() {
                     baName = baName,
                     onClose = { finish() },
                     onPublished = {
-                        Toast.makeText(this, "发布成功", Toast.LENGTH_SHORT).show()
+                        if (isEditMode) setResult(RESULT_OK)
+                        Toast.makeText(
+                            this,
+                            if (isEditMode) "编辑成功" else "发布成功",
+                            Toast.LENGTH_SHORT
+                        ).show()
                         finish()
                     },
                     viewModel = viewModel,
@@ -77,19 +82,6 @@ class CreatePostActivity : ComponentActivity() {
             val intent = Intent(context, CreatePostActivity::class.java).apply {
                 putExtra(EXTRA_BA_ID, baId)
                 putExtra(EXTRA_BA_NAME, baName)
-                if (context !is ComponentActivity) {
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                }
-            }
-            context.startActivity(intent)
-        }
-
-        fun startEdit(context: Context, postId: Int, title: String, content: String, contentType: Int) {
-            val intent = Intent(context, CreatePostActivity::class.java).apply {
-                putExtra(EXTRA_POST_ID, postId)
-                putExtra(EXTRA_TITLE, title)
-                putExtra(EXTRA_CONTENT, content)
-                putExtra(EXTRA_CONTENT_TYPE, contentType)
                 if (context !is ComponentActivity) {
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 }

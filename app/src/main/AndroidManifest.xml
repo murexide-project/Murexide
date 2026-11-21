@@ -144,6 +144,10 @@
             android:exported="false"
             android:theme="@style/Theme.Murexide" />
         <activity
+            android:name=".plugin.PluginDocsActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Murexide" />
+        <activity
             android:name=".ui.login.LoginActivity"
             android:exported="false"
             android:theme="@style/Theme.Murexide" />

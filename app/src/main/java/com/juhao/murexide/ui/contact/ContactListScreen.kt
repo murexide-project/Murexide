@@ -428,7 +428,10 @@ private fun NewMessageShortcut(
 
 @Composable
 private fun ContactSectionHeader(initial: Char) {
-    SettingsGroupHeader(title = initial.toString())
+    SettingsGroupHeader(
+        title = initial.toString(),
+        modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface.copy(alpha = 0.6f))
+    )
 }
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -685,8 +688,7 @@ private fun NewMessagesScreen(
                 )
                 else -> LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = paddingValues,
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    contentPadding = paddingValues
                 ) {
                     if (uiState.isRequestsLoading) {
                         item(key = "request_loading") {
@@ -702,12 +704,14 @@ private fun NewMessagesScreen(
                             InlineError(message = uiState.requestsError, onRetry = onRefresh)
                         }
                     }
-                    items(
+                    itemsIndexed(
                         items = requests,
-                        key = { it.requestId },
-                        contentType = { "request" }
-                    ) { request ->
+                        key = { _, request -> request.requestId },
+                        contentType = { _, _ -> "request" }
+                    ) { index, request ->
                         RequestSurface(
+                            isTop = index == 0,
+                            isBottom = index == requests.size,
                             request = request,
                             isProcessing = request.requestId in uiState.processingRequestIds,
                             onRespond = { accept -> onRespond(request.requestId, accept) }
@@ -724,6 +728,8 @@ private fun NewMessagesScreen(
 
 @Composable
 private fun RequestSurface(
+    isTop: Boolean,
+    isBottom: Boolean,
     request: ContactRequestItem,
     isProcessing: Boolean,
     onRespond: (Boolean) -> Unit
@@ -733,11 +739,9 @@ private fun RequestSurface(
         add(request.typeLabel)
     }.joinToString(" · ")
 
-    Surface(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
-        shape = MaterialTheme.shapes.large,
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
-        tonalElevation = 1.dp
+    SettingsGroupSurface(
+        isTop = isTop,
+        isBottom = isBottom
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             Row(

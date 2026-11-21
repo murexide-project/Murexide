@@ -49,7 +49,7 @@ internal fun MessageText(
             mapOf(
                 reserveId to InlineTextContent(
                     Placeholder(
-                        width = (trailingReserveWidthPx!! / density.density).sp,
+                        width = (trailingReserveWidthPx / density.density).sp,
                         height = 1.em,
                         placeholderVerticalAlign = PlaceholderVerticalAlign.TextBottom
                     )

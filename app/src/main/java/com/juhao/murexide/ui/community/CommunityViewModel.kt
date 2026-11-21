@@ -1,11 +1,14 @@
 package com.juhao.murexide.ui.community
 
+import android.content.Context
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.juhao.murexide.data.BaItem
 import com.juhao.murexide.data.PostItem
 import com.juhao.murexide.repository.AuthRepository
 import com.juhao.murexide.repository.CommunityRepository
+import com.juhao.murexide.utils.QiniuUploader
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -245,6 +248,58 @@ class CommunityViewModel(
         }
     }
 
+    fun uploadBaAvatar(context: Context, uri: Uri) {
+        if (_uiState.value.isUploadingAvatar || _uiState.value.isCreatingBa) return
+        viewModelScope.launch {
+            _uiState.update { it.copy(isUploadingAvatar = true, uploadProgress = 0f, error = null) }
+            QiniuUploader(context, token, enableWebp = true).uploadFromUri(context, uri) { progress ->
+                _uiState.update { it.copy(uploadProgress = progress) }
+            }.onSuccess { response ->
+                _uiState.update {
+                    it.copy(
+                        isUploadingAvatar = false,
+                        avatarUrl = "https://chat-img.jwznb.com/${response.key}"
+                    )
+                }
+            }.onFailure { error ->
+                _uiState.update {
+                    it.copy(
+                        isUploadingAvatar = false,
+                        error = "头像上传失败: ${error.message}"
+                    )
+                }
+            }
+        }
+    }
+
+    fun createBa(name: String, onResult: (Boolean, String?) -> Unit) {
+        if (_uiState.value.isCreatingBa || _uiState.value.isUploadingAvatar) return
+        if (name.isBlank()) {
+            onResult(false, "分区名称不能为空")
+            return
+        }
+        viewModelScope.launch {
+            _uiState.update { it.copy(isCreatingBa = true, error = null) }
+            repository.createBa(name = name.trim(), avatar = _uiState.value.avatarUrl)
+                .onSuccess {
+                    _uiState.update {
+                        it.copy(
+                            isCreatingBa = false,
+                            avatarUrl = "",
+                            uploadProgress = 0f
+                        )
+                    }
+                    onResult(true, null)
+                    loadManageBa()
+                    loadAllBa()
+                }
+                .onFailure { e ->
+                    _uiState.update { it.copy(isCreatingBa = false, error = e.message) }
+                    onResult(false, e.message ?: "创建分区失败")
+                }
+        }
+    }
+
     fun toggleLike(postId: Int) {
         viewModelScope.launch {
             repository.toggleLike(postId).onSuccess { updatePostLike(postId) }
@@ -437,5 +492,9 @@ data class CommunityUiState(
     val isLoadingAllBa: Boolean = false,
     val manageBaList: List<BaItem> = emptyList(),
     val isLoadingManageBa: Boolean = false,
+    val isCreatingBa: Boolean = false,
+    val avatarUrl: String = "",
+    val isUploadingAvatar: Boolean = false,
+    val uploadProgress: Float = 0f,
     val error: String? = null
 )

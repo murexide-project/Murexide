@@ -41,7 +41,7 @@ class PluginActivityCallbacks : Application.ActivityLifecycleCallbacks {
 
     private fun dispatch(activity: Activity, event: String) {
         try {
-            PluginDispatcher.dispatchPageEvent(activity, activity.javaClass.name, event)
+            PluginDispatcher.dispatchActivityEvent(activity, event)
         } catch (t: Throwable) {
             PluginLogger.error(activity, "plugin", "page event $event failed: ${t.message}")
         }

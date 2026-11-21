@@ -48,6 +48,7 @@ private fun PluginFunctionScreen(entryId: String, onBack: () -> Unit) {
     val pluginId = PluginManager.manifestForEntry(entryId)
     val entry = PluginManager.entryById(entryId)
     val revision by PluginSession.revision.collectAsState()
+    val pageTick by PluginSession.pageTick.collectAsState()
 
     if (entry == null || pluginId == null) {
         StyledScaffold(
@@ -70,7 +71,7 @@ private fun PluginFunctionScreen(entryId: String, onBack: () -> Unit) {
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            val env = remember(revision, pluginId) {
+            val env = remember(revision, pageTick, pluginId) {
                 PluginContext(context, pluginId).toEnv()
             }
             PluginWidgetRenderer(entry.page, pluginId, env)
