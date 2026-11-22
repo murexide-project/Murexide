@@ -824,11 +824,14 @@ fun PostCard(
                         fontWeight = FontWeight.Medium,
                         fontSize = 15.sp
                     )
-                    Text(
-                        text = post.createTimeText,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        fontSize = 12.sp
-                    )
+                    
+                    if (post.createTimeText.isNotEmpty()) {
+                        Text(
+                            text = post.createTimeText,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontSize = 12.sp
+                        )
+                    }
                 }
             }
     

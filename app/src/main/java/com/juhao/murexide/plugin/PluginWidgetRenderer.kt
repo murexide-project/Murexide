@@ -85,6 +85,102 @@ fun PluginWidgetRenderer(
             color = widget.color?.let { safeColor(it) } ?: MaterialTheme.colorScheme.onSurface,
             modifier = base
         )
+        "textfield" -> {
+            val model = widget.model ?: ""
+            val key = if (model.startsWith("var.")) model else "var.$model"
+            var text by remember {
+                mutableStateOf(env[key]?.toString() ?: widget.content.orEmpty())
+            }
+            OutlinedTextField(
+                value = text,
+                onValueChange = { new ->
+                    text = new
+                    if (model.isNotBlank()) {
+                        PluginSession.setVar(pluginId, model.removePrefix("var."), new)
+                        PluginSession.bumpPage()
+                    }
+                },
+                placeholder = widget.placeholder?.let { ph ->
+                    { Text(PluginExecutor.interpolate(ph, env, pluginId)) }
+                },
+                singleLine = true,
+                modifier = base.fillMaxWidth()
+            )
+        }
+        "dropdown" -> {
+            val model = widget.model ?: ""
+            val key = if (model.startsWith("var.")) model else "var.$model"
+            val options = widget.options
+            var selected by remember {
+                mutableStateOf(env[key]?.toString() ?: options.firstOrNull().orEmpty())
+            }
+            var expanded by remember { mutableStateOf(false) }
+            Column(modifier = base.fillMaxWidth()) {
+                OutlinedButton(
+                    onClick = { expanded = true },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        if (selected.isBlank()) {
+                            "请选择"
+                        } else {
+                            PluginExecutor.interpolate(selected, env, pluginId)
+                        },
+                        modifier = Modifier.weight(1f)
+                    )
+                    Icon(
+                        AppIcons.ExpandMore,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                    options.forEach { opt ->
+                        DropdownMenuItem(
+                            text = { Text(PluginExecutor.interpolate(opt, env, pluginId)) },
+                            onClick = {
+                                selected = opt
+                                expanded = false
+                                if (model.isNotBlank()) {
+                                    PluginSession.setVar(pluginId, model.removePrefix("var."), opt)
+                                    PluginSession.bumpPage()
+                                }
+                            }
+                        )
+                    }
+                }
+            }
+        }
+        "slider" -> {
+            val model = widget.model ?: ""
+            val key = if (model.startsWith("var.")) model else "var.$model"
+            val min = widget.min ?: 0f
+            val max = (widget.max ?: 100f).coerceAtLeast(min + 1f)
+            var value by remember {
+                mutableStateOf(env[key]?.toString()?.toFloatOrNull() ?: min)
+            }
+            Column(modifier = base.fillMaxWidth()) {
+                Slider(
+                    value = value.coerceIn(min, max),
+                    onValueChange = { v ->
+                        val stepped = widget.step?.let { s -> (v / s).toInt() * s } ?: v
+                        value = stepped.coerceIn(min, max)
+                        if (model.isNotBlank()) {
+                            PluginSession.setVar(pluginId, model.removePrefix("var."), value.toString())
+                            PluginSession.bumpPage()
+                        }
+                    },
+                    valueRange = min..max
+                )
+                Text(
+                    value.toString(),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        }
         "button" -> Button(
             onClick = { PluginExecutor.execute(context, pluginId, widget.onClick, env) },
             modifier = base

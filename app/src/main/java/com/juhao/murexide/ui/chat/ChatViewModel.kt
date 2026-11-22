@@ -1661,6 +1661,7 @@ class ChatViewModel(
         _uiState.update {
             it.copy(
                 editingMessage = message,
+                draftText = if (it.draftText.isEmpty()) it.inputText else it.draftText,
                 inputText = message.content,
                 inputSelectionStart = message.content.length,
                 inputSelectionEnd = message.content.length,
@@ -1682,7 +1683,8 @@ class ChatViewModel(
         _uiState.update {
             it.copy(
                 editingMessage = null,
-                inputText = "",
+                inputText = it.draftText,
+                draftText = "",
                 inputSelectionStart = 0,
                 inputSelectionEnd = 0,
                 mentions = emptyList(),
@@ -1722,7 +1724,8 @@ class ChatViewModel(
                     it.copy(
                         isSending = false,
                         editingMessage = null,
-                        inputText = "",
+                        inputText = it.draftText,
+                        draftText = "",
                         inputSelectionStart = 0,
                         inputSelectionEnd = 0,
                         mentions = emptyList(),

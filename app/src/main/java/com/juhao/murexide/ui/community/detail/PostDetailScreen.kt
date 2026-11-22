@@ -267,6 +267,21 @@ fun PostDetailScreen(
                                     Icon(AppIcons.Share, contentDescription = null)
                                 }
                             )
+                            DropdownMenuItem(
+                                text = { Text("复制链接") },
+                                onClick = {
+                                    showMenu = false
+                                    val id = uiState.post?.id ?: return@DropdownMenuItem
+                                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                    clipboard.setPrimaryClip(
+                                        ClipData.newPlainText("post_link", "https://www.yhchat.com/c/p/$id")
+                                    )
+                                    Toast.makeText(context, "链接已复制", Toast.LENGTH_SHORT).show()
+                                },
+                                leadingIcon = {
+                                    Icon(AppIcons.Link, contentDescription = null)
+                                }
+                            )
                             if (uiState.isManageEnabled) {
                                 DropdownMenuItem(
                                     text = { Text("编辑文章") },

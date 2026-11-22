@@ -29,6 +29,7 @@ object PluginLoader {
                     id = manifestId,
                     name = meta.optString("name", manifestId),
                     author = meta.optString("author").ifBlank { null },
+                    description = meta.optString("description").ifBlank { null },
                     version = meta.optInt("version", 1),
                     minVersion = meta.optInt("minVersion", 0),
                     enabled = meta.optBoolean("enabled", true),
@@ -175,6 +176,9 @@ object PluginLoader {
 
         lua.register("Button") { args -> listOf(widgetTable(lua, "button", args)) }
         lua.register("Text") { args -> listOf(widgetTable(lua, "text", args)) }
+        lua.register("TextField") { args -> listOf(widgetTable(lua, "textfield", args)) }
+        lua.register("Dropdown") { args -> listOf(widgetTable(lua, "dropdown", args)) }
+        lua.register("Slider") { args -> listOf(widgetTable(lua, "slider", args)) }
         lua.register("Column") { args -> listOf(widgetTable(lua, "column", args)) }
         lua.register("Row") { args -> listOf(widgetTable(lua, "row", args)) }
         lua.register("Spacer") { args -> listOf(widgetTable(lua, "spacer", args)) }
@@ -296,7 +300,22 @@ object PluginLoader {
             children = (t[LuaValue.Str("children")] as? LuaValue.Table)?.let { tbl ->
                 tbl.toMap().values.mapNotNull { (it as? LuaValue.Table)?.let(::parseWidget) }
             } ?: emptyList(),
-            onClick = collectActions(t[LuaValue.Str("onClick")] as? LuaValue.Table)
+            onClick = collectActions(t[LuaValue.Str("onClick")] as? LuaValue.Table),
+            model = lit(t, "model").ifBlank { null },
+            placeholder = lit(t, "placeholder").ifBlank { null },
+            options = (t[LuaValue.Str("options")] as? LuaValue.Table)?.let { tbl ->
+                tbl.toMap().values.mapNotNull { v ->
+                    when (v) {
+                        is LuaValue.Str -> v.value
+                        is LuaValue.Integer -> v.value.toString()
+                        is LuaValue.Number -> v.value.toString()
+                        else -> null
+                    }
+                }
+            } ?: emptyList(),
+            min = num("min"),
+            max = num("max"),
+            step = num("step")
         )
     }
 

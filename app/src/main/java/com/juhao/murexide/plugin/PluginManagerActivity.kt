@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.juhao.murexide.ui.components.*
 import com.juhao.murexide.ui.icons.AppIcons
@@ -54,6 +55,7 @@ private data class PendingInstall(
     val zip: File,
     val id: String,
     val name: String,
+    val description: String?,
     val minVersion: Int,
     val permissions: Set<String>
 )
@@ -88,11 +90,12 @@ fun PluginManagerScreen(onBack: () -> Unit) {
             val meta = z.getInputStream(entry).bufferedReader().use { JSONObject(it.readText()) }
             val id = meta.optString("id")
             val name = meta.optString("name", id)
+            val description = meta.optString("description").ifBlank { null }
             val minVersion = meta.optInt("minVersion", 0)
             val permsArr = meta.optJSONArray("permissions")
             val perms = if (permsArr == null) emptySet() else
                 (0 until permsArr.length()).mapNotNull { permsArr.optString(it).ifBlank { null } }.toSet()
-            PendingInstall(zip, id, name, minVersion, perms)
+            PendingInstall(zip, id, name, description, minVersion, perms)
         }
     }.getOrNull()
 
@@ -149,6 +152,10 @@ fun PluginManagerScreen(onBack: () -> Unit) {
                         .fillMaxWidth()
                         .verticalScroll(rememberScrollState())
                 ) {
+                    pi.description?.let {
+                        Text(it, style = MaterialTheme.typography.bodyMedium)
+                        Spacer(Modifier.height(12.dp))
+                    }
                     if (pi.minVersion > 0) {
                         Surface(
                             color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
@@ -358,6 +365,16 @@ private fun PluginCard(
                     .padding(16.dp)
             ) {
                 Text(manifest.name, style = MaterialTheme.typography.titleMedium)
+                manifest.description?.let {
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        it,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 3,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
                 Spacer(Modifier.height(4.dp))
                 Text(
                     "v${manifest.version}${manifest.author?.let { " · $it" } ?: ""} · ${formatSize(sizeBytes)}",

@@ -1,8 +1,11 @@
 package com.juhao.murexide.plugin
 
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -18,6 +21,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.juhao.murexide.ui.components.MarkdownText
 import com.juhao.murexide.ui.components.StyledScaffold
@@ -44,9 +48,19 @@ class PluginDocsActivity : ComponentActivity() {
 
 @Composable
 private fun PluginDocsScreen(onBack: () -> Unit) {
+    val context = LocalContext.current
     StyledScaffold(
         title = { Text("插件开发文档") },
-        navigationIcon = { IconButton(onClick = onBack) { Icon(AppIcons.ArrowBack, "返回") } }
+        navigationIcon = { IconButton(onClick = onBack) { Icon(AppIcons.ArrowBack, "返回") } },
+        actions = {
+            IconButton(onClick = {
+                val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                cm.setPrimaryClip(ClipData.newPlainText("plugin_docs", PluginDocs.MARKDOWN))
+                Toast.makeText(context, "文档已复制", Toast.LENGTH_SHORT).show()
+            }) {
+                Icon(AppIcons.ContentCopy, "复制完整文档")
+            }
+        }
     ) { padding ->
         Surface(color = MaterialTheme.colorScheme.surface, modifier = Modifier.fillMaxSize()) {
             MarkdownText(
@@ -164,6 +178,7 @@ writeData({ name = "installed_at", value = "{{time.datetime}}" })
 | --- | --- | --- | --- |
 | `id` | string | 无，必填 | 插件唯一标识，建议用下划线命名，不要含空格与斜杠 |
 | `name` | string | 同 `id` | 显示名称 |
+| `description` | string | 空 | 插件简介，显示在安装确认弹窗与插件管理卡片上 |
 | `author` | string | 空 | 作者，可为空 |
 | `version` | int | `1` | 版本号，仅用于展示 |
 | `minVersion` | int | `0` | 要求的最低应用 versionCode，低于当前应用版本时拒绝安装 |
@@ -556,10 +571,15 @@ registerPage({
 | `Row({ children = {...} })` | 横向排列 |
 | `Text({ content = "..." })` | 文本 |
 | `Button({ content = "...", onClick = {...} })` | 按钮 |
+| `TextField({ model = "var.input", placeholder = "..." })` | 文本输入框，输入实时写入 `model` 绑定变量 |
+| `Dropdown({ options = {...}, model = "var.choice" })` | 下拉选择，选中项写入 `model` 绑定变量 |
+| `Slider({ min = 0, max = 100, step = 1, model = "var.level" })` | 滑块，拖动值写入 `model` 绑定变量（显示当前值） |
 | `Spacer({ size = 8 })` | 空白间距，单位 dp |
 | `Image({ src = "..." })` | 图片 |
 | `Card` | 卡片容器（仅 `type = "card"` 可识别） |
 | `Divider` | 分隔线（仅 `type = "divider"` 可识别） |
+
+三个交互控件（`TextField` / `Dropdown` / `Slider`）通过 `model` 绑定运行时变量：`model = "var.xxx"` 或直接 `"xxx"` 等价。输入/选择/拖动会实时写入 `var.xxx`，页面里其他 `{{var.xxx}}` 文本随之刷新；`TextField` 的 `content` 作初始值、`placeholder` 作占位提示，`Dropdown` 的 `options` 与 `Slider` 的 `min/max/step` 均支持，`options` 和 `placeholder` 支持插值。
 
 ### 8.3 通用属性
 

@@ -179,6 +179,7 @@ data class ChatUiState(
     val isRefreshing: Boolean = false,
     val error: String? = null,
     val inputText: String = "",
+    val draftText: String = "",
     val inputSelectionStart: Int = 0,
     val inputSelectionEnd: Int = 0,
     val replyTo: MessageItem? = null,

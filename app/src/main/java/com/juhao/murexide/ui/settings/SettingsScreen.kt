@@ -330,8 +330,8 @@ private fun SettingsHomeScreen(
                                     .size(8.dp)
                                     .clip(RoundedCornerShape(4.dp))
                                     .background(
-                                        if (connected) Color(0xFF4CAF50)
-                                        else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                                        if (connected) MaterialTheme.colorScheme.primary
+                                        else MaterialTheme.colorScheme.error
                                     )
                             )
                         },

@@ -81,7 +81,13 @@ data class PluginWidget(
     val paddingV: Float? = null,
     val align: String? = null,
     val children: List<PluginWidget> = emptyList(),
-    val onClick: List<PluginAction> = emptyList()
+    val onClick: List<PluginAction> = emptyList(),
+    val model: String? = null,
+    val placeholder: String? = null,
+    val options: List<String> = emptyList(),
+    val min: Float? = null,
+    val max: Float? = null,
+    val step: Float? = null
 )
 
 data class PluginPage(
@@ -102,6 +108,7 @@ class PluginManifest(
     val id: String,
     val name: String,
     val author: String?,
+    val description: String? = null,
     val version: Int,
     val minVersion: Int = 0,
     val enabled: Boolean,
