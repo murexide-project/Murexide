@@ -2,10 +2,8 @@ package com.juhao.murexide.ui.theme
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
-import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
@@ -94,7 +92,6 @@ private fun contrastRatio(foreground: Color, background: Color): Float {
     val darker = minOf(visibleForeground.luminance(), background.luminance())
     return (lighter + 0.05f) / (darker + 0.05f)
 }
-
 
 /** Returns the adaptive neutral while inside a glass surface and the exact fallback elsewhere. */
 @Composable

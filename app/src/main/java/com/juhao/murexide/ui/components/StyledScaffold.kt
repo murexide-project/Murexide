@@ -81,7 +81,7 @@ fun StyledScaffold(
             backgroundColor(surfaceColor)
             colorEffects(
                 listOf(
-                    HazeColorEffect.tint(surfaceColor)-
+                    HazeColorEffect.tint(surfaceColor)
                 )
             )
             noiseFactor(0.02f)
