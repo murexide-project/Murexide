@@ -95,35 +95,6 @@ private fun contrastRatio(foreground: Color, background: Color): Float {
     return (lighter + 0.05f) / (darker + 0.05f)
 }
 
-@Composable
-fun ProvideLiquidGlassContentColor(
-    glassColor: Color,
-    preferredColor: Color = LocalContentColor.current,
-    minimumContrast: Float = DEFAULT_MINIMUM_TEXT_CONTRAST,
-    content: @Composable () -> Unit,
-) {
-    if (!LocalLiquidGlassEnabled.current) {
-        content()
-        return
-    }
-    val backgroundColor = MaterialTheme.colorScheme.background
-    val contentColor = liquidGlassContentColor(
-        preferredColor = preferredColor,
-        glassColor = glassColor,
-        backgroundColor = backgroundColor,
-        minimumContrast = minimumContrast,
-    )
-    CompositionLocalProvider(
-        LocalContentColor provides contentColor,
-        LocalLiquidGlassContrastContext provides LiquidGlassContrastContext(
-            glassColor = glassColor,
-            backgroundColor = backgroundColor,
-            minimumContrast = minimumContrast,
-        ),
-    ) {
-        content()
-    }
-}
 
 /** Returns the adaptive neutral while inside a glass surface and the exact fallback elsewhere. */
 @Composable

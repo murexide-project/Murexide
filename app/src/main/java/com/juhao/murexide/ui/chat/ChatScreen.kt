@@ -95,7 +95,6 @@ import com.juhao.murexide.utils.NotificationHelper
 import com.juhao.murexide.utils.formatTimestamp
 import com.juhao.murexide.ui.theme.LocalLiquidGlassEnabled
 import com.juhao.murexide.ui.theme.LocalLiquidGlassBlur
-import com.juhao.murexide.ui.theme.ProvideLiquidGlassContentColor
 import com.juhao.murexide.ui.theme.liquidglass.glassControl
 import com.juhao.murexide.utils.requiresLegacyWritePermission
 import com.kyant.backdrop.Backdrop
@@ -1289,20 +1288,15 @@ fun ChatScreen(
                     exit = fadeOut() + shrinkVertically()
                 ) {
                     Box(modifier = panelModifier) {
-                        ProvideLiquidGlassContentColor(
-                            glassColor = panelGlassColor,
-                            preferredColor = MaterialTheme.colorScheme.onSurface,
-                        ) {
-                            BoardPanel(
-                                boards = uiState.boardPanel.boards,
-                                onImageClick = { url ->
-                                    showMediaViewer(
-                                        context = context,
-                                        items = listOf(imageMediaItem(url))
-                                    )
-                                }
-                            )
-                        }
+                        BoardPanel(
+                            boards = uiState.boardPanel.boards,
+                            onImageClick = { url ->
+                                showMediaViewer(
+                                    context = context,
+                                    items = listOf(imageMediaItem(url))
+                                )
+                            }
+                        )
                     }
                 }
 
@@ -1312,25 +1306,20 @@ fun ChatScreen(
                     exit = fadeOut() + shrinkVertically()
                 ) {
                     Box(modifier = panelModifier) {
-                        ProvideLiquidGlassContentColor(
-                            glassColor = panelGlassColor,
-                            preferredColor = MaterialTheme.colorScheme.onSurface,
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Text(
-                                    text = "正在定位消息…",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                LinearProgressIndicator(
-                                    modifier = Modifier.fillMaxWidth()
-                                )
-                            }
+                            Text(
+                                text = "正在定位消息…",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            LinearProgressIndicator(
+                                modifier = Modifier.fillMaxWidth()
+                            )
                         }
                     }
                 }

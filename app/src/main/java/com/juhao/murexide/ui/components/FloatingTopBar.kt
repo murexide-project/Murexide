@@ -64,7 +64,7 @@ internal fun FloatingTopBar(
 
     if (!floatingEnabled) {
         val surfaceColor = MaterialTheme.colorScheme.surface
-        val supportsBlur = Build.VERSION.SDK_INT > Build.VERSION_CODES.S_V2
+        val supportsBlur = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
     
         val blurStyle = remember(surfaceColor) {
             HazeBlurStyle {

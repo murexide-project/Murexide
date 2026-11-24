@@ -73,7 +73,7 @@ fun StyledScaffold(
 ) {
     val hazeState = rememberHazeState()
     val surfaceColor = MaterialTheme.colorScheme.surface
-    val supportsBlur = Build.VERSION.SDK_INT > Build.VERSION_CODES.S_V2
+    val supportsBlur = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
 
     val blurStyle = remember(surfaceColor) {
         HazeBlurStyle {
@@ -81,7 +81,7 @@ fun StyledScaffold(
             backgroundColor(surfaceColor)
             colorEffects(
                 listOf(
-                    HazeColorEffect.tint(surfaceColor)
+                    HazeColorEffect.tint(surfaceColor)-
                 )
             )
             noiseFactor(0.02f)

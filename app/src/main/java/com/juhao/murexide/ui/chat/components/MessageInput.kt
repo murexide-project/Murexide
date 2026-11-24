@@ -275,12 +275,6 @@ fun MessageInput(
                 )
             } else {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    MoreActionsButton(
-                        onAddAlbumClick = onAddAlbumClick,
-                        onAddFileClick = onAddFileClick,
-                        onVoiceClick = onVoiceClick,
-                        limitedMsgType = limitedMsgType
-                    )
                     IconButton(
                         onClick = onInstructionClick,
                         modifier = Modifier.size(36.dp)
@@ -295,6 +289,12 @@ fun MessageInput(
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
+                    MoreActionsButton(
+                        onAddAlbumClick = onAddAlbumClick,
+                        onAddFileClick = onAddFileClick,
+                        onVoiceClick = onVoiceClick,
+                        limitedMsgType = limitedMsgType
+                    )
                 }
             }
         }

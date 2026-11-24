@@ -36,7 +36,6 @@ import com.juhao.murexide.datastore.AccountStorage
 import com.juhao.murexide.datastore.UserAccount
 import com.juhao.murexide.ui.icons.AppIcons
 import com.juhao.murexide.ui.login.LoginActivity
-import com.juhao.murexide.ui.theme.ProvideLiquidGlassContentColor
 import com.juhao.murexide.ui.theme.liquidglass.glassControl
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.blur.materials.HazeMaterials
@@ -232,50 +231,44 @@ fun AccountQuickSwitchGlassMenu(
                     )
                     .padding(8.dp),
             ) {
-                val glassColor = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.8f)
-                ProvideLiquidGlassContentColor(
-                    glassColor = glassColor,
-                    preferredColor = MaterialTheme.colorScheme.onSurface,
+                GlassMenuItemRow(
+                    leadingIcon = { Icon(AppIcons.Add, contentDescription = null) },
+                    text = "添加账号",
+                    onClick = {
+                        onDismissRequest()
+                        LoginActivity.start(context, isAddMode = true)
+                    },
+                )
+                HorizontalDivider(
+                    modifier = Modifier.padding(horizontal = 12.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant,
+                )
+                Column(
+                    modifier = Modifier
+                        .heightIn(max = 320.dp)
+                        .padding(vertical = 4.dp)
+                        .verticalScroll(rememberScrollState()),
                 ) {
-                    GlassMenuItemRow(
-                        leadingIcon = { Icon(AppIcons.Add, contentDescription = null) },
-                        text = "添加账号",
-                        onClick = {
-                            onDismissRequest()
-                            LoginActivity.start(context, isAddMode = true)
-                        },
-                    )
-                    HorizontalDivider(
-                        modifier = Modifier.padding(horizontal = 12.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant,
-                    )
-                    Column(
-                        modifier = Modifier
-                            .heightIn(max = 320.dp)
-                            .padding(vertical = 4.dp)
-                            .verticalScroll(rememberScrollState()),
-                    ) {
-                        accounts.forEach { account ->
-                            val isCurrentAccount = account.id == currentAccountId
-                            GlassAccountRow(
-                                account = account,
-                                isCurrentAccount = isCurrentAccount,
-                                onClick = {
-                                    onDismissRequest()
-                                    if (!isCurrentAccount) {
-                                        scope.launch {
-                                            accountStorage.switchAccount(account.id)
-                                            context.startActivity(
-                                                Intent(context, MainActivity::class.java).apply {
-                                                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or
-                                                        Intent.FLAG_ACTIVITY_CLEAR_TASK
-                                                }
-                                            )
-                                        }
+                    accounts.forEach { account ->
+                        val isCurrentAccount = account.id == currentAccountId
+                        GlassAccountRow(
+                            account = account,
+                            isCurrentAccount = isCurrentAccount,
+                            onClick = {
+                                onDismissRequest()
+                                if (!isCurrentAccount) {
+                                    scope.launch {
+                                        accountStorage.switchAccount(account.id)
+                                        context.startActivity(
+                                            Intent(context, MainActivity::class.java).apply {
+                                                flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                                                    Intent.FLAG_ACTIVITY_CLEAR_TASK
+                                            }
+                                        )
                                     }
-                                },
-                            )
-                        }
+                                }
+                            },
+                        )
                     }
                 }
             }
