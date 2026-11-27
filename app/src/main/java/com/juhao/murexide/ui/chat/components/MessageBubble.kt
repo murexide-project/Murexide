@@ -481,7 +481,9 @@ private fun MessageBubbleBody(
                                         context = context,
                                         bubbleCornerRadius = bubbleCornerRadius,
                                         bubbleOpacity = bubbleOpacity,
-                                        incomingBubbleColor = incomingBubbleColor
+                                        incomingBubbleColor = incomingBubbleColor,
+                                        onA2uiAction = { button -> onButtonClick(message, button) },
+                                        onSelectionClick = { onClickInSelectionMode(message) }
                                     )
     
                                     if (!message.isRecalled && message.buttons.isNotEmpty()) {
@@ -751,7 +753,9 @@ private fun MessageContentRouter(
     context: android.content.Context,
     bubbleCornerRadius: Float,
     bubbleOpacity: Float,
-    incomingBubbleColor: Color
+    incomingBubbleColor: Color,
+    onA2uiAction: (MessageButton) -> Unit,
+    onSelectionClick: () -> Unit
 ) {
     val reserve = remember(timestampDisplay, message.isEdited) {
         val timeCharCount = timestampDisplay.length + if (message.isEdited) 4 else 0
@@ -832,6 +836,14 @@ private fun MessageContentRouter(
         )
 
         MessageItem.CONTENT_TYPE_POST -> PostContent(message = message)
+
+        MessageItem.CONTENT_TYPE_A2UI -> A2uiContent(
+            content = message.content,
+            hideImages = hideImages,
+            isSelectionMode = isSelectionMode,
+            onSelectionClick = onSelectionClick,
+            onButtonClick = onA2uiAction
+        )
 
         else -> UnsupportedContent(contentType = message.contentType)
     }

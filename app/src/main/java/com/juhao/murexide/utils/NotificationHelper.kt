@@ -117,17 +117,20 @@ object AppForegroundState {
     private val activityCount = AtomicInteger(0)
     private val _returnedToForeground = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     private var hasEnteredForeground = false
+    @Volatile
+    private var foreground = false
 
     val returnedToForeground: SharedFlow<Unit> = _returnedToForeground.asSharedFlow()
 
     val isInForeground: Boolean
-        get() = activityCount.get() > 0
+        get() = foreground
 
     fun init(application: Application) {
         application.registerActivityLifecycleCallbacks(object : Application.ActivityLifecycleCallbacks {
             override fun onActivityStarted(activity: Activity) {
                 val count = activityCount.incrementAndGet()
-                if (count == 1) {
+                if (count == 1 && !foreground) {
+                    foreground = true
                     if (hasEnteredForeground) {
                         _returnedToForeground.tryEmit(Unit)
                     } else {
@@ -139,7 +142,8 @@ object AppForegroundState {
 
             override fun onActivityStopped(activity: Activity) {
                 val count = activityCount.decrementAndGet()
-                if (count == 0) {
+                if (count == 0 && !activity.isChangingConfigurations) {
+                    foreground = false
                     onForegroundChanged(false)
                 }
             }

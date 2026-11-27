@@ -13,7 +13,6 @@ import android.os.Vibrator
 import android.widget.Toast
 import com.juhao.murexide.network.NetworkClient
 import com.juhao.murexide.ui.chat.ChatActivity
-import com.seanproctor.lua.LuaValue
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -58,13 +57,6 @@ sealed class PluginAction {
         val thenActions: List<PluginAction>,
         val elseActions: List<PluginAction>
     ) : PluginAction()
-    data class Decorate(
-        val page: String,
-        val position: String,
-        val whenField: String?,
-        val whenEquals: String?,
-        val widget: PluginWidget
-    ) : PluginAction()
 }
 
 data class PluginWidget(
@@ -81,13 +73,17 @@ data class PluginWidget(
     val paddingV: Float? = null,
     val align: String? = null,
     val children: List<PluginWidget> = emptyList(),
-    val onClick: List<PluginAction> = emptyList(),
     val model: String? = null,
     val placeholder: String? = null,
     val options: List<String> = emptyList(),
     val min: Float? = null,
     val max: Float? = null,
-    val step: Float? = null
+    val step: Float? = null,
+    val enabled: String = "true",
+    val title: String? = null,
+    val subtitle: String? = null,
+    val onClickCallback: (() -> Unit)? = null,
+    val scrollable: String = "false"
 )
 
 data class PluginPage(
@@ -95,14 +91,11 @@ data class PluginPage(
     val icon: String,
     val title: String,
     val subtitle: String? = null,
-    val page: PluginWidget
+    val script: java.io.File? = null,
+    val localId: String = id
 )
 
-data class PluginRule(
-    val event: String,
-    val pages: List<String>,
-    val actions: List<PluginAction>
-)
+data class PluginEventScript(val page: String, val event: String, val file: java.io.File)
 
 class PluginManifest(
     val id: String,
@@ -117,10 +110,8 @@ class PluginManifest(
 
 class Plugin(
     val manifest: PluginManifest,
-    val rules: List<PluginRule>,
-    val pages: List<PluginPage>,
-    val global: List<PluginRule>,
-    val decorates: List<PluginAction.Decorate>
+    val events: List<PluginEventScript>,
+    val pages: List<PluginPage>
 )
 
 object PluginExecutor {
@@ -311,7 +302,6 @@ object PluginExecutor {
                     for (a in chosen) execSuspend(context, pluginId, a, env)
                     true
                 }
-                is PluginAction.Decorate -> true
             }
         } catch (t: Throwable) {
             PluginLogger.error(context, pluginId, "action failed: ${t.message}")
@@ -349,18 +339,15 @@ object PluginExecutor {
         }
     }
 
-    fun interpolate(text: String, env: Map<String, Any?>, pluginId: String): String =
-        REGEX.replace(text) { m ->
-            val key = m.groupValues[1]
-            when {
-                key.startsWith("var.") -> {
-                    env[key]?.toString()
-                        ?: PluginSession.getVar(pluginId, key.removePrefix("var."))?.toString()
-                        ?: m.value
-                }
-                else -> env[key]?.toString() ?: m.value
-            }
+    fun interpolate(text: String, env: Map<String, Any?>, pluginId: String): String {
+        val legacy = REGEX.replace(text) { match ->
+            val key = match.groupValues[1]
+            env[key]?.toString() ?: if (key.startsWith("var.")) {
+                PluginSession.getVar(pluginId, key.removePrefix("var."))?.toString() ?: match.value
+            } else match.value
         }
+        return PluginBindings.interpolate(legacy, env, pluginId)
+    }
 
     private val REGEX = Regex("\\{\\{\\s*([\\w.]+)\\s*\\}\\}")
 
@@ -380,6 +367,4 @@ object PluginExecutor {
         else -> value == expected
     }
 
-    fun str(v: Any?, def: String = ""): String = (v as? LuaValue.Str)?.value ?: def
-    fun text(t: LuaValue): String = (t as? LuaValue.Str)?.value ?: ""
 }

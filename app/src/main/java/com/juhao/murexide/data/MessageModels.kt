@@ -70,9 +70,21 @@ data class MessageItem(
             CONTENT_TYPE_AUDIO -> "[语音消息]"
             CONTENT_TYPE_MARKDOWN -> "[Markdown消息]"
             CONTENT_TYPE_HTML -> "[HTML消息]"
+            CONTENT_TYPE_A2UI -> "[A2UI消息]"
             CONTENT_TYPE_POST -> "[文章]"
             else -> content.takeIf { it.isNotEmpty() } ?: "[消息]"
         }
+    }
+
+    fun getQuoteText(): String {
+        val text = when {
+            isRecalled -> getRecallDisplayContent()
+            contentType == CONTENT_TYPE_FILE && !fileName.isNullOrBlank() -> "[文件] $fileName"
+            contentType in setOf(CONTENT_TYPE_TEXT, CONTENT_TYPE_MARKDOWN, CONTENT_TYPE_HTML) ->
+                content.ifBlank { getDisplayContent().ifBlank { "[消息]" } }
+            else -> getDisplayContent().ifBlank { "[消息]" }
+        }
+        return "$senderName: $text"
     }
 
     fun getRecallDisplayContent(): String = "此消息已被撤回"
@@ -88,6 +100,7 @@ data class MessageItem(
         const val CONTENT_TYPE_TIP = 9
         const val CONTENT_TYPE_VIDEO = 10
         const val CONTENT_TYPE_AUDIO = 11
+        const val CONTENT_TYPE_A2UI = 14
     }
 }
 

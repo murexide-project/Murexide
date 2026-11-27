@@ -19,7 +19,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.lang.ref.WeakReference
-import java.util.concurrent.CopyOnWriteArrayList
 
 object PluginPermissions {
     const val NETWORK = "network"
@@ -35,12 +34,13 @@ object PluginPermissions {
     const val STORAGE = "storage"
     const val LOG = "log"
     const val SHARE = "share"
+    const val USER_BOT = "user_bot"
     const val ALL = "all"
 
     val KNOWN = setOf(
         NETWORK, CLIPBOARD, NOTIFICATION, VIBRATE, READ_SETTINGS,
         READ_ACCOUNT, OPEN_CHAT, START_ACTIVITY, RESTART, OPEN_URL,
-        STORAGE, LOG, SHARE, ALL
+        STORAGE, LOG, SHARE, USER_BOT, ALL
     )
 
     fun label(p: String): String = when (p) {
@@ -57,6 +57,7 @@ object PluginPermissions {
         STORAGE -> "插件存储"
         LOG -> "写入日志"
         SHARE -> "系统分享"
+        USER_BOT -> "用户 Bot（发送与撤回消息）"
         ALL -> "全部权限"
         else -> p
     }
@@ -75,12 +76,13 @@ object PluginPermissions {
         STORAGE -> AppIcons.Storage
         LOG -> AppIcons.Article
         SHARE -> AppIcons.Share
+        USER_BOT -> AppIcons.SmartToy
         ALL -> AppIcons.AdminPanelSettings
         else -> AppIcons.Build
     }
 
     fun risk(p: String): Int = when (p) {
-        ALL -> 3
+        ALL, USER_BOT -> 3
         NETWORK, READ_ACCOUNT, READ_SETTINGS, OPEN_CHAT, START_ACTIVITY, RESTART, STORAGE -> 2
         else -> 1
     }
@@ -99,6 +101,7 @@ object PluginPermissions {
         STORAGE -> "可在插件自己的空间内持久化数据"
         LOG -> "可写入插件日志文件"
         SHARE -> "可调用系统分享面板"
+        USER_BOT -> "可使用当前登录账号自动发送消息或撤回消息，操作会直接影响真实会话，请仅授权可信插件"
         ALL -> "等同于授予以上全部能力，请仅信任可信来源"
         else -> "未知权限"
     }
@@ -149,29 +152,6 @@ object PluginSystem {
     fun isWsConnected(): Boolean = runCatching {
         WebSocketManager.getInstance().connectionState.value
     }.getOrDefault(wsConnected)
-}
-
-object PluginEventBus {
-    private val listeners = CopyOnWriteArrayList<(PluginEvent) -> Unit>()
-
-    data class PluginEvent(
-        val name: String,
-        val context: Context,
-        val activity: Activity? = null,
-        val extras: Map<String, Any?> = emptyMap()
-    )
-
-    fun addListener(listener: (PluginEvent) -> Unit) {
-        if (!listeners.contains(listener)) listeners += listener
-    }
-
-    fun removeListener(listener: (PluginEvent) -> Unit) {
-        listeners -= listener
-    }
-
-    fun emit(event: PluginEvent) {
-        listeners.forEach { runCatching { it(event) } }
-    }
 }
 
 object PluginActivityTracker : Application.ActivityLifecycleCallbacks {

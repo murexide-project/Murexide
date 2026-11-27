@@ -13,7 +13,9 @@ android {
     ndkVersion = "29.0.14033849"
 
     compileSdk {
-        version = release(37)
+        version = release(37) {
+            minorApiLevel = 1
+        }
     }
 
     defaultConfig {
@@ -112,6 +114,9 @@ dependencies {
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.a2ui.compose.runtime)
+    implementation(libs.androidx.a2ui.compose.ui)
+    implementation(libs.androidx.compose.material3.a2ui)
     implementation(libs.navigation.compose)
     implementation(libs.androidx.compose.material3.adaptive.navigation.suite)
 

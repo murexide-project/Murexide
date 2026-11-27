@@ -30,7 +30,6 @@ import com.juhao.murexide.plugin.PluginFunctionActivity
 import com.juhao.murexide.plugin.PluginManager
 import com.juhao.murexide.plugin.PluginManagerActivity
 import com.juhao.murexide.ui.settings.chatbackground.ChatBackgroundActivity
-import com.juhao.murexide.ui.settings.userbot.UserBotActivity
 import kotlinx.coroutines.launch
 
 private fun resolvePluginIcon(name: String?): ImageVector = when (name) {
@@ -336,16 +335,6 @@ private fun SettingsHomeScreen(
                             )
                         },
                         onClick = { onOpenPage(5) }
-                    )
-                }
-            }
-            item {
-                SettingsGroupSurface(isTop = false, isBottom = false) {
-                    SettingsItem(
-                        icon = AppIcons.SmartToy,
-                        title = "用户 Bot",
-                        subtitle = "关键词自动回复、自动撤回",
-                        onClick = { UserBotActivity.start(context) }
                     )
                 }
             }

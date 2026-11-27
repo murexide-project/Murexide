@@ -990,7 +990,7 @@ class ChatViewModel(
             val content = MessageContent(
                 text = state.inputText,
                 mentionedId = mentionedIds,
-                quoteMsgText = state.replyTo?.let { "${it.senderName}: ${it.content}" },
+                quoteMsgText = state.replyTo?.getQuoteText(),
                 quoteImageUrl = state.replyTo?.imageUrl,
                 quoteImageName = state.replyTo?.imageUrl?.toUri()?.lastPathSegment
             )
@@ -1127,7 +1127,7 @@ class ChatViewModel(
             val content = MessageContent(
                 video = upload.key,
                 text = "",
-                quoteMsgText = state.replyTo?.let { "${it.senderName}: ${it.content}" },
+                quoteMsgText = state.replyTo?.getQuoteText(),
                 quoteImageUrl = state.replyTo?.imageUrl,
                 quoteImageName = state.replyTo?.imageUrl?.toUri()?.lastPathSegment,
                 media = upload.toMessageMedia()
@@ -1171,7 +1171,7 @@ class ChatViewModel(
             val content = MessageContent(
                 image = upload.key,
                 text = "",
-                quoteMsgText = state.replyTo?.let { "${it.senderName}: ${it.content}" },
+                quoteMsgText = state.replyTo?.getQuoteText(),
                 quoteImageUrl = state.replyTo?.imageUrl,
                 quoteImageName = state.replyTo?.imageUrl?.toUri()?.lastPathSegment,
                 media = upload.toMessageMedia()
@@ -1399,7 +1399,7 @@ class ChatViewModel(
                 audio = upload.key,
                 audioTime = audioSeconds,
                 text = "",
-                quoteMsgText = state.replyTo?.let { "${it.senderName}: ${it.content}" },
+                quoteMsgText = state.replyTo?.getQuoteText(),
                 quoteImageUrl = state.replyTo?.imageUrl,
                 quoteImageName = state.replyTo?.imageUrl?.toUri()?.lastPathSegment,
                 media = upload.toMessageMedia()
@@ -1497,7 +1497,10 @@ class ChatViewModel(
                 text = "",
                 fileKey = fileUrl,
                 fileName = fileName,
-                fileSize = fileSize
+                fileSize = fileSize,
+                quoteMsgText = state.replyTo?.getQuoteText(),
+                quoteImageUrl = state.replyTo?.imageUrl,
+                quoteImageName = state.replyTo?.imageUrl?.toUri()?.lastPathSegment
             )
 
             repository.sendMessage(
@@ -1817,7 +1820,7 @@ class ChatViewModel(
             expressionId = expressionId,
             stickerItemId = stickerItemId,
             stickerPackId = stickerPackId,
-            quoteMsgText = state.replyTo?.let { "${it.senderName}: ${it.content}" },
+            quoteMsgText = state.replyTo?.getQuoteText(),
             quoteImageUrl = state.replyTo?.imageUrl,
             quoteImageName = state.replyTo?.imageUrl?.toUri()?.lastPathSegment
         )

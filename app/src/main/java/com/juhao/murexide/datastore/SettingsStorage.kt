@@ -44,10 +44,6 @@ class SettingsStorage(private val context: Context) {
         private val SCREENSHOT_HIDE_IMAGES_KEY = booleanPreferencesKey("screenshot_hide_images")
         private val CACHE_ENABLED_KEY = booleanPreferencesKey("cache_enabled")
         private val WS_ENABLED_KEY = booleanPreferencesKey("ws_enabled")
-        private val USER_BOT_ENABLED_KEY = booleanPreferencesKey("user_bot_enabled")
-        private val USER_BOT_RULES_KEY = stringPreferencesKey("user_bot_rules")
-        private val USER_BOT_TIP_SHOWN_KEY = booleanPreferencesKey("user_bot_tip_shown")
-        private val USER_BOT_RECALL_SENDER_IDS_KEY = stringPreferencesKey("user_bot_recall_sender_ids")
         private val APP_LOCK_ENABLED_KEY = booleanPreferencesKey("app_lock_enabled")
         private val APP_LOCK_PIN_HASH_KEY = stringPreferencesKey("app_lock_pin_hash")
         private val APP_LOCK_LOCK_ON_BACKGROUND_KEY = booleanPreferencesKey("app_lock_lock_on_background")
@@ -175,22 +171,6 @@ class SettingsStorage(private val context: Context) {
     val wsEnabledFlow = preferenceFlow(WS_ENABLED_KEY, true)
     suspend fun getWsEnabled() = getPreference(WS_ENABLED_KEY, true)
     suspend fun setWsEnabled(enabled: Boolean) = setPreference(WS_ENABLED_KEY, enabled)
-
-    val userBotEnabledFlow = preferenceFlow(USER_BOT_ENABLED_KEY, false)
-    suspend fun getUserBotEnabled() = getPreference(USER_BOT_ENABLED_KEY, false)
-    suspend fun setUserBotEnabled(enabled: Boolean) = setPreference(USER_BOT_ENABLED_KEY, enabled)
-
-    val userBotRulesFlow = preferenceFlow(USER_BOT_RULES_KEY, "")
-    suspend fun getUserBotRules() = getPreference(USER_BOT_RULES_KEY, "")
-    suspend fun setUserBotRules(rules: String) = setPreference(USER_BOT_RULES_KEY, rules)
-
-    val userBotTipShownFlow = preferenceFlow(USER_BOT_TIP_SHOWN_KEY, false)
-    suspend fun getUserBotTipShown() = getPreference(USER_BOT_TIP_SHOWN_KEY, false)
-    suspend fun setUserBotTipShown(shown: Boolean) = setPreference(USER_BOT_TIP_SHOWN_KEY, shown)
-
-    val userBotRecallSenderIdsFlow = preferenceFlow(USER_BOT_RECALL_SENDER_IDS_KEY, "")
-    suspend fun getUserBotRecallSenderIds() = getPreference(USER_BOT_RECALL_SENDER_IDS_KEY, "")
-    suspend fun setUserBotRecallSenderIds(ids: String) = setPreference(USER_BOT_RECALL_SENDER_IDS_KEY, ids)
 
     val appLockEnabledFlow = preferenceFlow(APP_LOCK_ENABLED_KEY, false)
     suspend fun getAppLockEnabled() = getPreference(APP_LOCK_ENABLED_KEY, false)

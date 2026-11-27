@@ -45,11 +45,12 @@ class PluginFunctionActivity : ComponentActivity() {
 @Composable
 private fun PluginFunctionScreen(entryId: String, onBack: () -> Unit) {
     val context = LocalContext.current
-    val pluginId = PluginManager.manifestForEntry(entryId)
-    val entry = PluginManager.entryById(entryId)
-    val revision by PluginSession.revision.collectAsState()
+    val plugins by PluginSession.plugins.collectAsState()
+    val entries by PluginManager.functions.collectAsState()
     val pageTick by PluginSession.pageTick.collectAsState()
-
+    val entry = entries.firstOrNull { it.id == entryId }
+    val plugin = plugins.firstOrNull { owner -> owner.pages.any { it.id == entryId } }
+    val pluginId = plugin?.manifest?.id
     if (entry == null || pluginId == null) {
         StyledScaffold(
             title = { Text("插件页面") },
@@ -61,20 +62,21 @@ private fun PluginFunctionScreen(entryId: String, onBack: () -> Unit) {
         }
         return
     }
-
+    val runtime = remember(plugin, entry) { PluginScripts.openPage(context, pluginId, entry) }
+    DisposableEffect(runtime) { onDispose { runtime.close() } }
+    LaunchedEffect(pageTick, runtime) { runtime.refresh() }
+    val rendered by runtime.content.collectAsState()
     StyledScaffold(
         title = { Text(entry.title) },
         navigationIcon = { IconButton(onClick = onBack) { Icon(AppIcons.ArrowBack, "返回") } }
     ) { padding ->
-        Column(
-            Modifier
-                .fillMaxSize()
-                .padding(padding)
-        ) {
-            val env = remember(revision, pageTick, pluginId) {
-                PluginContext(context, pluginId).toEnv()
+        Column(Modifier.fillMaxSize().padding(padding)) {
+            rendered.error?.let { message ->
+                Text(message, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(16.dp))
             }
-            PluginWidgetRenderer(entry.page, pluginId, env)
+            Box(Modifier.weight(1f).fillMaxWidth()) {
+                PluginWidgetRenderer(rendered.widget, pluginId, rendered.env)
+            }
         }
     }
 }

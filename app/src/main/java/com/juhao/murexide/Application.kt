@@ -4,7 +4,6 @@ import android.Manifest
 import android.app.Activity
 import android.app.Application
 import android.content.Context
-import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.drawable.BitmapDrawable
@@ -33,7 +32,6 @@ import com.juhao.murexide.plugin.*
 import com.juhao.murexide.repository.ConversationRepository
 import com.juhao.murexide.ui.lock.AppLockState
 import com.juhao.murexide.ui.lock.GateActivity
-import com.juhao.murexide.ui.settings.userbot.UserBotManager
 import com.juhao.murexide.ui.theme.UiCache
 import com.juhao.murexide.ui.theme.UiState
 import com.juhao.murexide.utils.AppForegroundState
@@ -63,67 +61,42 @@ class MyApplication : Application(), ImageLoaderFactory {
     @Volatile
     private var appLockLockOnBackground: Boolean = true
 
-    @Volatile
-    private var wasInBackground: Boolean = false
-
     private val activityLifecycleCallbacks = object : ActivityLifecycleCallbacks {
 
-        override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {
-            if (!appLockEnabled) return
-            if (AppLockState.unlocked) return
-            if (activity is GateActivity) return
-            if (AppLockState.gateVisible) return
-
-            val forwarded = cloneIntent(activity.intent)
+        private fun showGateIfLocked(activity: Activity) {
+            if (!appLockEnabled || AppLockState.unlocked) return
+            if (activity is GateActivity || AppLockState.gateVisible) return
             AppLockState.gateVisible = true
-            activity.startActivity(GateActivity.intentFor(activity, forwarded))
+            try {
+                activity.startActivity(GateActivity.intentFor(activity))
+            } catch (error: Exception) {
+                AppLockState.gateVisible = false
+                throw error
+            }
+        }
+
+        override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {
+            showGateIfLocked(activity)
         }
 
         override fun onActivityStarted(activity: Activity) {
-            if (!appLockEnabled || !appLockLockOnBackground) {
-                wasInBackground = false
-                return
-            }
-            if (activity is GateActivity) {
-                wasInBackground = false
-                return
-            }
-            if (wasInBackground && !AppLockState.unlocked && !AppLockState.gateVisible) {
-                wasInBackground = false
-                AppLockState.gateVisible = true
-                activity.startActivity(GateIntentFor(activity))
-            }
+            showGateIfLocked(activity)
         }
-
-        private fun GateIntentFor(activity: Activity): Intent =
-            GateActivity.intentFor(activity, null)
 
         override fun onActivityResumed(activity: Activity) { }
 
         override fun onActivityPaused(activity: Activity) { }
 
         override fun onActivityStopped(activity: Activity) {
-            if (!AppForegroundState.isInForeground) {
-                if (appLockEnabled && appLockLockOnBackground) {
-                    AppLockState.reset()
-                }
-                wasInBackground = true
+            if (activity.isChangingConfigurations) return
+            if (!AppForegroundState.isInForeground && appLockEnabled && appLockLockOnBackground) {
+                AppLockState.reset()
             }
         }
 
         override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) { }
 
         override fun onActivityDestroyed(activity: Activity) { }
-    }
-
-    private fun cloneIntent(intent: Intent?): Intent? {
-        if (intent == null) return null
-        if (intent.action == Intent.ACTION_MAIN &&
-            intent.categories?.contains(Intent.CATEGORY_LAUNCHER) == true
-        ) {
-            return null
-        }
-        return runCatching { Intent(intent) }.getOrNull()
     }
 
     override fun onCreate() {
@@ -141,11 +114,9 @@ class MyApplication : Application(), ImageLoaderFactory {
         registerActivityLifecycleCallbacks(PluginActivityTracker)
         registerActivityLifecycleCallbacks(PluginActivityCallbacks())
         AppForegroundState.init(this)
-        UserBotManager.start(this)
         observeAvatarSetting()
         initWebSocket()
         registerActivityLifecycleCallbacks(activityLifecycleCallbacks)
-        registerActivityLifecycleCallbacks(PluginOverlayCallbacks())
         observePluginEvents()
         CacheSyncCoordinator(
             dismissConversationNotification = { chatId ->
@@ -184,48 +155,7 @@ class MyApplication : Application(), ImageLoaderFactory {
         }
         applicationScope.launch {
             WebSocketManager.getInstance().messageFlow.collect { event ->
-                when (event) {
-                    is WebSocketManager.WsEvent.NewMessage -> {
-                        val m = event.message
-                        PluginDispatcher.dispatchAppEvent(
-                            app, "ws.message",
-                            extras = mapOf(
-                                "msgId" to m.msgId,
-                                "chatId" to m.chatId,
-                                "chatType" to m.chatType,
-                                "senderId" to m.senderId,
-                                "senderName" to m.senderName,
-                                "content" to m.content,
-                                "contentType" to m.contentType,
-                                "timestamp" to m.timestamp
-                            )
-                        )
-                    }
-                    is WebSocketManager.WsEvent.MessageDeleted -> {
-                        val m = event.message
-                        PluginDispatcher.dispatchAppEvent(
-                            app, "ws.messageRecall",
-                            extras = mapOf(
-                                "msgId" to event.msgId,
-                                "chatId" to m.chatId,
-                                "senderId" to m.senderId,
-                                "senderName" to m.senderName
-                            )
-                        )
-                    }
-                    is WebSocketManager.WsEvent.EditMessage -> {
-                        val m = event.message
-                        PluginDispatcher.dispatchAppEvent(
-                            app, "ws.messageEdit",
-                            extras = mapOf(
-                                "msgId" to m.msgId,
-                                "chatId" to m.chatId,
-                                "content" to m.content
-                            )
-                        )
-                    }
-                    else -> { }
-                }
+                PluginDispatcher.dispatchMessageEvent(app, event)
             }
         }
         applicationScope.launch {

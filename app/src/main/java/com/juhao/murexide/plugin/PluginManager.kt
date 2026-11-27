@@ -23,20 +23,41 @@ object PluginManager {
         if (initialized) return
         initialized = true
         reload(context)
+        PluginDispatcher.dispatchAppEvent(context, "onLaunched")
     }
 
     fun reload(context: Context) {
-        val plugins = PluginLoader.load(context)
-        PluginSession.update(plugins.filter { it.manifest.enabled })
+        reload(context, changedPluginId = null)
+    }
+
+    private fun reload(context: Context, changedPluginId: String?, restoreActivity: Boolean = true) {
+        val previous = PluginSession.allPlugins().associateBy { it.manifest.id }
+        val plugins = PluginLoader.load(context).map { plugin ->
+            if (changedPluginId != null && plugin.manifest.id != changedPluginId && plugin.manifest.enabled) {
+                previous[plugin.manifest.id] ?: plugin
+            } else plugin
+        }
+        val enabled = plugins.filter { it.manifest.enabled }
+        PluginSession.update(enabled)
+        PluginScripts.invalidateStaleSessions()
         _manifests.value = plugins.map { it.manifest }
-        _functions.value = plugins.filter { it.manifest.enabled }.flatMap { it.pages }
+        _functions.value = enabled.flatMap { it.pages }
+        if (restoreActivity) {
+            val changed = enabled.filter { previous[it.manifest.id] !== it }.map { it.manifest.id }.toSet()
+            PluginDispatcher.refreshActivityPlugins(changed)
+        }
     }
 
     fun install(context: Context, zipFile: File): Result<Unit> = runCatching {
-        validateZip(zipFile)
-        val id = readIdFromZip(zipFile)
+        val manifest = readZipManifest(zipFile)
+        val id = manifest.optString("id")
         require(id.isNotBlank()) { "插件缺 id" }
-        checkMinVersion(context, zipFile)
+        require(id.matches(Regex("[A-Za-z0-9_][A-Za-z0-9_.-]*"))) { "插件 id 格式无效" }
+        val minVersion = manifest.optInt("minVersion", 0)
+        val appVersionCode = context.getAppVersionInfo().versionCode
+        require(minVersion <= 0 || appVersionCode >= minVersion.toLong()) {
+            "需要应用版本 $minVersion，当前 $appVersionCode"
+        }
         val pluginDir = File(context.filesDir, "lua_plugins/$id")
         pluginDir.deleteRecursively()
         pluginDir.mkdirs()
@@ -50,44 +71,23 @@ object PluginManager {
                 require(total <= 32L * 1024 * 1024) { "超过 32MB" }
                 require(count <= 2048) { "文件数过多" }
                 val target = File(pluginDir, entry.name)
-                require(target.canonicalPath.startsWith(pluginDir.canonicalPath)) { "非法路径" }
+                require(target.canonicalPath.startsWith(pluginDir.canonicalPath + File.separator)) { "非法路径" }
                 target.parentFile?.mkdirs()
                 zip.getInputStream(entry).use { input ->
                     target.outputStream().use { output -> input.copyTo(output) }
                 }
             }
         }
-        reload(context)
-        val loaded = PluginSession.findPlugin(id)
-        require(loaded != null) { "插件加载失败，脚本缺失或格式错误" }
-        require(
-            loaded.rules.isNotEmpty() || loaded.global.isNotEmpty() ||
-                loaded.pages.isNotEmpty() || loaded.decorates.isNotEmpty()
-        ) { "插件加载失败：脚本未注册任何功能（检查 Lua 语法，详见插件日志）" }
+        reload(context, id, restoreActivity = false)
+        require(_manifests.value.any { it.id == id }) { "插件加载失败，manifest.json 格式错误" }
         PluginLoader.executeInstalledScript(context, id, pluginDir)
-    }
-
-    private fun checkMinVersion(context: Context, zipFile: File) {
-        val minVersion = readMinVersionFromZip(zipFile)
-        if (minVersion <= 0) return
-        val appVersionCode = context.getAppVersionInfo().versionCode
-        require(appVersionCode >= minVersion.toLong()) {
-            "需要应用版本 $minVersion，当前 $appVersionCode"
-        }
-    }
-
-    private fun readMinVersionFromZip(zipFile: File): Int {
-        ZipFile(zipFile).use { zip ->
-            val entry = zip.getEntry("manifest.json") ?: return 0
-            return zip.getInputStream(entry).bufferedReader().use {
-                JSONObject(it.readText()).optInt("minVersion", 0)
-            }
-        }
+        PluginDispatcher.refreshActivityPlugins(setOf(id))
     }
 
     fun uninstall(context: Context, id: String) {
+        PluginSession.clearPlugin(id)
         File(context.filesDir, "lua_plugins/$id").deleteRecursively()
-        reload(context)
+        reload(context, id)
     }
 
     fun pluginDirSize(context: Context, id: String): Long {
@@ -104,7 +104,7 @@ object PluginManager {
             obj.put("enabled", enabled)
             f.writeText(obj.toString(2))
         }
-        reload(context)
+        reload(context, id)
     }
 
     fun manifestById(id: String): PluginManifest? = _manifests.value.firstOrNull { it.id == id }
@@ -121,32 +121,13 @@ object PluginManager {
         return null
     }
 
-    fun rulesForPage(pageId: String, event: String): List<Pair<PluginManifest, PluginRule>> {
-        val out = mutableListOf<Pair<PluginManifest, PluginRule>>()
-        for ((pid, rule) in PluginSession.rulesFor(pageId, event)) {
-            val m = manifestById(pid) ?: continue
-            out += m to rule
-        }
-        return out
-    }
-
     fun scanZipForReplace(zipFile: File): Boolean = runCatching {
-        val id = readIdFromZip(zipFile)
+        val id = readZipManifest(zipFile).optString("id")
         id.isNotBlank() && _manifests.value.any { it.id == id }
     }.getOrDefault(false)
 
-    private fun validateZip(zipFile: File) {
-        ZipFile(zipFile).use { zip ->
-            require(zip.getEntry("manifest.json") != null) { "缺少 manifest.json" }
-        }
-    }
-
-    private fun readIdFromZip(zipFile: File): String {
-        ZipFile(zipFile).use { zip ->
-            val entry = zip.getEntry("manifest.json") ?: return ""
-            return zip.getInputStream(entry).bufferedReader().use {
-                JSONObject(it.readText()).optString("id")
-            }
-        }
+    private fun readZipManifest(zipFile: File): JSONObject = ZipFile(zipFile).use { zip ->
+        val entry = requireNotNull(zip.getEntry("manifest.json")) { "缺少 manifest.json" }
+        zip.getInputStream(entry).bufferedReader().use { JSONObject(it.readText()) }
     }
 }

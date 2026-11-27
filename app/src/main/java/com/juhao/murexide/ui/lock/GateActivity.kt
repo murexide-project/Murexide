@@ -1,5 +1,6 @@
 package com.juhao.murexide.ui.lock
 
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
@@ -29,6 +30,7 @@ import kotlinx.coroutines.launch
 class GateActivity : ComponentActivity() {
 
     private lateinit var storage: SettingsStorage
+    private var passing = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -43,46 +45,32 @@ class GateActivity : ComponentActivity() {
             }
         })
 
-        val target = intent.getParcelableExtra<Intent>(EXTRA_TARGET)
-
         setContent {
             MurexideTheme {
                 GateContent(
                     storage = storage,
                     onPass = {
-                        AppLockState.unlocked = true
-                        passTo(target)
+                        if (!passing) {
+                            passing = true
+                            AppLockState.unlocked = true
+                            finish()
+                        }
                     }
                 )
             }
         }
     }
 
-    private fun passTo(target: Intent?) {
-        if (target != null) {
-            target.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            runCatching { startActivity(target) }
-        }
-        finish()
-    }
-
     override fun onDestroy() {
         super.onDestroy()
-        AppLockState.gateVisible = false
+        if (!isChangingConfigurations) AppLockState.gateVisible = false
     }
 
     companion object {
-        const val EXTRA_TARGET = "gate_target"
-
-        fun intentFor(context: Context, target: Intent?): Intent {
-            val intent = Intent(context, GateActivity::class.java).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        fun intentFor(context: Context): Intent =
+            Intent(context, GateActivity::class.java).apply {
+                if (context !is Activity) addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
-            if (target != null) {
-                intent.putExtra(EXTRA_TARGET, target)
-            }
-            return intent
-        }
     }
 }
 
@@ -192,7 +180,6 @@ private fun GateContent(
                             val ok = storage.verifyAppLockPin(pin)
                             checking = false
                             if (ok) {
-                                AppLockState.unlocked = true
                                 onPass()
                             } else {
                                 error = "密码错误"

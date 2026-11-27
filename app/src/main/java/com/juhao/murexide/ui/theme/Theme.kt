@@ -106,6 +106,7 @@ internal fun usesDarkTheme(themeMode: String, systemInDarkTheme: Boolean): Boole
 
 @Composable
 fun MurexideTheme(
+    windowBackdrop: Boolean = true,
     content: @Composable () -> Unit
 ) {
     val context = LocalContext.current
@@ -160,9 +161,9 @@ fun MurexideTheme(
         colorScheme = colorScheme,
         typography = Typography(),
         content = {
-            val backdrop = if (liquidGlassEnabled) rememberLayerBackdrop() else null
+            val backdrop = if (liquidGlassEnabled && windowBackdrop) rememberLayerBackdrop() else null
             CompositionLocalProvider(
-                LocalLiquidGlassEnabled provides liquidGlassEnabled,
+                LocalLiquidGlassEnabled provides (liquidGlassEnabled && windowBackdrop),
                 LocalLiquidGlassBlur provides liquidGlassBlur,
                 LocalLiquidGlassBackdrop provides backdrop
             ) {

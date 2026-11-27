@@ -33,11 +33,15 @@ class PluginActivityCallbacks : Application.ActivityLifecycleCallbacks {
     }
 
     override fun onActivityDestroyed(activity: Activity) {
+        PluginFloatingViews.clearActivity(activity)
         if (activity is GateActivity) return
         dispatch(activity, "destroyed")
     }
 
-    override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) {}
+    override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) {
+        if (activity is GateActivity) return
+        dispatch(activity, "saveInstanceState")
+    }
 
     private fun dispatch(activity: Activity, event: String) {
         try {

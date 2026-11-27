@@ -14,6 +14,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -21,6 +22,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -28,6 +30,10 @@ import com.juhao.murexide.ui.components.*
 import com.juhao.murexide.ui.icons.AppIcons
 import com.juhao.murexide.ui.theme.MurexideTheme
 import com.juhao.murexide.utils.getAppVersionInfo
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.File
 import java.util.zip.ZipFile
@@ -65,8 +71,7 @@ fun PluginManagerScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     val manifests by PluginManager.manifests.collectAsState()
     var showTutorial by remember { mutableStateOf(false) }
-    var logsPluginId by remember { mutableStateOf<String?>(null) }
-    var logsText by remember { mutableStateOf("") }
+    var managedPluginId by remember { mutableStateOf<String?>(null) }
     var pendingInstall by remember { mutableStateOf<PendingInstall?>(null) }
     var installError by remember { mutableStateOf<String?>(null) }
 
@@ -212,7 +217,7 @@ fun PluginManagerScreen(onBack: () -> Unit) {
                             PermissionRow(permission = p)
                         }
                     }
-                    if (pi.permissions.any { it == PluginPermissions.ALL }) {
+                    if (pi.permissions.any { PluginPermissions.risk(it) == 3 }) {
                         Spacer(Modifier.height(12.dp))
                         Surface(
                             color = MaterialTheme.colorScheme.errorContainer,
@@ -231,7 +236,11 @@ fun PluginManagerScreen(onBack: () -> Unit) {
                                 )
                                 Spacer(Modifier.width(8.dp))
                                 Text(
-                                    "该插件申请了全部权限，请确认来源可信后再安装。",
+                                    if (PluginPermissions.ALL in pi.permissions) {
+                                        "该插件申请了全部权限，包含以当前账号发送与撤回消息的能力，请确认来源可信后再安装。"
+                                    } else {
+                                        "该插件申请了用户 Bot 高危权限，可使用当前账号发送与撤回消息，请确认来源可信后再安装。"
+                                    },
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onErrorContainer
                                 )
@@ -262,32 +271,13 @@ fun PluginManagerScreen(onBack: () -> Unit) {
         }
     }
 
-    logsPluginId?.let { pid ->
-        AlertDialog(
-            onDismissRequest = { logsPluginId = null },
-            title = { Text("插件日志 · $pid") },
-            text = {
-                Box(
-                    Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = 400.dp)
-                ) {
-                    Text(
-                        logsText.ifBlank { "暂无日志" },
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    PluginLogger.clear(context, pid)
-                    logsPluginId = null
-                }) { Text("清空") }
-            },
-            dismissButton = {
-                TextButton(onClick = { logsPluginId = null }) { Text("关闭") }
-            }
-        )
+    manifests.firstOrNull { it.id == managedPluginId }?.let { manifest ->
+        key(manifest.id) {
+            PluginManagementSheet(
+                manifest = manifest,
+                onDismiss = { managedPluginId = null }
+            )
+        }
     }
 
     StyledScaffold(
@@ -321,12 +311,8 @@ fun PluginManagerScreen(onBack: () -> Unit) {
                     PluginCard(
                         manifest = m,
                         context = context,
-                        rulesCount = PluginManager.rulesForPage("*", "*").count { it.first == m },
                         sizeBytes = PluginManager.pluginDirSize(context, m.id),
-                        onShowLogs = {
-                            logsPluginId = m.id
-                            logsText = PluginLogger.read(context, m.id)
-                        }
+                        onManage = { managedPluginId = m.id }
                     )
                 }
             }
@@ -338,9 +324,8 @@ fun PluginManagerScreen(onBack: () -> Unit) {
 private fun PluginCard(
     manifest: PluginManifest,
     context: Context,
-    rulesCount: Int,
     sizeBytes: Long,
-    onShowLogs: () -> Unit
+    onManage: () -> Unit
 ) {
     Surface(
         onClick = {
@@ -381,20 +366,6 @@ private fun PluginCard(
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Spacer(Modifier.height(6.dp))
-                if (manifest.permissions.isEmpty()) {
-                    Text(
-                        "未请求任何权限",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                } else {
-                    Text(
-                        "权限：${manifest.permissions.sorted().joinToString("、") { PluginPermissions.label(it) }}",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
             }
 
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
@@ -406,21 +377,10 @@ private fun PluginCard(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    TextButton(onClick = onShowLogs) { Text("日志") }
-                    TextButton(onClick = {
-                        PluginManager.uninstall(context, manifest.id)
-                        Toast.makeText(context, "已卸载 ${manifest.name}", Toast.LENGTH_SHORT).show()
-                    }) {
-                        Icon(
-                            AppIcons.Delete,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(Modifier.width(4.dp))
-                        Text("卸载", color = MaterialTheme.colorScheme.error)
-                    }
+                TextButton(onClick = onManage) {
+                    Icon(AppIcons.Settings, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("管理")
                 }
                 StyledSwitch(
                     checked = manifest.enabled,
@@ -430,6 +390,218 @@ private fun PluginCard(
         }
     }
 }
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun PluginManagementSheet(
+    manifest: PluginManifest,
+    onDismiss: () -> Unit
+) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var selectedTab by remember { mutableIntStateOf(0) }
+    var logsText by remember { mutableStateOf<String?>(null) }
+    var logsBusy by remember { mutableStateOf(false) }
+    var logsError by remember { mutableStateOf<String?>(null) }
+    var showDeleteConfirm by remember { mutableStateOf(false) }
+    var deleteError by remember { mutableStateOf<String?>(null) }
+    val sizeText by produceState("读取中", manifest.id, logsText) {
+        value = withContext(Dispatchers.IO) {
+            runCatching { formatSize(PluginManager.pluginDirSize(context, manifest.id)) }
+                .getOrDefault("读取失败")
+        }
+    }
+
+    fun refreshLogs(clear: Boolean = false) {
+        if (logsBusy) return
+        logsBusy = true
+        logsError = null
+        scope.launch {
+            try {
+                logsText = withContext(Dispatchers.IO) {
+                    if (clear) PluginLogger.clear(context, manifest.id)
+                    PluginLogger.read(context, manifest.id)
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                logsError = "${if (clear) "清空" else "读取"}日志失败：${e.message ?: "未知错误"}"
+            } finally {
+                logsBusy = false
+            }
+        }
+    }
+
+    LaunchedEffect(selectedTab) {
+        if (selectedTab == 2) refreshLogs()
+    }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+    ) {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(0.85f)
+                .padding(horizontal = 20.dp)
+        ) {
+            Text("插件详情", style = MaterialTheme.typography.titleLarge)
+            Spacer(Modifier.height(8.dp))
+            Text(manifest.name, style = MaterialTheme.typography.titleMedium)
+            Spacer(Modifier.height(16.dp))
+            PrimaryTabRow(selectedTabIndex = selectedTab) {
+                listOf("详情", "所需权限", "日志").forEachIndexed { index, title ->
+                    Tab(
+                        selected = selectedTab == index,
+                        onClick = { selectedTab = index },
+                        text = { Text(title) }
+                    )
+                }
+            }
+            key(selectedTab) {
+                LazyColumn(
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                    contentPadding = PaddingValues(vertical = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    when (selectedTab) {
+                        0 -> {
+                            item { PluginDetailRow("插件 ID", manifest.id) }
+                            item { PluginDetailRow("版本", "v${manifest.version}") }
+                            item { PluginDetailRow("作者", manifest.author?.takeIf { it.isNotBlank() } ?: "未提供") }
+                            item { PluginDetailRow("状态", if (manifest.enabled) "已启用" else "已停用") }
+                            item { PluginDetailRow("占用空间", sizeText) }
+                            item {
+                                PluginDetailRow(
+                                    "最低应用版本",
+                                    if (manifest.minVersion > 0) manifest.minVersion.toString() else "未限制"
+                                )
+                            }
+                            item { PluginDetailRow("描述", manifest.description?.takeIf { it.isNotBlank() } ?: "暂无描述") }
+                        }
+                        1 -> {
+                            if (manifest.permissions.isEmpty()) {
+                                item {
+                                    Text(
+                                        "未请求任何权限",
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            } else {
+                                items(
+                                    manifest.permissions.sortedWith(
+                                        compareByDescending<String> { PluginPermissions.risk(it) }
+                                            .thenBy { PluginPermissions.label(it) }
+                                    ),
+                                    key = { it }
+                                ) { permission ->
+                                    PermissionRow(permission)
+                                }
+                            }
+                        }
+                        2 -> {
+                            item {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.End
+                                ) {
+                                    TextButton(onClick = { refreshLogs() }, enabled = !logsBusy) {
+                                        Text("刷新")
+                                    }
+                                    TextButton(
+                                        onClick = { refreshLogs(clear = true) },
+                                        enabled = !logsBusy && !logsText.isNullOrEmpty()
+                                    ) { Text("清空") }
+                                }
+                            }
+                            if (logsBusy) {
+                                item { LinearProgressIndicator(Modifier.fillMaxWidth()) }
+                            }
+                            logsError?.let { message ->
+                                item { Text(message, color = MaterialTheme.colorScheme.error) }
+                            }
+                            item {
+                                SelectionContainer {
+                                    Text(
+                                        logsText?.ifBlank { "暂无日志" }
+                                            ?: if (logsBusy) "正在读取日志…" else "暂无日志",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        fontFamily = FontFamily.Monospace
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            HorizontalDivider()
+            TextButton(
+                onClick = {
+                    deleteError = null
+                    showDeleteConfirm = true
+                },
+                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+            ) {
+                Icon(AppIcons.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("删除插件")
+            }
+        }
+    }
+
+    if (showDeleteConfirm) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirm = false },
+            icon = { Icon(AppIcons.Delete, contentDescription = null) },
+            title = { Text("删除 ${manifest.name}？") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("将停用并删除此插件及其本地数据和日志，此操作无法撤销。")
+                    deleteError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        runCatching {
+                            PluginManager.uninstall(context, manifest.id)
+                            check(PluginManager.manifestById(manifest.id) == null) {
+                                "插件未能完整删除，请重试"
+                            }
+                        }.onSuccess {
+                            showDeleteConfirm = false
+                            onDismiss()
+                            Toast.makeText(context, "已删除 ${manifest.name}", Toast.LENGTH_SHORT).show()
+                        }.onFailure {
+                            deleteError = it.message ?: "删除失败，请重试"
+                        }
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) { Text("删除") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirm = false }) { Text("取消") }
+            }
+        )
+    }
+}
+
+@Composable
+private fun PluginDetailRow(label: String, value: String) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(
+            label,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        SelectionContainer {
+            Text(value, style = MaterialTheme.typography.bodyMedium)
+        }
+    }
+}
+
 private fun formatSize(bytes: Long): String = when {
     bytes >= 1024L * 1024L -> "%.1f MB".format(bytes / 1024.0 / 1024.0)
     bytes >= 1024L -> "%.1f KB".format(bytes / 1024.0)
