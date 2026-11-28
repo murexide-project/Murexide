@@ -1840,6 +1840,7 @@ fun ChatScreen(
                             isLastFromSender = item.isLastFromSender,
                             isFirstFromSender = item.isFirstFromSender,
                             drawAvatar = false,
+                            swipeToReplyEnabled = true,
                             showTags = showMsgTagsSetting,
                             showMyBubbleAvatarSetting = showMyBubbleAvatarSetting,
                             bubbleOpacity = bubbleOpacity,

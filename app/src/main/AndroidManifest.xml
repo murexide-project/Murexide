@@ -140,6 +140,10 @@
             android:exported="false"
             android:theme="@style/Theme.Murexide" />
         <activity
+            android:name=".plugin.PluginDetailActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Murexide" />
+        <activity
             android:name=".plugin.PluginFunctionActivity"
             android:exported="false"
             android:theme="@style/Theme.Murexide" />

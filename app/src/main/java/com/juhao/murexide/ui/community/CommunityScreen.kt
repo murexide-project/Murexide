@@ -154,7 +154,6 @@ fun CommunityScreen(
                 Icon(AppIcons.Search, contentDescription = "搜索")
             }
         },
-        isMediumTopAppBarDisabled = true,
         extraContent = {
             CapsuleTabBar(
                 tabs = tabs.map { it.second },

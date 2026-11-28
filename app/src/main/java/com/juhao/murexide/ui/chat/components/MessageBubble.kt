@@ -7,16 +7,11 @@ import android.content.ClipData
 import android.view.View
 import android.widget.Toast
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -45,6 +40,7 @@ import androidx.compose.ui.graphics.PathOperation
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
@@ -58,6 +54,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -74,6 +71,8 @@ import com.juhao.murexide.ui.community.detail.PostDetailActivity
 
 import com.juhao.murexide.utils.*
 
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.Locale
 import kotlin.math.roundToInt
@@ -102,6 +101,7 @@ fun MessageBubble(
     onRecall: () -> Unit = {},
     onEdit: () -> Unit = {},
     onReply: () -> Unit = {},
+    swipeToReplyEnabled: Boolean = false,
     onForward: () -> Unit = {},
     onQuoteClick: ((MessageItem) -> Unit)? = null,
     isAdmin: Boolean = false,
@@ -134,6 +134,30 @@ fun MessageBubble(
 ) {
     val clipboardManager = LocalClipboard.current
     val scope = rememberCoroutineScope()
+    val swipeReplyThresholdPx = with(LocalDensity.current) { 72.dp.toPx() }
+    val currentOnReply = rememberUpdatedState(onReply)
+    var swipeOffsetPx by remember(message.msgId) { mutableFloatStateOf(0f) }
+    var swipeReturnJob by remember(message.msgId) { mutableStateOf<Job?>(null) }
+    val swipeIconProgress = (swipeOffsetPx / swipeReplyThresholdPx).coerceIn(0f, 1f)
+
+    DisposableEffect(message.msgId) {
+        onDispose { swipeReturnJob?.cancel() }
+    }
+
+    fun returnSwipe(confirmed: Boolean) {
+        swipeReturnJob?.cancel()
+        swipeReturnJob = scope.launch {
+            if (confirmed) delay(60L)
+            animate(
+                initialValue = swipeOffsetPx,
+                targetValue = 0f,
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioNoBouncy,
+                    stiffness = Spring.StiffnessMedium
+                )
+            ) { value, _ -> swipeOffsetPx = value }
+        }
+    }
 
     val isMine = if (hideMyInfo) false else message.isMine
 
@@ -189,73 +213,132 @@ fun MessageBubble(
     val bubbleLayoutDirection = if (isMine) defaultLayoutDirection.opposite() else defaultLayoutDirection
 
     CompositionLocalProvider(LocalLayoutDirection provides bubbleLayoutDirection) {
-        Row(
+        Box(
             modifier = modifier
-                .alpha(animatedAlpha)
-                .background(highlightColor, shape = RoundedCornerShape(12.dp))
-                .combinedClickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = {
-                        if (isSelectionMode) {
-                            onClickInSelectionMode(message)
-                        } else if (!message.isRecalled && message.contentType != MessageItem.CONTENT_TYPE_TIP) {
-                            showMenuChanged(message.msgId)
-                        }
-                    },
-                    onLongClick = {
-                        if (!isSelectionMode) onLongPress(message)
-                    }
-                )
+                .fillMaxWidth()
+                .alpha(animatedAlpha),
+            contentAlignment = Alignment.CenterEnd
         ) {
-            if (message.contentType == MessageItem.CONTENT_TYPE_TIP) {
-                TipContent(content = message.content)
-            } else {
-                MessageBubbleBody(
-                    message = message,
-                    isMine = isMine,
-                    isSelectionMode = isSelectionMode,
-                    isSelected = isSelected,
-                    onLongPress = onLongPress,
-                    onClickInSelectionMode = onClickInSelectionMode,
-                    onRecall = onRecall,
-                    onEdit = onEdit,
-                    onReply = onReply,
-                    onForward = onForward,
-                    onQuoteClick = onQuoteClick,
-                    isAdmin = isAdmin,
-                    isLastFromSender = isLastFromSender,
-                    isFirstFromSender = isFirstFromSender,
-                    drawAvatar = drawAvatar,
-                    showMyBubbleAvatarSetting = showMyBubbleAvatarSetting,
-                    showTags = showTags,
-                    showMenu = showMenu,
-                    showMenuChanged = showMenuChanged,
-                    onImageClick = onImageClick,
-                    onMarkdownImageClick = onMarkdownImageClick,
-                    onAvatarClick = onAvatarClick,
-                    onAvatarLongClick = onAvatarLongClick,
-                    bubbleCornerRadius = bubbleCornerRadius,
-                    bubbleOpacity = bubbleOpacity,
-                    downloadProgress = downloadProgress,
-                    isDownloaded = isDownloaded,
-                    onDownloadClick = onDownloadClick,
-                    onButtonClick = onButtonClick,
-                    onEditIconClick = onEditIconClick,
-                    hideSenderInfo = hideSenderInfo,
-                    hideImages = hideImages,
-                    anonymousNameProvider = anonymousNameProvider,
-                    roleLabel = roleLabel,
-                    incomingBubbleColor = incomingBubbleColor,
-                    incomingAttachmentBackgroundColor = incomingAttachmentBackgroundColor,
-                    defaultLayoutDirection = defaultLayoutDirection,
-                    layoutDirection = layoutDirection,
-                    audioPlaybackState = audioPlaybackState,
-                    timestampDisplay = timestampDisplay,
-                    clipboardManager = clipboardManager,
-                    scope = scope,
-                    context = context,
-                    onCreateExpression = onCreateExpression
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .absoluteOffset { IntOffset(swipeOffsetPx.roundToInt(), 0) }
+                    .background(highlightColor, shape = RoundedCornerShape(12.dp))
+                    .pointerInput(
+                        message.msgId,
+                        swipeToReplyEnabled,
+                        isSelectionMode,
+                        message.isRecalled,
+                        message.contentType,
+                        swipeReplyThresholdPx
+                    ) {
+                        if (swipeToReplyEnabled && !isSelectionMode && !message.isRecalled &&
+                            message.contentType != MessageItem.CONTENT_TYPE_TIP
+                        ) {
+                            detectHorizontalDragGestures(
+                                onDragStart = {
+                                    swipeReturnJob?.cancel()
+                                },
+                                onHorizontalDrag = { change, dragAmount ->
+                                    swipeOffsetPx = (swipeOffsetPx + dragAmount)
+                                        .coerceIn(0f, swipeReplyThresholdPx * 1.35f)
+                                    change.consume()
+                                },
+                                onDragEnd = {
+                                    val shouldReply = swipeOffsetPx >= swipeReplyThresholdPx
+                                    returnSwipe(confirmed = shouldReply)
+                                    if (shouldReply) {
+                                        currentOnReply.value()
+                                    }
+                                },
+                                onDragCancel = { returnSwipe(confirmed = false) }
+                            )
+                        }
+                    }
+                    .combinedClickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = {
+                            if (isSelectionMode) {
+                                onClickInSelectionMode(message)
+                            } else if (!message.isRecalled && message.contentType != MessageItem.CONTENT_TYPE_TIP) {
+                                showMenuChanged(message.msgId)
+                            }
+                        },
+                        onLongClick = {
+                            if (!isSelectionMode) onLongPress(message)
+                        }
+                    )
+            ) {
+                if (message.contentType == MessageItem.CONTENT_TYPE_TIP) {
+                    TipContent(content = message.content)
+                } else {
+                    MessageBubbleBody(
+                        message = message,
+                        isMine = isMine,
+                        isSelectionMode = isSelectionMode,
+                        isSelected = isSelected,
+                        onLongPress = onLongPress,
+                        onClickInSelectionMode = onClickInSelectionMode,
+                        onRecall = onRecall,
+                        onEdit = onEdit,
+                        onReply = onReply,
+                        onForward = onForward,
+                        onQuoteClick = onQuoteClick,
+                        isAdmin = isAdmin,
+                        isLastFromSender = isLastFromSender,
+                        isFirstFromSender = isFirstFromSender,
+                        drawAvatar = drawAvatar,
+                        showMyBubbleAvatarSetting = showMyBubbleAvatarSetting,
+                        showTags = showTags,
+                        showMenu = showMenu,
+                        showMenuChanged = showMenuChanged,
+                        onImageClick = onImageClick,
+                        onMarkdownImageClick = onMarkdownImageClick,
+                        onAvatarClick = onAvatarClick,
+                        onAvatarLongClick = onAvatarLongClick,
+                        bubbleCornerRadius = bubbleCornerRadius,
+                        bubbleOpacity = bubbleOpacity,
+                        downloadProgress = downloadProgress,
+                        isDownloaded = isDownloaded,
+                        onDownloadClick = onDownloadClick,
+                        onButtonClick = onButtonClick,
+                        onEditIconClick = onEditIconClick,
+                        hideSenderInfo = hideSenderInfo,
+                        hideImages = hideImages,
+                        anonymousNameProvider = anonymousNameProvider,
+                        roleLabel = roleLabel,
+                        incomingBubbleColor = incomingBubbleColor,
+                        incomingAttachmentBackgroundColor = incomingAttachmentBackgroundColor,
+                        defaultLayoutDirection = defaultLayoutDirection,
+                        layoutDirection = layoutDirection,
+                        audioPlaybackState = audioPlaybackState,
+                        timestampDisplay = timestampDisplay,
+                        clipboardManager = clipboardManager,
+                        scope = scope,
+                        context = context,
+                        onCreateExpression = onCreateExpression
+                    )
+                }
+            }
+
+            Box(
+                modifier = Modifier
+                    .padding(end = 8.dp)
+                    .size(36.dp)
+                    .graphicsLayer {
+                        alpha = swipeIconProgress
+                        scaleX = 0.75f + swipeIconProgress * 0.25f
+                        scaleY = 0.75f + swipeIconProgress * 0.25f
+                    }
+                    .background(MaterialTheme.colorScheme.secondaryContainer, CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = AppIcons.FormatQuote,
+                    contentDescription = "引用",
+                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                    modifier = Modifier.size(22.dp)
                 )
             }
         }

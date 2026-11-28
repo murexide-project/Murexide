@@ -226,7 +226,6 @@ fun ConversationListScreen(
                 }
             }
         },
-        isMediumTopAppBarDisabled = true
     ) { contentPadding ->
         Box(
             modifier = Modifier

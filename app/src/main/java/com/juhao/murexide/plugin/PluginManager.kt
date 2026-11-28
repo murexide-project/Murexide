@@ -86,6 +86,9 @@ object PluginManager {
 
     fun uninstall(context: Context, id: String) {
         PluginSession.clearPlugin(id)
+        PluginScripts.enqueue(context.applicationContext, id) {
+            PluginCallTraceStorage.getInstance(context).clear(id)
+        }
         File(context.filesDir, "lua_plugins/$id").deleteRecursively()
         reload(context, id)
     }

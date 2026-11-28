@@ -108,8 +108,7 @@ class MineViewModel(
 
             val uploader = QiniuUploader(
                 context = context,
-                userToken = token,
-                enableWebp = true
+                userToken = token
             )
             
             uploader.uploadFromUri(

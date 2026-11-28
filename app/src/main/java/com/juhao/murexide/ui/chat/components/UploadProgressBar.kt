@@ -2,6 +2,8 @@ package com.juhao.murexide.ui.chat.components
 
 import com.juhao.murexide.ui.icons.AppIcons
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -24,6 +26,11 @@ fun UploadProgressBar(
     onCancel: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val animatedProgress = animateFloatAsState(
+        targetValue = progress.coerceIn(0f, 1f),
+        animationSpec = tween(durationMillis = 250)
+    ).value
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -63,7 +70,7 @@ fun UploadProgressBar(
         }
         
         LinearProgressIndicator(
-            progress = { progress.coerceIn(0f, 1f) },
+            progress = { animatedProgress },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(3.dp),

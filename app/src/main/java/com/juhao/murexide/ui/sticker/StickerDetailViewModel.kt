@@ -145,8 +145,7 @@ class StickerDetailViewModel(
                 val uploader = QiniuUploader(
                     context = context,
                     userToken = token,
-                    uploadType = 1,
-                    enableWebp = false
+                    uploadType = 1
                 )
                 val result = uploader.uploadFromUri(context, uri) { progress ->
                     _uploadProgress.value = progress

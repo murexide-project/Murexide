@@ -313,7 +313,6 @@ fun ConversationDetailScreen(
                 }
             }
         },
-        isMediumTopAppBarDisabled = true
     ) { padding ->
         CompositionLocalProvider(LocalLiquidGlassBackdrop provides liquidBackdrop) {
             Box(modifier = Modifier.fillMaxSize()) {

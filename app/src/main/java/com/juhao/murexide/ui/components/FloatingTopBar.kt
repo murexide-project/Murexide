@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -19,6 +20,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import com.juhao.murexide.datastore.SettingsStorage
 import com.juhao.murexide.ui.theme.LocalLiquidGlassBlur
 import com.juhao.murexide.ui.theme.LocalLiquidGlassEnabled
@@ -41,6 +43,7 @@ internal fun FloatingTopBar(
     avatar: (@Composable () -> Unit)? = null,
     title: @Composable () -> Unit,
     onTitleClick: () -> Unit = {},
+    titleContainerEnabled: Boolean = true,
     extraButton: (@Composable () -> Unit)? = null,
     onExtraButtonClick: () -> Unit = {},
     showOverlay: Boolean = true
@@ -65,7 +68,7 @@ internal fun FloatingTopBar(
     if (!floatingEnabled) {
         val surfaceColor = MaterialTheme.colorScheme.surface
         val supportsBlur = Build.VERSION.SDK_INT > Build.VERSION_CODES.S_V2
-    
+
         val blurStyle = remember(surfaceColor) {
             HazeBlurStyle {
                 blurRadius(16.dp)
@@ -84,7 +87,7 @@ internal fun FloatingTopBar(
                 )
             }
         }
-    
+
         val fallbackBrush = remember(surfaceColor) {
             Brush.verticalGradient(
                 colors = listOf(
@@ -95,25 +98,26 @@ internal fun FloatingTopBar(
                 )
             )
         }
-        
+
         TopAppBar(
             title = {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(controlSize)
-                        .clickable(onClick = onTitleClick)
-                        .padding(start = 4.dp),
+                        .clickable(onClick = onTitleClick),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     if (avatar != null) {
                         avatar()
+                        Spacer(Modifier.width(8.dp))
                     }
-                    Spacer(Modifier.width(if (avatar == null) 8.dp else 4.dp))
+
                     Box(modifier = Modifier.weight(1f)) {
                         title()
                     }
+
                     if (extraButton != null) {
                         Box(
                             modifier = Modifier
@@ -167,7 +171,9 @@ internal fun FloatingTopBar(
         return
     }
 
-    Box(modifier = Modifier.fillMaxWidth()) {
+    Box(
+        modifier = Modifier.fillMaxWidth()
+    ) {
         if (showOverlay) {
             Box(
                 modifier = Modifier
@@ -184,71 +190,88 @@ internal fun FloatingTopBar(
             )
         }
 
-        TopAppBar(
-            title = {
-                Row(
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .statusBarsPadding()
+                .heightIn(min = 64.dp)
+                .padding(horizontal = 4.dp)
+                .zIndex(1f),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (navigationIcon != null) {
+                Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .height(controlSize)
-                        .glassControl(RoundedCornerShape(24.dp), true)
-                        .clip(RoundedCornerShape(24.dp))
-                        .clickable(onClick = onTitleClick)
-                        .padding(start = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        .size(controlSize)
+                        .glassControl(buttonShape),
+                    contentAlignment = Alignment.Center
                 ) {
-                    if (avatar != null) {
-                        avatar()
-                    }
-                    Spacer(Modifier.width(if (avatar == null) 8.dp else 4.dp))
-                    Box(modifier = Modifier.weight(1f)) {
+                    navigationIcon()
+                }
+
+                Spacer(
+                    Modifier.width(4.dp)
+                )
+            }
+
+            Row(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(controlSize)
+                    .then(
+                        if (titleContainerEnabled) {
+                            Modifier
+                                .glassControl(RoundedCornerShape(24.dp), true)
+                                .clip(RoundedCornerShape(24.dp))
+                                .padding(start = 4.dp)
+                        } else {
+                            Modifier
+                        }
+                    )
+                    .clickable(onClick = onTitleClick),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                if (avatar != null) {
+                    avatar()
+                }
+                Spacer(
+                    Modifier.width(4.dp)
+                )
+                Box(modifier = Modifier.weight(1f)) {
+                    CompositionLocalProvider(
+                        LocalTextStyle provides MaterialTheme.typography.titleLarge
+                    ) {
                         title()
                     }
-                    if (extraButton != null) {
-                        Box(
-                            modifier = Modifier
-                                .height(46.dp)
-                                .clip(RoundedCornerShape(4.dp))
-                                .clickable(onClick = onExtraButtonClick)
-                                .padding(horizontal = 4.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            extraButton()
-                        }
-                    }
                 }
-            },
-            navigationIcon = {
-                if (navigationIcon != null) {
+                if (extraButton != null) {
                     Box(
                         modifier = Modifier
-                            .size(controlSize)
-                            .glassControl(buttonShape),
+                            .height(46.dp)
+                            .clip(RoundedCornerShape(4.dp))
+                            .clickable(onClick = onExtraButtonClick)
+                            .padding(horizontal = 4.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        navigationIcon()
+                        extraButton()
                     }
                 }
-            },
-            actions = {
-                if (actions != null) {
-                    Row(
-                        modifier = Modifier
-                            .height(controlSize)
-                            .glassControl(buttonShape),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        actions()
-                    }
-                }
-            },
-            colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = Color.Transparent,
-                scrolledContainerColor = Color.Transparent,
-                navigationIconContentColor = Color.Unspecified,
-                titleContentColor = Color.Unspecified,
-                actionIconContentColor = Color.Unspecified
-            )
-        )
+            }
+
+            if (actions != null) {
+                Spacer(
+                    Modifier.width(4.dp)
+                )
+
+                Row(
+                    modifier = Modifier
+                        .height(controlSize)
+                        .glassControl(buttonShape),
+                    verticalAlignment = Alignment.CenterVertically,
+                    content = actions
+                )
+            }
+        }
     }
 }

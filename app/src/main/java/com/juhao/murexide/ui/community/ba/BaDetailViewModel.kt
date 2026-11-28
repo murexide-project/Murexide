@@ -85,7 +85,7 @@ class BaDetailViewModel(
         if (_uiState.value.isUploadingAvatar || _uiState.value.isSavingEdit) return
         viewModelScope.launch {
             _uiState.update { it.copy(isUploadingAvatar = true, uploadProgress = 0f, error = null) }
-            QiniuUploader(context, token, enableWebp = true).uploadFromUri(context, uri) { progress ->
+            QiniuUploader(context, token).uploadFromUri(context, uri) { progress ->
                 _uiState.update { it.copy(uploadProgress = progress) }
             }.onSuccess { response ->
                 _uiState.update {

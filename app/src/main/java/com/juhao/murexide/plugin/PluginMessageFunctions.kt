@@ -33,7 +33,7 @@ internal object PluginMessageFunctions {
         }
         for (sending in listOf(true, false)) {
             val name = if (sending) "sendMessage" else "recallMessage"
-            state.register(name) { args ->
+            state.registerTraced(context, pluginId, name) { args ->
                 beforeCall()
                 val plugin = checkNotNull(PluginSession.findPlugin(pluginId)) { "插件已停用" }
                 val permissions = plugin.manifest.permissions

@@ -80,7 +80,6 @@ fun BaDetailScreen(
     Box(modifier = Modifier.fillMaxSize()) {
         StyledScaffold(
             modifier = Modifier.fillMaxSize(),
-            isMediumTopAppBarDisabled = true,
             title = {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,

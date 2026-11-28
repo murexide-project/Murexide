@@ -1,19 +1,23 @@
 package com.juhao.murexide.utils
 
 import android.net.Uri
-import android.os.Build
 import android.content.Context
-import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.media.MediaMetadataRetriever
 import android.provider.OpenableColumns
 import android.webkit.MimeTypeMap
 import com.juhao.murexide.data.MessageMedia
+import okhttp3.MediaType
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.asRequestBody
+import okio.Buffer
+import okio.BufferedSink
+import okio.ForwardingSink
+import okio.buffer
 import java.io.File
 import java.io.IOException
 import java.security.MessageDigest
@@ -61,12 +65,36 @@ internal fun orientedMediaDimensions(
     }
 }
 
+private class UploadProgressRequestBody(
+    private val delegate: RequestBody,
+    private val onProgress: (Float) -> Unit
+) : RequestBody() {
+    override fun contentType(): MediaType? = delegate.contentType()
+
+    override fun contentLength(): Long = delegate.contentLength()
+
+    override fun writeTo(sink: BufferedSink) {
+        val totalBytes = contentLength()
+        var writtenBytes = 0L
+        val countingSink = object : ForwardingSink(sink) {
+            override fun write(source: Buffer, byteCount: Long) {
+                super.write(source, byteCount)
+                writtenBytes += byteCount
+                if (totalBytes > 0L) {
+                    onProgress((writtenBytes.toFloat() / totalBytes).coerceIn(0f, 0.99f))
+                }
+            }
+        }
+        val bufferedSink = countingSink.buffer()
+        delegate.writeTo(bufferedSink)
+        bufferedSink.flush()
+    }
+}
+
 class QiniuUploader(
     context: Context,
     private val userToken: String,
-    private val enableWebp: Boolean = false,
     private val uploadType: Int = 1,
-    private val webpQuality: Int = 95,
     private val keyPrefix: String = ""
 ) {
     companion object {
@@ -225,59 +253,15 @@ class QiniuUploader(
         }
     }
 
-    private suspend fun convertToWebp(inputFile: File, outputFile: File): Boolean {
-        return withContext(Dispatchers.IO) {
-            var bitmap: Bitmap? = null
-            try {
-                bitmap = BitmapFactory.decodeFile(inputFile.absolutePath)
-                if (bitmap == null) {
-                    return@withContext false
-                }
-
-                val format = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                    Bitmap.CompressFormat.WEBP_LOSSY
-                } else {
-                    Bitmap.CompressFormat.WEBP
-                }
-                val quality = webpQuality.coerceIn(1, 100)
-                val success = bitmap.compress(
-                    format,
-                    quality,
-                    outputFile.outputStream()
-                )
-
-                success && outputFile.exists() && outputFile.length() > 0
-            } catch (_: Exception) {
-                false
-            } finally {
-                bitmap?.recycle()
-            }
-        }
-    }
-
     private suspend fun prepareFile(file: File): Pair<File, String> {
-        return when (uploadType) {
-            1 -> {
-                if (enableWebp) {
-                    val webpFile = File(appContext.cacheDir, "${file.nameWithoutExtension}.webp")
-                    if (convertToWebp(file, webpFile)) {
-                        return webpFile to "webp"
-                    }
-                }
-                val ext = file.extension.ifEmpty { "bin" }
-                file to ext
-            }
-            2 -> {
-                // 视频处理
-                val ext = file.extension.ifEmpty { "mp4" }
-                file to ext
-            }
-            else -> {
-                // 文件处理
-                val ext = file.extension.ifEmpty { "bin" }
-                file to ext
+        val ext = file.extension.ifEmpty {
+            when (uploadType) {
+                1 -> "bin"
+                2 -> "mp4"
+                else -> "bin"
             }
         }
+        return file to ext
     }
 
     private fun parseUploadResponse(responseBody: String): QiniuUploadResponse {
@@ -372,6 +356,7 @@ class QiniuUploader(
                 if (inputPath.isEmpty()) {
                     return@withContext Result.failure(IllegalArgumentException("Input is empty"))
                 }
+                onProgress(0f)
     
                 val cacheDir = appContext.cacheDir
                 val timestamp = System.currentTimeMillis()
@@ -389,22 +374,12 @@ class QiniuUploader(
                         }
 
                         response.body.byteStream().use { inputStream ->
-                            val totalBytes = response.body.contentLength()
-                            var uploadedBytes = 0L
                             val buffer = ByteArray(8192)
-
                             downloadFile.outputStream().use { outputStream ->
                                 var bytesRead: Int
                                 while (inputStream.read(buffer).also { bytesRead = it } != -1) {
                                     coroutineContext.ensureActive()
                                     outputStream.write(buffer, 0, bytesRead)
-                                    uploadedBytes += bytesRead
-                                    if (totalBytes > 0) {
-                                        val progress = uploadedBytes.toFloat() / totalBytes
-                                        withContext(Dispatchers.Main) {
-                                            onProgress(progress)
-                                        }
-                                    }
                                 }
                             }
                         }
@@ -417,7 +392,6 @@ class QiniuUploader(
                     if (!file.exists()) {
                         return@withContext Result.failure(IOException("File not found: $inputPath"))
                     }
-                    onProgress(0.3f)
                     file
                 }
     
@@ -428,7 +402,6 @@ class QiniuUploader(
                     filesToClean.add(uploadFile)
                 }
     
-                onProgress(0.5f)
     
                 val safeExt = ext.replace(Regex("[^a-zA-Z0-9]"), "").ifEmpty { "bin" }
                 if (uploadType != 3) {
@@ -452,7 +425,6 @@ class QiniuUploader(
                     return@withContext Result.failure(IOException("Failed to get upload token: ${e.message}"))
                 }
     
-                onProgress(0.7f)
     
                 val host = queryUploadHost(uploadToken)
                 val uploadUrl = "https://$host"
@@ -460,18 +432,20 @@ class QiniuUploader(
                 val mediaType = "application/octet-stream".toMediaTypeOrNull()
                     ?: throw IllegalStateException("Invalid media type")
     
-                val requestBody = MultipartBody.Builder()
-                    .setType(MultipartBody.FORM)
-                    .addFormDataPart("token", uploadToken)
-                    .addFormDataPart("key", key)
-                    .addFormDataPart(
-                        "file",
-                        uploadFile.name,
-                        uploadFile.asRequestBody(mediaType)
-                    )
-                    .build()
+                val requestBody = UploadProgressRequestBody(
+                    delegate = MultipartBody.Builder()
+                        .setType(MultipartBody.FORM)
+                        .addFormDataPart("token", uploadToken)
+                        .addFormDataPart("key", key)
+                        .addFormDataPart(
+                            "file",
+                            uploadFile.name,
+                            uploadFile.asRequestBody(mediaType)
+                        )
+                        .build(),
+                    onProgress = onProgress
+                )
     
-                onProgress(0.8f)
     
                 coroutineContext.ensureActive()
     
@@ -485,6 +459,7 @@ class QiniuUploader(
                     val responseBody = response.body.string()
 
                     if (!response.isSuccessful && responseBody.contains("no such domain")) {
+                        onProgress(0f)
                         val fallbackUrl = "https://$defaultUploadHost"
                         val fallbackRequest = Request.Builder()
                             .url(fallbackUrl)

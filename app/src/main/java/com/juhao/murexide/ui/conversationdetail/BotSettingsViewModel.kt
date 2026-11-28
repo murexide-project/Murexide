@@ -115,7 +115,7 @@ class BotSettingsViewModel(
     fun uploadAvatar(context: Context, uri: Uri) {
         viewModelScope.launch {
             _uiState.update { it.copy(isUploadingAvatar = true, uploadProgress = 0f) }
-            val uploader = QiniuUploader(context = context, userToken = token, enableWebp = true)
+            val uploader = QiniuUploader(context = context, userToken = token)
             uploader.uploadFromUri(
                 context = context,
                 uri = uri,

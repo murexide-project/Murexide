@@ -196,7 +196,7 @@ class PluginScriptSession internal constructor(
             check(isCurrent) { "插件已停用或重载" }
         }, resolve = ::resolveString)
         fun action(name: String, create: (List<LuaValue>) -> PluginAction) {
-            state.register(name) { args ->
+            state.registerTraced(context, pluginId, name) { args ->
                 mutate()
                 val success = PluginExecutor.execute(context, pluginId, listOf(create(args)), env())
                 listOf(LuaValue.Bool(success))
@@ -216,7 +216,7 @@ class PluginScriptSession internal constructor(
             val data = fromLua(value(it, "extras", 1)) as? Map<String, Any?> ?: emptyMap()
             PluginAction.StartActivity(text(it, "activity").ifBlank { text(it, "class") }, data)
         }
-        state.register("Alert") { args ->
+        state.registerTraced(context, pluginId, "Alert") { args ->
             mutate()
             val original = options(args)
             val table = original?.get(LuaValue.Str("dialog")) as? LuaValue.Table ?: original
@@ -232,13 +232,13 @@ class PluginScriptSession internal constructor(
             })
             emptyList()
         }
-        state.register("readData") { args ->
+        state.registerTraced(context, pluginId, "readData") { args ->
             requirePermission(PluginPermissions.STORAGE)
             val key = text(args, "name").ifBlank { text(args, "key") }
             val stored = LuaPluginDataStorage.getInstance(context).readValue(pluginId, key)
             listOf(if (stored == null) value(args, "default", 1) else toLua(state, stored))
         }
-        state.register("writeData") { args ->
+        state.registerTraced(context, pluginId, "writeData") { args ->
             mutate()
             requirePermission(PluginPermissions.STORAGE)
             val key = text(args, "name").ifBlank { text(args, "key") }
@@ -246,18 +246,18 @@ class PluginScriptSession internal constructor(
             PluginSession.bumpPage()
             listOf(LuaValue.Bool(true))
         }
-        state.register("getValue") { args ->
+        state.registerTraced(context, pluginId, "getValue") { args ->
             val key = text(args, "name").ifBlank { text(args, "key") }
             val stored = PluginSession.getVar(pluginId, key)
             listOf(if (stored == null) value(args, "default", 1) else toLua(state, stored))
         }
-        state.register("setValue") { args ->
+        state.registerTraced(context, pluginId, "setValue") { args ->
             mutate()
             val key = text(args, "name").ifBlank { text(args, "key") }
             PluginSession.setVar(pluginId, key, resolvedValue(value(args, "value", 1)))
             emptyList()
         }
-        state.register("Http") { args ->
+        state.registerTraced(context, pluginId, "Http") { args ->
             mutate()
             requirePermission(PluginPermissions.NETWORK)
             val method = text(args, "method", "GET").uppercase()
@@ -281,7 +281,7 @@ class PluginScriptSession internal constructor(
             }
         }
         state.register("enabled") { args -> listOf(value(args, "value")) }
-        state.register("addFloatingView") { args ->
+        state.registerTraced(context, pluginId, "addFloatingView") { args ->
             mutate()
             val id = text(args, "id")
             require(id.isNotBlank()) { "浮窗 id 不能为空" }
@@ -305,7 +305,7 @@ class PluginScriptSession internal constructor(
             PluginFloatingViews.add(target, pluginId, id, this, rendered, position)
             emptyList()
         }
-        state.register("removeFloatingView") { args ->
+        state.registerTraced(context, pluginId, "removeFloatingView") { args ->
             mutate()
             val id = text(args, "id")
             require(id.isNotBlank()) { "浮窗 id 不能为空" }

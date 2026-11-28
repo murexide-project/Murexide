@@ -430,8 +430,7 @@ private object ShareDispatcher {
             val uploader = QiniuUploader(
                 context = context,
                 userToken = token,
-                uploadType = 1,
-                enableWebp = true
+                uploadType = 1
             )
             val response = uploader.uploadFromUri(context, uri, onProgress = {}).getOrNull()
             if (response == null) {

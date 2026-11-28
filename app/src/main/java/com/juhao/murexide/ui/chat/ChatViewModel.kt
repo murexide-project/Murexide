@@ -657,13 +657,11 @@ class ChatViewModel(
         voiceRecorder = null
         val text = _uiState.value.inputText
         val sending = _uiState.value.isSending
-        kotlinx.coroutines.GlobalScope.launch(Dispatchers.IO) {
-            if (!sending && text.isNotBlank()) {
-                accountStorage.saveDraft(chatId, chatType, text)
-            } else {
-                accountStorage.clearDraft(chatId, chatType)
-            }
-        }
+        accountStorage.saveDraftInBackground(
+            chatId = chatId,
+            chatType = chatType,
+            draft = if (!sending && text.isNotBlank()) text else ""
+        )
         ActiveConversationRegistry.deactivate(this)
         super.onCleared()
     }
@@ -1073,8 +1071,7 @@ class ChatViewModel(
             val uploader = QiniuUploader(
                 context = context,
                 userToken = token,
-                uploadType = if (isVideo) 2 else 1,
-                enableWebp = !isVideo
+                uploadType = if (isVideo) 2 else 1
             )
 
             val result = uploader.uploadFromUri(

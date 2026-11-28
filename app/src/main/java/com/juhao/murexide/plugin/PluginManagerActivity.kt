@@ -71,7 +71,6 @@ fun PluginManagerScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     val manifests by PluginManager.manifests.collectAsState()
     var showTutorial by remember { mutableStateOf(false) }
-    var managedPluginId by remember { mutableStateOf<String?>(null) }
     var pendingInstall by remember { mutableStateOf<PendingInstall?>(null) }
     var installError by remember { mutableStateOf<String?>(null) }
 
@@ -271,15 +270,6 @@ fun PluginManagerScreen(onBack: () -> Unit) {
         }
     }
 
-    manifests.firstOrNull { it.id == managedPluginId }?.let { manifest ->
-        key(manifest.id) {
-            PluginManagementSheet(
-                manifest = manifest,
-                onDismiss = { managedPluginId = null }
-            )
-        }
-    }
-
     StyledScaffold(
         title = { Text("插件管理") },
         navigationIcon = {
@@ -312,7 +302,7 @@ fun PluginManagerScreen(onBack: () -> Unit) {
                         manifest = m,
                         context = context,
                         sizeBytes = PluginManager.pluginDirSize(context, m.id),
-                        onManage = { managedPluginId = m.id }
+                        onManage = { PluginDetailActivity.start(context, m.id) }
                     )
                 }
             }
@@ -390,9 +380,10 @@ private fun PluginCard(
         }
     }
 }
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun PluginManagementSheet(
+internal fun PluginDetailScreen(
     manifest: PluginManifest,
     onDismiss: () -> Unit
 ) {
@@ -404,6 +395,7 @@ private fun PluginManagementSheet(
     var logsError by remember { mutableStateOf<String?>(null) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var deleteError by remember { mutableStateOf<String?>(null) }
+    var showMoreMenu by remember { mutableStateOf(false) }
     val sizeText by produceState("读取中", manifest.id, logsText) {
         value = withContext(Dispatchers.IO) {
             runCatching { formatSize(PluginManager.pluginDirSize(context, manifest.id)) }
@@ -435,118 +427,133 @@ private fun PluginManagementSheet(
         if (selectedTab == 2) refreshLogs()
     }
 
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        containerColor = MaterialTheme.colorScheme.surfaceContainerLow
-    ) {
-        Column(
-            Modifier
-                .fillMaxWidth()
-                .fillMaxHeight(0.85f)
-                .padding(horizontal = 20.dp)
-        ) {
-            Text("插件详情", style = MaterialTheme.typography.titleLarge)
-            Spacer(Modifier.height(8.dp))
-            Text(manifest.name, style = MaterialTheme.typography.titleMedium)
-            Spacer(Modifier.height(16.dp))
-            PrimaryTabRow(selectedTabIndex = selectedTab) {
-                listOf("详情", "所需权限", "日志").forEachIndexed { index, title ->
-                    Tab(
-                        selected = selectedTab == index,
-                        onClick = { selectedTab = index },
-                        text = { Text(title) }
+    val tabTitles = listOf("详情", "所需权限", "日志", "调用轨迹")
+
+    StyledScaffold(
+        title = { Text(manifest.name) },
+        navigationIcon = {
+            IconButton(onClick = onDismiss) { Icon(AppIcons.ArrowBack, "返回") }
+        },
+        actions = {
+            Box {
+                IconButton(onClick = { showMoreMenu = true }) {
+                    Icon(AppIcons.MoreVert, contentDescription = "更多")
+                }
+                ExpressiveDropdownMenu(
+                    expanded = showMoreMenu,
+                    onDismissRequest = { showMoreMenu = false }
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("删除插件") },
+                        onClick = {
+                            showMoreMenu = false
+                            deleteError = null
+                            showDeleteConfirm = true
+                        },
+                        leadingIcon = {
+                            Icon(
+                                AppIcons.Delete,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        },
+                        colors = MenuDefaults.itemColors(
+                            textColor = MaterialTheme.colorScheme.error,
+                            leadingIconColor = MaterialTheme.colorScheme.error
+                        )
                     )
                 }
             }
-            key(selectedTab) {
-                LazyColumn(
-                    modifier = Modifier.weight(1f).fillMaxWidth(),
-                    contentPadding = PaddingValues(vertical = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    when (selectedTab) {
-                        0 -> {
-                            item { PluginDetailRow("插件 ID", manifest.id) }
-                            item { PluginDetailRow("版本", "v${manifest.version}") }
-                            item { PluginDetailRow("作者", manifest.author?.takeIf { it.isNotBlank() } ?: "未提供") }
-                            item { PluginDetailRow("状态", if (manifest.enabled) "已启用" else "已停用") }
-                            item { PluginDetailRow("占用空间", sizeText) }
+        },
+        extraContent = {
+            CapsuleTabBar(
+                tabs = tabTitles,
+                selectedTabIndex = selectedTab,
+                onTabSelected = { selectedTab = it },
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+        }
+    ) { padding ->
+        if (selectedTab == 3) {
+            PluginCallTracePage(
+                Modifier.fillMaxWidth(),
+                manifest.id,
+                padding
+            )
+        } else key(selectedTab) {
+            LazyColumn(
+                modifier = Modifier.fillMaxWidth(),
+                contentPadding = padding,
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                when (selectedTab) {
+                    0 -> {
+                        item { PluginDetailRow("插件 ID", manifest.id) }
+                        item { PluginDetailRow("版本", "v${manifest.version}") }
+                        item { PluginDetailRow("作者", manifest.author?.takeIf { it.isNotBlank() } ?: "未提供") }
+                        item { PluginDetailRow("状态", if (manifest.enabled) "已启用" else "已停用") }
+                        item { PluginDetailRow("占用空间", sizeText) }
+                        item {
+                            PluginDetailRow(
+                                "最低应用版本",
+                                if (manifest.minVersion > 0) manifest.minVersion.toString() else "未限制"
+                            )
+                        }
+                        item { PluginDetailRow("描述", manifest.description?.takeIf { it.isNotBlank() } ?: "暂无描述") }
+                    }
+                    1 -> {
+                        if (manifest.permissions.isEmpty()) {
                             item {
-                                PluginDetailRow(
-                                    "最低应用版本",
-                                    if (manifest.minVersion > 0) manifest.minVersion.toString() else "未限制"
+                                Text(
+                                    "未请求任何权限",
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
-                            item { PluginDetailRow("描述", manifest.description?.takeIf { it.isNotBlank() } ?: "暂无描述") }
-                        }
-                        1 -> {
-                            if (manifest.permissions.isEmpty()) {
-                                item {
-                                    Text(
-                                        "未请求任何权限",
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            } else {
-                                items(
-                                    manifest.permissions.sortedWith(
-                                        compareByDescending<String> { PluginPermissions.risk(it) }
-                                            .thenBy { PluginPermissions.label(it) }
-                                    ),
-                                    key = { it }
-                                ) { permission ->
-                                    PermissionRow(permission)
-                                }
+                        } else {
+                            items(
+                                manifest.permissions.sortedWith(
+                                    compareByDescending<String> { PluginPermissions.risk(it) }
+                                        .thenBy { PluginPermissions.label(it) }
+                                ),
+                                key = { it }
+                            ) { permission ->
+                                PermissionRow(permission)
                             }
                         }
-                        2 -> {
-                            item {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.End
-                                ) {
-                                    TextButton(onClick = { refreshLogs() }, enabled = !logsBusy) {
-                                        Text("刷新")
-                                    }
-                                    TextButton(
-                                        onClick = { refreshLogs(clear = true) },
-                                        enabled = !logsBusy && !logsText.isNullOrEmpty()
-                                    ) { Text("清空") }
+                    }
+                    2 -> {
+                        item {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.End
+                            ) {
+                                TextButton(onClick = { refreshLogs() }, enabled = !logsBusy) {
+                                    Text("刷新")
                                 }
+                                TextButton(
+                                    onClick = { refreshLogs(clear = true) },
+                                    enabled = !logsBusy && !logsText.isNullOrEmpty()
+                                ) { Text("清空") }
                             }
-                            if (logsBusy) {
-                                item { LinearProgressIndicator(Modifier.fillMaxWidth()) }
-                            }
-                            logsError?.let { message ->
-                                item { Text(message, color = MaterialTheme.colorScheme.error) }
-                            }
-                            item {
-                                SelectionContainer {
-                                    Text(
-                                        logsText?.ifBlank { "暂无日志" }
-                                            ?: if (logsBusy) "正在读取日志…" else "暂无日志",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        fontFamily = FontFamily.Monospace
-                                    )
-                                }
+                        }
+                        if (logsBusy) {
+                            item { LinearProgressIndicator(Modifier.fillMaxWidth()) }
+                        }
+                        logsError?.let { message ->
+                            item { Text(message, color = MaterialTheme.colorScheme.error) }
+                        }
+                        item {
+                            SelectionContainer {
+                                Text(
+                                    logsText?.ifBlank { "暂无日志" }
+                                        ?: if (logsBusy) "正在读取日志…" else "暂无日志",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontFamily = FontFamily.Monospace
+                                )
                             }
                         }
                     }
                 }
-            }
-            HorizontalDivider()
-            TextButton(
-                onClick = {
-                    deleteError = null
-                    showDeleteConfirm = true
-                },
-                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
-            ) {
-                Icon(AppIcons.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(8.dp))
-                Text("删除插件")
             }
         }
     }
@@ -590,7 +597,10 @@ private fun PluginManagementSheet(
 
 @Composable
 private fun PluginDetailRow(label: String, value: String) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    Column(
+        modifier = Modifier.padding(horizontal = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
         Text(
             label,
             style = MaterialTheme.typography.labelMedium,
@@ -619,7 +629,7 @@ private fun PermissionRow(permission: String) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 6.dp),
+            .padding(vertical = 6.dp, horizontal = 12.dp),
         verticalAlignment = Alignment.Top
     ) {
         Surface(

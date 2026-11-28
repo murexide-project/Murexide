@@ -55,7 +55,7 @@ class CreationViewModel(
         if (_uiState.value.isUploadingAvatar || _uiState.value.isCreating) return
         viewModelScope.launch {
             _uiState.update { it.copy(isUploadingAvatar = true, uploadProgress = 0f, error = null) }
-            QiniuUploader(context, token, enableWebp = true).uploadFromUri(context, uri) { progress ->
+            QiniuUploader(context, token).uploadFromUri(context, uri) { progress ->
                 _uiState.update { it.copy(uploadProgress = progress) }
             }.onSuccess { response ->
                 _uiState.update { it.copy(isUploadingAvatar = false, avatarUrl = "https://chat-img.jwznb.com/${response.key}") }
