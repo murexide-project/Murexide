@@ -790,7 +790,8 @@ fun MainScreen(account: UserAccount) {
                     composable("community") {
                         CommunityScreen(
                             token = token,
-                            innerPadding = innerPadding
+                            innerPadding = innerPadding,
+                            bigScreenMode = isBigScreen && bigScreenEnabled
                         )
                     }
 

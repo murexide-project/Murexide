@@ -8,7 +8,9 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
@@ -16,12 +18,14 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.juhao.murexide.MainActivity
 import com.juhao.murexide.datastore.AccountStorage
+import com.juhao.murexide.datastore.SettingsStorage
 import com.juhao.murexide.repository.ShareRepository
 import com.juhao.murexide.ui.chat.ChatActivity
 import com.juhao.murexide.ui.community.ba.BaDetailActivity
@@ -50,6 +54,9 @@ class ConversationDetailActivity : ComponentActivity() {
 
         setContent {
             MurexideTheme {
+                val settingsStorage = remember { SettingsStorage(this@ConversationDetailActivity) }
+                val bigScreenEnabled = settingsStorage.bigScreenFlow.collectAsState(initial = true).value
+                val bigScreenMode = LocalConfiguration.current.screenWidthDp >= 600 && bigScreenEnabled
                 val account = accountState.value
                 val state = detailState.value
                 when {
@@ -69,6 +76,7 @@ class ConversationDetailActivity : ComponentActivity() {
                     ) { Text(state.message) }
 
                     state is DetailState.Ready -> ConversationDetailScreen(
+                        bigScreenMode = bigScreenMode,
                         onBack = { finish() },
                         onEnterChat = { detail ->
                             ChatActivity.start(

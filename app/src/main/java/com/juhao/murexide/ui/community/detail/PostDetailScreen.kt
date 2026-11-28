@@ -67,6 +67,7 @@ import com.kyant.backdrop.backdrops.emptyBackdrop
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun PostDetailScreen(
+    modifier: Modifier = Modifier,
     onBackClick: () -> Unit,
     viewModel: PostDetailViewModel
 ) {
@@ -194,6 +195,7 @@ fun PostDetailScreen(
     }
 
     Scaffold(
+        modifier = modifier,
         topBar = {
             FloatingTopBar(
                 hazeState = hazeState,

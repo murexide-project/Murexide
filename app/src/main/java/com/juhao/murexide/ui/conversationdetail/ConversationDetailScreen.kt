@@ -100,6 +100,7 @@ private fun detailGlassColor(color: Color): Color = color.copy(
 fun ConversationDetailScreen(
     viewModel: ConversationDetailViewModel,
     onBack: () -> Unit,
+    bigScreenMode: Boolean = false,
     onEnterChat: (ConversationDetail) -> Unit,
     onEditGroup: (ConversationDetail) -> Unit = {},
     onEditBot: (ConversationDetail) -> Unit = {},
@@ -189,7 +190,7 @@ fun ConversationDetailScreen(
     StyledScaffold(
         snackbarHost = { SnackbarHost(snackbars) },
         title = {
-            if (detail != null) {
+            if (!bigScreenMode && detail != null) {
                 Column {
                     Text(
                         text = detail.name,
@@ -336,6 +337,7 @@ fun ConversationDetailScreen(
 
                     else -> ConversationDetailContent(
                         innerPadding = padding,
+                        bigScreenMode = bigScreenMode,
                         detail = detail,
                         currentUserId = currentUserId,
                         listState = when (detail.chatType) {
@@ -514,6 +516,7 @@ fun ConversationDetailScreen(
 @Composable
 private fun ConversationDetailContent(
     innerPadding: PaddingValues,
+    bigScreenMode: Boolean,
     detail: ConversationDetail,
     currentUserId: String,
     listState: LazyListState,
@@ -603,31 +606,7 @@ private fun ConversationDetailContent(
         }
     }
 
-    LazyColumn(
-        state = listState,
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = innerPadding
-    ) {
-        item(key = "header") {
-            DetailHeader(
-                detail = detail,
-                isCurrentUser = isCurrentUser,
-                isBot = isBot,
-                isAdded = isAdded,
-                isAdding = isAdding,
-                isLeaving = isLeaving,
-                isChangingMute = isChangingMute,
-                introductionExpanded = introductionExpanded,
-                titleFadeAlpha = titleFadeAlpha,
-                onIntroductionClick = { introductionExpanded = true },
-                onAdd = onAdd,
-                onMessage = onMessage,
-                onMute = onMute,
-                onLeave = onLeave,
-                onInviteToGroup = if (isBot) onInviteToGroup else null
-            )
-        }
-
+    val bodyContent: LazyListScope.() -> Unit = {
         if (isGroup && isAdded == true) {
             item(key = "tabs") {
                 CapsuleTabBar(
@@ -706,6 +685,92 @@ private fun ConversationDetailContent(
                 hasMoreHistory = hasMoreHistory,
                 isTop = false
             )
+        }
+    }
+
+    if (bigScreenMode) {
+        Row(modifier = Modifier.fillMaxSize()) {
+            Column(
+                modifier = Modifier
+                    .weight(0.38f)
+                    .fillMaxHeight()
+                    .verticalScroll(rememberScrollState())
+                    .padding(innerPadding)
+            ) {
+                DetailHeader(
+                    detail = detail,
+                    isCurrentUser = isCurrentUser,
+                    isBot = isBot,
+                    isAdded = isAdded,
+                    isAdding = isAdding,
+                    isLeaving = isLeaving,
+                    isChangingMute = isChangingMute,
+                    introductionExpanded = introductionExpanded,
+                    titleFadeAlpha = 0f,
+                    bigScreenMode = true,
+                    onIntroductionClick = { introductionExpanded = true },
+                    onAdd = onAdd,
+                    onMessage = onMessage,
+                    onMute = onMute,
+                    onLeave = onLeave,
+                    onInviteToGroup = if (isBot) onInviteToGroup else null
+                )
+            }
+            LazyColumn(
+                state = listState,
+                modifier = Modifier
+                    .weight(0.62f)
+                    .fillMaxHeight(),
+                contentPadding = innerPadding
+            ) {
+                item(key = "header-actions") {
+                    DetailActionsAndInfo(
+                        detail = detail,
+                        isCurrentUser = isCurrentUser,
+                        isBot = isBot,
+                        isAdded = isAdded,
+                        isAdding = isAdding,
+                        isLeaving = isLeaving,
+                        isChangingMute = isChangingMute,
+                        introductionExpanded = introductionExpanded,
+                        bigScreenMode = true,
+                        onIntroductionClick = { introductionExpanded = true },
+                        onAdd = onAdd,
+                        onMessage = onMessage,
+                        onMute = onMute,
+                        onLeave = onLeave,
+                        onInviteToGroup = if (isBot) onInviteToGroup else null
+                    )
+                }
+                bodyContent()
+            }
+        }
+    } else {
+        LazyColumn(
+            state = listState,
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = innerPadding
+        ) {
+            item(key = "header") {
+                DetailHeader(
+                    detail = detail,
+                    isCurrentUser = isCurrentUser,
+                    isBot = isBot,
+                    isAdded = isAdded,
+                    isAdding = isAdding,
+                    isLeaving = isLeaving,
+                    isChangingMute = isChangingMute,
+                    introductionExpanded = introductionExpanded,
+                    titleFadeAlpha = titleFadeAlpha,
+                    onIntroductionClick = { introductionExpanded = true },
+                    onAdd = onAdd,
+                    onMessage = onMessage,
+                    onMute = onMute,
+                    onLeave = onLeave,
+                    onInviteToGroup = if (isBot) onInviteToGroup else null
+                )
+            }
+            bodyContent()
         }
     }
 }
@@ -913,6 +978,7 @@ private fun DetailHeader(
     isChangingMute: Boolean,
     introductionExpanded: Boolean,
     titleFadeAlpha: Float,
+    bigScreenMode: Boolean = false,
     onIntroductionClick: () -> Unit,
     onAdd: () -> Unit,
     onMessage: () -> Unit,
@@ -931,13 +997,15 @@ private fun DetailHeader(
         }
     }
     Column(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterHorizontally
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(if (bigScreenMode) Modifier.padding(horizontal = 16.dp) else Modifier),
+        horizontalAlignment = if (bigScreenMode) Alignment.Start else Alignment.CenterHorizontally
     ) {
         Spacer(Modifier.height(4.dp))
         Avatar(
             url = detail.avatarUrl,
-            size = 88.dp,
+            size = if (bigScreenMode) 128.dp else 88.dp,
             canView = true,
             modifier = Modifier.alpha(headerAlpha)
         )
@@ -946,7 +1014,7 @@ private fun DetailHeader(
             detail.name,
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center,
+            textAlign = if (bigScreenMode) TextAlign.Start else TextAlign.Center,
             modifier = Modifier.alpha(headerAlpha)
         )
         Text(
@@ -960,8 +1028,11 @@ private fun DetailHeader(
             FlowRow(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 24.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
+                    .padding(horizontal = if (bigScreenMode) 0.dp else 24.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(
+                    6.dp,
+                    if (bigScreenMode) Alignment.Start else Alignment.CenterHorizontally
+                ),
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 val genderLabel = when (detail.gender) {
@@ -994,6 +1065,51 @@ private fun DetailHeader(
             }
         }
 
+        if (!bigScreenMode) {
+            DetailActionsAndInfo(
+                detail = detail,
+                isCurrentUser = isCurrentUser,
+                isBot = isBot,
+                isAdded = isAdded,
+                isAdding = isAdding,
+                isLeaving = isLeaving,
+                isChangingMute = isChangingMute,
+                introductionExpanded = introductionExpanded,
+                bigScreenMode = bigScreenMode,
+                onIntroductionClick = onIntroductionClick,
+                onAdd = onAdd,
+                onMessage = onMessage,
+                onMute = onMute,
+                onLeave = onLeave,
+                onInviteToGroup = onInviteToGroup
+            )
+        }
+    }
+}
+
+@Composable
+private fun DetailActionsAndInfo(
+    detail: ConversationDetail,
+    isCurrentUser: Boolean,
+    isBot: Boolean,
+    isAdded: Boolean?,
+    isAdding: Boolean,
+    isLeaving: Boolean,
+    isChangingMute: Boolean,
+    introductionExpanded: Boolean,
+    bigScreenMode: Boolean,
+    onIntroductionClick: () -> Unit,
+    onAdd: () -> Unit,
+    onMessage: () -> Unit,
+    onMute: () -> Unit,
+    onLeave: () -> Unit,
+    onInviteToGroup: (() -> Unit)?
+) {
+    val isGroup = detail.chatType == 2
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = if (bigScreenMode) Alignment.Start else Alignment.CenterHorizontally
+    ) {
         Spacer(Modifier.height(12.dp))
         when {
             isCurrentUser -> TelegramAction(

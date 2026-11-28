@@ -2,6 +2,7 @@ package com.juhao.murexide.ui.community
 
 import android.net.Uri
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -32,7 +33,10 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.juhao.murexide.data.PostItem
 import com.juhao.murexide.data.BaItem
+import com.juhao.murexide.datastore.AccountStorage
 import com.juhao.murexide.ui.community.ba.BaDetailActivity
+import com.juhao.murexide.ui.community.detail.PostDetailViewModel
+import com.juhao.murexide.ui.community.detail.PostDetailScreen
 import com.juhao.murexide.ui.community.detail.PostDetailActivity
 import com.juhao.murexide.ui.community.myposts.MyPostsActivity
 import com.juhao.murexide.ui.components.*
@@ -56,7 +60,8 @@ operator fun PaddingValues.plus(other: PaddingValues): PaddingValues {
 fun CommunityScreen(
     token: String,
     innerPadding: PaddingValues,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    bigScreenMode: Boolean = false
 ) {
     val viewModel: CommunityViewModel = viewModel(
         key = "community_$token",
@@ -71,6 +76,23 @@ fun CommunityScreen(
     val uiState by viewModel.uiState.collectAsState()
     val searchState by viewModel.searchState.collectAsState()
     val context = LocalContext.current
+
+    var selectedPostId by remember(token) { mutableStateOf<Int?>(null) }
+
+    val selectedPostViewModel: PostDetailViewModel? = selectedPostId?.let { postId ->
+        androidx.lifecycle.viewmodel.compose.viewModel<PostDetailViewModel>(
+            key = "community_post_${token}_$postId",
+            factory = object : androidx.lifecycle.ViewModelProvider.Factory {
+                @Suppress("UNCHECKED_CAST")
+                override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+                    return PostDetailViewModel(
+                        accountStorage = AccountStorage.getInstance(context.applicationContext),
+                        postId = postId
+                    ) as T
+                }
+            }
+        )
+    }
 
     var showCreateBaDialog by remember { mutableStateOf(false) }
 
@@ -128,106 +150,162 @@ fun CommunityScreen(
         it.first == uiState.currentTab
     }.coerceAtLeast(0)
 
-    StyledScaffold(
-        title = { Text("社区") },
-        actions = {
-            if (uiState.currentTab == CommunityTab.RECOMMEND) {
-                IconButton(onClick = { viewModel.toggleSort() }) {
-                    Icon(
-                        imageVector = if (uiState.sort == CommunitySort.RECOMMEND) {
-                            AppIcons.LocalFireDepartment
-                        } else {
-                            AppIcons.Update
-                        },
-                        contentDescription = if (uiState.sort == CommunitySort.RECOMMEND) {
-                            "推荐"
-                        } else {
-                            "最新"
-                        }
-                    )
+    val communityContent: @Composable () -> Unit = {
+        StyledScaffold(
+            modifier = modifier,
+            title = { Text("社区") },
+            actions = {
+                if (uiState.currentTab == CommunityTab.RECOMMEND) {
+                    IconButton(onClick = { viewModel.toggleSort() }) {
+                        Icon(
+                            imageVector = if (uiState.sort == CommunitySort.RECOMMEND) {
+                                AppIcons.LocalFireDepartment
+                            } else {
+                                AppIcons.Update
+                            },
+                            contentDescription = if (uiState.sort == CommunitySort.RECOMMEND) {
+                                "推荐"
+                            } else {
+                                "最新"
+                            }
+                        )
+                    }
                 }
-            }
 
-            IconButton(onClick = {
-                scope.launch { searchBarState.animateToExpanded() }
-            }) {
-                Icon(AppIcons.Search, contentDescription = "搜索")
+                IconButton(onClick = {
+                    scope.launch { searchBarState.animateToExpanded() }
+                }) {
+                    Icon(AppIcons.Search, contentDescription = "搜索")
+                }
+            },
+            extraContent = {
+                CapsuleTabBar(
+                    tabs = tabs.map { it.second },
+                    selectedTabIndex = selectedIndex,
+                    onTabSelected = { index ->
+                        viewModel.selectTab(tabs[index].first)
+                    },
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
             }
-        },
-        extraContent = {
-            CapsuleTabBar(
-                tabs = tabs.map { it.second },
-                selectedTabIndex = selectedIndex,
-                onTabSelected = { index ->
-                    viewModel.selectTab(tabs[index].first)
-                },
-                modifier = Modifier.padding(vertical = 8.dp)
-            )
+        ) { contentPadding ->
+            val combinedPadding = innerPadding + contentPadding
+            when (uiState.currentTab) {
+                CommunityTab.RECOMMEND -> {
+                    if (uiState.sort == CommunitySort.RECOMMEND) {
+                        PostsList(
+                            posts = uiState.posts,
+                            contentPadding = combinedPadding,
+                            isLoading = uiState.isLoadingPosts,
+                            isRefreshing = uiState.isRefreshingPosts,
+                            isLoadingMore = uiState.isLoadingMore,
+                            onRefresh = viewModel::loadRecommend,
+                            onLikeClick = viewModel::toggleLike,
+                            onCollectClick = viewModel::toggleCollect,
+                            onPostClick = {
+                                if (bigScreenMode) {
+                                    selectedPostId = it.id
+                                } else {
+                                    PostDetailActivity.start(context, it.id)
+                                }
+                            },
+                            onLoadMore = viewModel::loadMorePosts
+                        )
+                    } else {
+                        PostsList(
+                            posts = uiState.latestPosts,
+                            contentPadding = combinedPadding,
+                            isLoading = uiState.isLatestLoading,
+                            isRefreshing = uiState.isLatestRefreshing,
+                            isLoadingMore = uiState.isLatestLoadingMore,
+                            onRefresh = viewModel::loadLatest,
+                            onLikeClick = viewModel::toggleLike,
+                            onCollectClick = viewModel::toggleCollect,
+                            onPostClick = {
+                                if (bigScreenMode) {
+                                    selectedPostId = it.id
+                                } else {
+                                    PostDetailActivity.start(context, it.id)
+                                }
+                            },
+                            onLoadMore = viewModel::loadMoreLatest
+                        )
+                    }
+                }
+
+                CommunityTab.ALL_BA -> AllBaContent(
+                    contentPadding = combinedPadding,
+                    currentSide = uiState.currentBaSide,
+                    onSideSelected = viewModel::selectBaSide,
+                    baList = uiState.allBaList,
+                    isLoading = uiState.isLoadingAllBa,
+                    onBaClick = {
+                        BaDetailActivity.start(context, it.id)
+                    }
+                )
+
+                CommunityTab.MANAGE -> ManageContent(
+                    contentPadding = combinedPadding,
+                    baList = uiState.manageBaList,
+                    isLoading = uiState.isLoadingManageBa,
+                    onMyPostsClick = {
+                        MyPostsActivity.start(context)
+                    },
+                    onCreateBaClick = {
+                        showCreateBaDialog = true
+                    },
+                    onBaClick = {
+                        BaDetailActivity.start(context, it.id)
+                    }
+                )
+            }
         }
-    ) { contentPadding ->
-        val combinedPadding = innerPadding + contentPadding
+    }
 
-        when (uiState.currentTab) {
-            CommunityTab.RECOMMEND -> {
-                if (uiState.sort == CommunitySort.RECOMMEND) {
-                    PostsList(
-                        posts = uiState.posts,
-                        contentPadding = combinedPadding,
-                        isLoading = uiState.isLoadingPosts,
-                        isRefreshing = uiState.isRefreshingPosts,
-                        isLoadingMore = uiState.isLoadingMore,
-                        onRefresh = viewModel::loadRecommend,
-                        onLikeClick = viewModel::toggleLike,
-                        onCollectClick = viewModel::toggleCollect,
-                        onPostClick = {
-                            PostDetailActivity.start(context, it.id)
-                        },
-                        onLoadMore = viewModel::loadMorePosts
-                    )
+    BackHandler(enabled = bigScreenMode && selectedPostId != null && searchBarState.targetValue == SearchBarValue.Collapsed) {
+        selectedPostId = null
+    }
+
+    if (bigScreenMode) {
+        Row(modifier = Modifier.fillMaxSize()) {
+            Box(
+                modifier = Modifier
+                    .weight(0.4f)
+                    .fillMaxHeight()
+            ) {
+                communityContent()
+            }
+            VerticalDivider()
+            Box(
+                modifier = Modifier
+                    .weight(0.7f)
+                    .fillMaxHeight()
+            ) {
+                if (selectedPostViewModel != null) {
+                    key(token, selectedPostId) {
+                        PostDetailScreen(
+                            modifier = Modifier.fillMaxSize(),
+                            onBackClick = { selectedPostId = null },
+                            viewModel = selectedPostViewModel
+                        )
+                    }
                 } else {
-                    PostsList(
-                        posts = uiState.latestPosts,
-                        contentPadding = combinedPadding,
-                        isLoading = uiState.isLatestLoading,
-                        isRefreshing = uiState.isLatestRefreshing,
-                        isLoadingMore = uiState.isLatestLoadingMore,
-                        onRefresh = viewModel::loadLatest,
-                        onLikeClick = viewModel::toggleLike,
-                        onCollectClick = viewModel::toggleCollect,
-                        onPostClick = {
-                            PostDetailActivity.start(context, it.id)
-                        },
-                        onLoadMore = viewModel::loadMoreLatest
-                    )
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = AppIcons.Article,
+                            contentDescription = null,
+                            modifier = Modifier.size(80.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                        )
+                    }
                 }
             }
-
-            CommunityTab.ALL_BA -> AllBaContent(
-                contentPadding = combinedPadding,
-                currentSide = uiState.currentBaSide,
-                onSideSelected = viewModel::selectBaSide,
-                baList = uiState.allBaList,
-                isLoading = uiState.isLoadingAllBa,
-                onBaClick = {
-                    BaDetailActivity.start(context, it.id)
-                }
-            )
-
-            CommunityTab.MANAGE -> ManageContent(
-                contentPadding = combinedPadding,
-                baList = uiState.manageBaList,
-                isLoading = uiState.isLoadingManageBa,
-                onMyPostsClick = {
-                    MyPostsActivity.start(context)
-                },
-                onCreateBaClick = {
-                    showCreateBaDialog = true
-                },
-                onBaClick = {
-                    BaDetailActivity.start(context, it.id)
-                }
-            )
         }
+    } else {
+        communityContent()
     }
 
     if (showCreateBaDialog) {
