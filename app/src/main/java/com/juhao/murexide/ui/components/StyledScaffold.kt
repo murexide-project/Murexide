@@ -113,81 +113,94 @@ fun StyledScaffold(
     Scaffold(
         modifier = modifier,
         topBar = {
-            Column(modifier = Modifier.fillMaxWidth()) {
-                if (floatingEnabled) {
-                    Box(modifier = Modifier.fillMaxWidth()) {
-                        Box(
-                            modifier = Modifier
-                                .matchParentSize()
-                                .background(
-                                    Brush.verticalGradient(
-                                        colors = listOf(
-                                            surfaceColor.copy(alpha = 0.8f),
-                                            surfaceColor.copy(alpha = 0.6f),
-                                            Color.Transparent
-                                        )
-                                    )
+            if (floatingEnabled) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    surfaceColor.copy(alpha = 0.8f),
+                                    surfaceColor.copy(alpha = 0.6f),
+                                    Color.Transparent
                                 )
+                            )
                         )
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .safeDrawingPadding()
+                            .heightIn(min = 64.dp)
+                            .padding(horizontal = 8.dp)
+                            .zIndex(1f),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        if (navigationIcon != null) {
+                            Box(
+                                modifier = Modifier
+                                    .size(controlSize)
+                                    .glassControl(
+                                        shape = buttonShape,
+                                        liquidBackdrop = liquidBackdrop,
+                                        hazeState = hazeState,
+                                        useGlassBar = useGlassBar
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                navigationIcon()
+                            }
+                            Spacer(Modifier.width(4.dp))
+                        }
                         Row(
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .safeDrawingPadding()
-                                .heightIn(min = 64.dp)
-                                .padding(horizontal = 8.dp)
-                                .zIndex(1f),
-                            verticalAlignment = Alignment.CenterVertically
+                                .weight(1f)
+                                .height(controlSize),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
-                            if (navigationIcon != null) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(controlSize)
-                                        .glassControl(
-                                            shape = buttonShape,
-                                            liquidBackdrop = liquidBackdrop,
-                                            hazeState = hazeState,
-                                            useGlassBar = useGlassBar
-                                        ),
-                                    contentAlignment = Alignment.Center
+                            Spacer(Modifier.width(4.dp))
+                            Box(modifier = Modifier.weight(1f)) {
+                                CompositionLocalProvider(
+                                    LocalTextStyle provides MaterialTheme.typography.titleLarge
                                 ) {
-                                    navigationIcon()
+                                    titleText()
                                 }
-                                Spacer(Modifier.width(4.dp))
-                            }
-                            Row(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(controlSize),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                Spacer(Modifier.width(4.dp))
-                                Box(modifier = Modifier.weight(1f)) {
-                                    CompositionLocalProvider(
-                                        LocalTextStyle provides MaterialTheme.typography.titleLarge
-                                    ) {
-                                        titleText()
-                                    }
-                                }
-                            }
-                            if (actions != null) {
-                                Spacer(Modifier.width(4.dp))
-                                Row(
-                                    modifier = Modifier
-                                        .height(controlSize)
-                                        .glassControl(
-                                            shape = buttonShape,
-                                            liquidBackdrop = liquidBackdrop,
-                                            hazeState = hazeState,
-                                            useGlassBar = useGlassBar
-                                        ),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    content = actions
-                                )
                             }
                         }
+                        if (actions != null) {
+                            Spacer(Modifier.width(4.dp))
+                            Row(
+                                modifier = Modifier
+                                    .height(controlSize)
+                                    .glassControl(
+                                        shape = buttonShape,
+                                        liquidBackdrop = liquidBackdrop,
+                                        hazeState = hazeState,
+                                        useGlassBar = useGlassBar
+                                    ),
+                                verticalAlignment = Alignment.CenterVertically,
+                                content = actions
+                            )
+                        }
                     }
-                } else {
+                    extraContent()
+                }
+            } else {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .then(
+                            if (supportsBlur) {
+                                Modifier.hazeBlur(
+                                    input = HazeInput.Sources(hazeState),
+                                    style = blurStyle
+                                )
+                            } else {
+                                Modifier.background(fallbackBrush)
+                            }
+                        )
+                ) {
                     TopAppBar(
                         title = appBarTitleContent,
                         navigationIcon = {
@@ -210,14 +223,6 @@ fun StyledScaffold(
                                 }
                             }
                         },
-                        modifier = if (supportsBlur) {
-                            Modifier.hazeBlur(
-                                input = HazeInput.Sources(hazeState),
-                                style = blurStyle
-                            )
-                        } else {
-                            Modifier.background(fallbackBrush)
-                        },
                         colors = TopAppBarDefaults.topAppBarColors(
                             containerColor = Color.Transparent,
                             scrolledContainerColor = Color.Transparent,
@@ -226,8 +231,8 @@ fun StyledScaffold(
                             actionIconContentColor = Color.Unspecified
                         )
                     )
+                    extraContent()
                 }
-                extraContent()
             }
         },
         bottomBar = bottomBar,

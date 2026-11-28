@@ -7,6 +7,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -34,6 +35,7 @@ class GateActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
         storage = SettingsStorage(this)
         AppLockState.gateVisible = true
 
@@ -104,14 +106,15 @@ private fun GateContent(
     }
     if (!ready) return
 
-    Surface(
+    Scaffold(
         modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background
-    ) {
+        containerColor = MaterialTheme.colorScheme.background
+    ) { innerPadding ->
         val scrollState = rememberScrollState()
         Box(
             modifier = Modifier
                 .fillMaxSize()
+                .padding(innerPadding)
                 .verticalScroll(scrollState),
             contentAlignment = Alignment.Center
         ) {

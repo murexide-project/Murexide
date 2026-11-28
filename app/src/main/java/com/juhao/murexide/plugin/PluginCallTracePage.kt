@@ -1,9 +1,9 @@
 package com.juhao.murexide.plugin
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -13,7 +13,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.juhao.murexide.ui.components.*
+import com.juhao.murexide.ui.components.EmptyPlaceholder
 import com.juhao.murexide.ui.icons.AppIcons
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -37,8 +37,6 @@ internal fun PluginCallTracePage(
     var hasMore by remember(pluginId) { mutableStateOf(false) }
     val dateFormat = remember { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()) }
     val timeFormat = remember { SimpleDateFormat("HH:mm:ss", Locale.getDefault()) }
-    var expandedGroups by remember(pluginId) { mutableStateOf(emptySet<Long>()) }
-    val groups = remember(traces) { groupConsecutiveCalls(traces) }
 
     fun load(reset: Boolean) {
         if (busy) return
@@ -83,7 +81,7 @@ internal fun PluginCallTracePage(
             LazyColumn(
                 modifier = Modifier.fillMaxWidth(),
                 contentPadding = innerPadding,
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 item(key = "timeline_header") {
                     Row(
@@ -105,15 +103,13 @@ internal fun PluginCallTracePage(
                     }
                 }
 
-                groups.forEachIndexed { index, group ->
-                    val trace = group.first()
-                    val expanded = trace.id in expandedGroups
+                traces.forEachIndexed { index, trace ->
                     val date = dateFormat.format(Date(trace.timestamp * 1000L))
-                    val previousDate = groups.getOrNull(index - 1)?.first()?.let { dateFormat.format(Date(it.timestamp * 1000L)) }
+                    val previousDate = traces.getOrNull(index - 1)?.let { dateFormat.format(Date(it.timestamp * 1000L)) }
                     if (date != previousDate) {
                         item(key = "date_${trace.id}") {
                             Row(
-                                Modifier.animateItem().padding(horizontal = 12.dp),
+                                Modifier.animateItem().padding(start = 12.dp, top = 8.dp, bottom = 4.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Icon(AppIcons.CalendarToday, null, Modifier.size(14.dp), tint = MaterialTheme.colorScheme.primary)
@@ -122,50 +118,13 @@ internal fun PluginCallTracePage(
                             }
                         }
                     }
-                    item(key = "group_${trace.id}") {
-                        PluginCallTraceCard(
+                    item(key = "call_${trace.id}") {
+                        PluginCallTraceRow(
                             function = trace.function,
-                            count = group.size,
-                            singleTime = if (group.size == 1) timeFormat.format(Date(trace.timestamp * 1000L)) else null,
-                            expanded = expanded,
-                            onClick = {
-                                if (group.size > 1) {
-                                    expandedGroups = if (expanded) expandedGroups - trace.id else expandedGroups + trace.id
-                                }
-                            },
+                            time = timeFormat.format(Date(trace.timestamp * 1000L)),
+                            isLast = index == traces.lastIndex && !hasMore,
                             modifier = Modifier.animateItem()
                         )
-                    }
-                    if (expanded) {
-                        group.forEach { call ->
-                            item(key = "call_${call.id}") {
-                                Row(
-                                    Modifier.animateItem().fillMaxWidth().padding(horizontal = 24.dp, vertical = 4.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Icon(
-                                        AppIcons.AccessTime, null, Modifier.size(16.dp),
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                    Spacer(Modifier.width(12.dp))
-                                    SelectionContainer {
-                                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                            Text(
-                                                call.function,
-                                                style = MaterialTheme.typography.bodySmall,
-                                                fontFamily = FontFamily.Monospace
-                                            )
-                                            Text(
-                                                timeFormat.format(Date(call.timestamp * 1000L)),
-                                                style = MaterialTheme.typography.labelSmall,
-                                                fontFamily = FontFamily.Monospace,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
                     }
                 }
                 if (hasMore) {
@@ -186,95 +145,93 @@ internal fun PluginCallTracePage(
     }
 }
 
-private fun groupConsecutiveCalls(traces: List<PluginCallTrace>): List<List<PluginCallTrace>> {
-    val groups = mutableListOf<MutableList<PluginCallTrace>>()
-    traces.forEach { trace ->
-        val previous = groups.lastOrNull()
-        if (previous != null && previous.last().function == trace.function) {
-            previous.add(trace)
-        } else {
-            groups.add(mutableListOf(trace))
-        }
-    }
-    return groups
-}
-
 @Composable
-private fun PluginCallTraceCard(
+private fun PluginCallTraceRow(
     function: String,
-    count: Int,
-    singleTime: String?,
-    expanded: Boolean,
-    onClick: () -> Unit,
+    time: String,
+    isLast: Boolean,
     modifier: Modifier = Modifier
 ) {
-    val accent = MaterialTheme.colorScheme.primary
-    val subtitle = if (count > 1) "${count}次函数调用" else "函数调用"
+    val permission = tracePermission(function)
+    val risk = permission?.let(PluginPermissions::risk) ?: 1
+    val accent = when (risk) {
+        3 -> MaterialTheme.colorScheme.error
+        2 -> MaterialTheme.colorScheme.tertiary
+        else -> MaterialTheme.colorScheme.primary
+    }
 
-    Surface(
-        onClick = onClick,
-        modifier = modifier.padding(horizontal = 12.dp),
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surfaceContainer
+    Row(
+        modifier = modifier.fillMaxWidth().padding(horizontal = 12.dp),
+        verticalAlignment = Alignment.Top
     ) {
-        Row(
-            Modifier.fillMaxWidth().padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
+        Column(
+            Modifier.width(40.dp).heightIn(min = 64.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Surface(shape = RoundedCornerShape(12.dp), color = accent.copy(alpha = 0.12f)) {
-                Icon(
-                    traceIcon(function), null,
-                    Modifier.padding(10.dp).size(22.dp),
-                    tint = accent
-                )
-            }
-            Spacer(Modifier.width(12.dp))
-            Column(
-                Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
+            Surface(
+                modifier = Modifier.size(36.dp),
+                shape = CircleShape,
+                color = accent.copy(alpha = 0.12f)
             ) {
-                Text(
-                    function,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontFamily = FontFamily.Monospace,
-                    fontWeight = FontWeight.Medium
-                )
-                Text(
-                    subtitle,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            if (singleTime != null) {
-                Spacer(Modifier.width(8.dp))
-                Column(
-                    horizontalAlignment = Alignment.End,
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Icon(
-                        AppIcons.AccessTime,
-                        contentDescription = null,
-                        modifier = Modifier.size(14.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        singleTime,
-                        style = MaterialTheme.typography.labelMedium,
-                        fontFamily = FontFamily.Monospace,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(traceIcon(function), null, Modifier.size(19.dp), tint = accent)
                 }
             }
-            if (count > 1) {
-                Spacer(Modifier.width(8.dp))
-                Icon(
-                    if (expanded) AppIcons.ExpandLess else AppIcons.ExpandMore,
-                    contentDescription = if (expanded) "折叠详情" else "展开详情",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+            if (!isLast) {
+                Box(
+                    Modifier.width(2.dp).weight(1f).heightIn(min = 24.dp)
+                        .padding(top = 4.dp)
+                        .background(MaterialTheme.colorScheme.outlineVariant)
                 )
             }
         }
+        Spacer(Modifier.width(8.dp))
+        Column(
+            Modifier.weight(1f).padding(top = 2.dp, bottom = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(5.dp)
+        ) {
+            Text(
+                function,
+                style = MaterialTheme.typography.bodyMedium,
+                fontFamily = FontFamily.Monospace,
+                fontWeight = FontWeight.Medium,
+                color = accent
+            )
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(traceCategory(function), style = MaterialTheme.typography.labelSmall, color = accent)
+                Text(time, style = MaterialTheme.typography.labelSmall, fontFamily = FontFamily.Monospace, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
     }
+}
+
+private fun tracePermission(function: String): String? = when (function) {
+    "sendMessage", "recallMessage" -> PluginPermissions.USER_BOT
+    "Http" -> PluginPermissions.NETWORK
+    "readData", "writeData" -> PluginPermissions.STORAGE
+    "getValue", "setValue" -> PluginPermissions.READ_SETTINGS
+    "OpenChat" -> PluginPermissions.OPEN_CHAT
+    "StartActivity" -> PluginPermissions.START_ACTIVITY
+    "RestartApp" -> PluginPermissions.RESTART
+    "OpenUrl" -> PluginPermissions.OPEN_URL
+    "Copy" -> PluginPermissions.CLIPBOARD
+    "Share" -> PluginPermissions.SHARE
+    "Toast", "Alert", "Notify" -> PluginPermissions.NOTIFICATION
+    "Vibrate" -> PluginPermissions.VIBRATE
+    "Log" -> PluginPermissions.LOG
+    else -> null
+}
+
+private fun traceCategory(function: String): String = when (function) {
+    "sendMessage", "recallMessage" -> "消息操作"
+    "Toast", "Alert", "Notify", "Copy", "Share" -> "交互反馈"
+    "Http", "OpenUrl" -> "网络访问"
+    "readData", "writeData", "getValue", "setValue" -> "数据与设置"
+    "OpenChat", "StartActivity", "RestartApp" -> "应用控制"
+    "Vibrate" -> "设备功能"
+    "Log" -> "日志"
+    "addFloatingView", "removeFloatingView" -> "界面"
+    else -> "其他"
 }
 
 private fun traceIcon(function: String): ImageVector = when (function) {

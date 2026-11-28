@@ -37,7 +37,7 @@ fun Modifier.glassControl(
     if (useGlassBar && liquidBackdrop != null) {
         val liquidGlassBlur = LocalLiquidGlassBlur.current
         
-        val color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.8f)
+        val color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.6f)
         
         val animationScope = rememberCoroutineScope()
     

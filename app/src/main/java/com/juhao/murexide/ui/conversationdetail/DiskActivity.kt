@@ -5,6 +5,7 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -27,6 +28,7 @@ class DiskActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
         chatId = intent.getStringExtra(EXTRA_CHAT_ID).orEmpty()
         canManage = intent.getBooleanExtra(EXTRA_CAN_MANAGE, false)
         token = runBlocking { AccountStorage.getInstance(this@DiskActivity).getCurrentToken() }.orEmpty()
